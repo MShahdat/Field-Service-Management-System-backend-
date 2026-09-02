@@ -1,0 +1,13 @@
+model ManagerRegion {
+  id String @id @default(uuid())
+
+  area        String  @unique
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  manager ManagerProfile[]
+
+  @@map("managerRegions")
+}

@@ -1,0 +1,26 @@
+model Service {
+  id String @id @default(uuid())
+
+  description String?
+  priority    Priority      @default(MEDIUM)
+  status      ServiceStatus @default(PENDING)
+
+  address       Json
+  requestedDate DateTime @db.Date
+
+  isDeleted   Boolean   @default(false)
+  isDeletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customerId String
+  customer   CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  workOrders WorkOrder?
+
+  @@map("services")
+}

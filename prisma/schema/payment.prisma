@@ -1,0 +1,25 @@
+model Payment {
+  id String @id @default(uuid())
+
+  paymentId             String?
+  amount                Decimal       @db.Decimal(10, 2)
+  method                String        @default("bKash")
+  transectionId         String?       @unique
+  status                PaymentStatus @default(UNPAID)
+  paidAt                DateTime?
+  payerReference        String?
+  currency              String        @default("BDT")
+  merchantInvoiceNumber String        @unique
+
+  getwayResponse Json?
+
+  refundTrxId  String?
+  refundAmount Decimal? @db.Decimal(10, 2)
+  refundedAt   String?
+  reason       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("payments")
+}

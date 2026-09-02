@@ -1,0 +1,14 @@
+model ManagerProfile {
+  id String @id @default(uuid())
+
+  phone   String
+  address Json
+  nid     String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  religion ManagerRegion[]
+
+  @@map("managerProfiles")
+}
