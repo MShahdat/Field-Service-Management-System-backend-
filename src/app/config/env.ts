@@ -16,7 +16,18 @@ const config = {
   jwt_access_secret: process.env.JWT_ACCESS_SECRET!,
   jwt_refresh_secret: process.env.JWT_REFRESH_SECRET!,
   jwt_access_expires_in: process.env.JWT_ACCESS_EXPIRES_IN!,
-  jwt_refresh_expires_in: process.env.JWT_REFRESH_EXPIRES_IN!
+  jwt_refresh_expires_in: process.env.JWT_REFRESH_EXPIRES_IN!,
+
+
+  super_admin_name: process.env.SUPER_ADMIN_NAME!,
+  super_admin_email: process.env.SUPER_ADMIN_EMAIL!,
+  super_admin_password: process.env.SUPER_ADMIN_PASSWORD!,
+  tester_admin_name: process.env.TESTER_ADMIN_NAME!,
+  tester_admin_email: process.env.TESTER_ADMIN_EMAIL!,
+  tester_admin_password: process.env.TESTER_ADMIN_PASSWORD!,
+  tester_manager_name: process.env.TESTER_MANAGER_NAME!,
+  tester_manager_email: process.env.TESTER_MANAGER_EMAIL!,
+  tester_manager_password: process.env.TESTER_MANAGER_PASSWORD!,
 }
 
 

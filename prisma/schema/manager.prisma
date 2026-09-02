@@ -9,6 +9,8 @@ model ManagerProfile {
   updatedAt DateTime @updatedAt
 
   religion ManagerRegion[]
+  userId   String          @unique
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@map("managerProfiles")
 }

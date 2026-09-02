@@ -24,6 +24,7 @@ model WorkOrder {
   attachment    Attachment[]
   serviceReport ServiceReport?
   feedback      Feedback?
+  payment       Payment?
 
   @@map("workOrders")
 }

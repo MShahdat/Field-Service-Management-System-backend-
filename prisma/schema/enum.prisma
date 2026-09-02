@@ -74,9 +74,3 @@ enum PaymentStatus {
   CANCELLED
   REFUNDED
 }
-
-enum SkillStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
-}

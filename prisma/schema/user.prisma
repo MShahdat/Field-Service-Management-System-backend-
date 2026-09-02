@@ -21,6 +21,7 @@ model User {
 
   customer   CustomerProfile?
   technician TechnicianProfile?
+  manager    ManagerProfile?
 
   @@map("users")
 }
