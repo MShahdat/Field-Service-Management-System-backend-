@@ -9,6 +9,7 @@ dotenv.config({ path: path.join(process.cwd(), ".env") })
 const config = {
   node_env: process.env.NODE_ENV,
   port: process.env.PORT,
+  app_name: process.env.APP_NAME,
   database_url: process.env.DATABASE_URL,
   bakend_url: process.env.BACKEND_URL,
   frontend_url: process.env.FRONTEND_URL,
@@ -28,6 +29,15 @@ const config = {
   tester_manager_name: process.env.TESTER_MANAGER_NAME!,
   tester_manager_email: process.env.TESTER_MANAGER_EMAIL!,
   tester_manager_password: process.env.TESTER_MANAGER_PASSWORD!,
+
+  radis_name: process.env.RADIS_NAME!,
+	radis_password: process.env.RADIS_PASSWORD!,
+	radis_host: process.env.RADIS_HOST!,
+	radis_port: process.env.RADIS_PORT!,
+
+  smtp_user: process.env.SMTP_USER!,
+	smtp_sender: process.env.SMTP_SENDER!,
+	smtp_password: process.env.SMTP_PASSWORD!,
 }
 
 

@@ -4,6 +4,7 @@ import cors from 'cors'
 import cookieParser from "cookie-parser"
 import { globalErrorHandler } from "./app/middleware/globalErrorHandler"
 import { notFound } from "./app/middleware/notFound"
+import { authRouter } from "./app/module/auth/auth.route"
 
 const app: Application = express()
 
@@ -29,6 +30,9 @@ app.get('/', async (req: Request, res: Response) => {
     author: "Md. Shahdat Hossain"
   })
 })
+
+
+app.use('/api/v1/auth', authRouter)
 
 
 app.use(globalErrorHandler)
