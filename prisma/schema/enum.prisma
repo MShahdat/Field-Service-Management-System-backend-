@@ -74,3 +74,9 @@ enum PaymentStatus {
   CANCELLED
   REFUNDED
 }
+
+enum ManagerVerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}

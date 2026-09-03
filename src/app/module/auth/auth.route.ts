@@ -49,30 +49,32 @@ route.post(
 	authController.resetPassword,
 );
 
-route.get('/google',
-  passport.authenticate("google", {
-    session: false,
-    scope: ["profile", "email"]
-  }
-  ))
+route.get(
+	"/google",
+	passport.authenticate("google", {
+		session: false,
+		scope: ["profile", "email"],
+	}),
+);
 
 route.get(
-  '/google/callback',
-  passport.authenticate('google', { session: false }),
-  authController.googleLogin,
-)
+	"/google/callback",
+	passport.authenticate("google", { session: false }),
+	authController.googleLogin,
+);
 
+route.get(
+	"/facebook",
+	passport.authenticate("facebook", {
+		session: false,
+		scope: ["email"],
+	}),
+);
 
-route.get('/facebook',
-  passport.authenticate('facebook', {
-    session: false,
-    scope: ['email'],
-  })
-)
-
-route.get('/facebook/callback',
-  passport.authenticate('facebook', { session: false }),
-  authController.facebookLogin,
-)
+route.get(
+	"/facebook/callback",
+	passport.authenticate("facebook", { session: false }),
+	authController.facebookLogin,
+);
 
 export const authRouter = route;

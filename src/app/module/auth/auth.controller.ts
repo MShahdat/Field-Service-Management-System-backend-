@@ -163,113 +163,117 @@ const resetPassword = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
-
 //& GOOGLE LOGIN
 const googleLogin = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user 
+	const user = req.user;
 
-	if(!user){
-		throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, 'Something Went wrong')
+	if (!user) {
+		throw new AppError(
+			httpStatus.INTERNAL_SERVER_ERROR,
+			"Something Went wrong",
+		);
 	}
 
 	const jwtPayload = {
 		userId: user.userId,
 		name: user.name,
 		email: user.email,
-		role: user.role
-	}
+		role: user.role,
+	};
 
-  const accessToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_access_secret,
-    config.jwt_access_expires_in as SignOptions
-  )
+	const accessToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_access_secret,
+		config.jwt_access_expires_in as SignOptions,
+	);
 
-  const refreshToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_refresh_secret,
-    config.jwt_refresh_expires_in as SignOptions
-  )
+	const refreshToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_refresh_secret,
+		config.jwt_refresh_expires_in as SignOptions,
+	);
 
-  res.cookie('accessToken', accessToken, {
-    httpOnly: true,
-    secure: config.node_env === 'production',
-    sameSite: config.node_env === 'production' ? 'none' : 'lax',
-    maxAge: 1000 * 60 * 60 * 24,
-  })
-  res.cookie('refreshToken', refreshToken, {
-    httpOnly: true,
-    secure: config.node_env === 'production',
-    sameSite: config.node_env === 'production' ? 'none' : 'lax',
-    maxAge: 1000 * 60 * 60 * 24 * 7,
-  })
+	res.cookie("accessToken", accessToken, {
+		httpOnly: true,
+		secure: config.node_env === "production",
+		sameSite: config.node_env === "production" ? "none" : "lax",
+		maxAge: 1000 * 60 * 60 * 24,
+	});
+	res.cookie("refreshToken", refreshToken, {
+		httpOnly: true,
+		secure: config.node_env === "production",
+		sameSite: config.node_env === "production" ? "none" : "lax",
+		maxAge: 1000 * 60 * 60 * 24 * 7,
+	});
 
-  // res.redirect(`${config.frontend_url}/dashboard?success=true`)
+	// res.redirect(`${config.frontend_url}/dashboard?success=true`)
 
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'Google login successful',
-    data: {
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Google login successful",
+		data: {
 			accessToken,
-			refreshToken
+			refreshToken,
 		},
-  })
-})
-
+	});
+});
 
 //& FACEBOOK LOGIN
 const facebookLogin = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user
+	const user = req.user;
 
-	if(!user){
-		throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, 'something went wrong')
+	if (!user) {
+		throw new AppError(
+			httpStatus.INTERNAL_SERVER_ERROR,
+			"something went wrong",
+		);
 	}
 
 	const jwtPayload = {
 		userId: user.userId,
 		name: user.name,
 		email: user.email,
-		role: user.role
-	}
+		role: user.role,
+	};
 
-  const accessToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_access_secret,
-    config.jwt_access_expires_in as SignOptions
-  )
+	const accessToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_access_secret,
+		config.jwt_access_expires_in as SignOptions,
+	);
 
-  const refreshToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_refresh_secret,
-    config.jwt_refresh_expires_in as SignOptions
-  )
+	const refreshToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_refresh_secret,
+		config.jwt_refresh_expires_in as SignOptions,
+	);
 
-  res.cookie('accessToken', accessToken, {
-    httpOnly: true,
-    secure: config.node_env === 'production',
-    sameSite: config.node_env === 'production' ? 'none' : 'lax',
-    maxAge: 1000 * 60 * 60 * 24,
-  })
-  res.cookie('refreshToken', refreshToken, {
-    httpOnly: true,
-    secure: config.node_env === 'production',
-    sameSite: config.node_env === 'production' ? 'none' : 'lax',
-    maxAge: 1000 * 60 * 60 * 24 * 7,
-  })
+	res.cookie("accessToken", accessToken, {
+		httpOnly: true,
+		secure: config.node_env === "production",
+		sameSite: config.node_env === "production" ? "none" : "lax",
+		maxAge: 1000 * 60 * 60 * 24,
+	});
+	res.cookie("refreshToken", refreshToken, {
+		httpOnly: true,
+		secure: config.node_env === "production",
+		sameSite: config.node_env === "production" ? "none" : "lax",
+		maxAge: 1000 * 60 * 60 * 24 * 7,
+	});
 
-  // res.redirect(`${config.frontend_url}/dashboard?success=true`)
+	// res.redirect(`${config.frontend_url}/dashboard?success=true`)
 
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'Facebook login successful',
-    data: {
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Facebook login successful",
+		data: {
 			accessToken,
-			refreshToken
+			refreshToken,
 		},
-  })
-})
+	});
+});
 
 export const authController = {
 	registerOTP,
@@ -280,5 +284,5 @@ export const authController = {
 	forgotPassword,
 	resetPassword,
 	googleLogin,
-facebookLogin
+	facebookLogin,
 };

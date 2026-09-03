@@ -76,7 +76,7 @@ const registerOTP = async (payload: IRegisterCustomerPayload) => {
 		name,
 		otp,
 		expire: expirationTime / 60,
-		app_name: config.app_name,
+		appName: config.app_name,
 	};
 
 	const html = await ejs.renderFile(templatePath, templateData);

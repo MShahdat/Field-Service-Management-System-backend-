@@ -2,15 +2,23 @@ model ManagerProfile {
   id String @id @default(uuid())
 
   phone   String
-  address Json
+  address Json?
   nid     String
+
+  verificationStatus ManagerVerificationStatus @default(PENDING)
+  rejectionReason    String?
+  reviewdBy          String?
+  reviewdAt          DateTime?
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  religion ManagerRegion[]
-  userId   String          @unique
-  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  region Region[]
+  userId String   @unique
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@map("managerProfiles")
 }
