@@ -8,6 +8,7 @@ model User {
   profileImgPublicId String?
 
   googleId           String?      @unique
+  facebookId         String?      @unique
   authProvider       AuthProvider @default(CREDENTIAL)
   emailVerified      Boolean      @default(false)
   role               UserRole     @default(CUSTOMER)

@@ -34,6 +34,13 @@ const config = {
 	smtp_user: process.env.SMTP_USER!,
 	smtp_sender: process.env.SMTP_SENDER!,
 	smtp_password: process.env.SMTP_PASSWORD!,
+
+	google_client_id: process.env.GOOGLE_CLIENT_ID!,
+  google_client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+  google_callback_uri: process.env.GOOGLE_CALLBACK_URI!,
+  facebook_app_key: process.env.FACEBOOK_APP_KEY!,
+  facebook_app_secret: process.env.FACEBOOK_APP_SECRET!,
+  facebook_callback_url: process.env.FACEBOOK_CALLBACK_URL!,
 };
 
 export default config;

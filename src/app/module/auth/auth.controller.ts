@@ -5,6 +5,9 @@ import { sendResponse } from "../../utils/sendResponse";
 import httpStatus from "http-status";
 import { IRequestUser } from "../../interface";
 import { AppError } from "../../utils/appError";
+import { jwtUtils } from "../../utils/jwt";
+import config from "../../config/env";
+import { SignOptions } from "jsonwebtoken";
 
 //& REGISTER USER
 const registerOTP = catchAsync(async (req: Request, res: Response) => {
@@ -160,6 +163,114 @@ const resetPassword = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+
+//& GOOGLE LOGIN
+const googleLogin = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user 
+
+	if(!user){
+		throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, 'Something Went wrong')
+	}
+
+	const jwtPayload = {
+		userId: user.userId,
+		name: user.name,
+		email: user.email,
+		role: user.role
+	}
+
+  const accessToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_access_secret,
+    config.jwt_access_expires_in as SignOptions
+  )
+
+  const refreshToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_refresh_secret,
+    config.jwt_refresh_expires_in as SignOptions
+  )
+
+  res.cookie('accessToken', accessToken, {
+    httpOnly: true,
+    secure: config.node_env === 'production',
+    sameSite: config.node_env === 'production' ? 'none' : 'lax',
+    maxAge: 1000 * 60 * 60 * 24,
+  })
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: config.node_env === 'production',
+    sameSite: config.node_env === 'production' ? 'none' : 'lax',
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+  })
+
+  // res.redirect(`${config.frontend_url}/dashboard?success=true`)
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Google login successful',
+    data: {
+			accessToken,
+			refreshToken
+		},
+  })
+})
+
+
+//& FACEBOOK LOGIN
+const facebookLogin = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user
+
+	if(!user){
+		throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, 'something went wrong')
+	}
+
+	const jwtPayload = {
+		userId: user.userId,
+		name: user.name,
+		email: user.email,
+		role: user.role
+	}
+
+  const accessToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_access_secret,
+    config.jwt_access_expires_in as SignOptions
+  )
+
+  const refreshToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_refresh_secret,
+    config.jwt_refresh_expires_in as SignOptions
+  )
+
+  res.cookie('accessToken', accessToken, {
+    httpOnly: true,
+    secure: config.node_env === 'production',
+    sameSite: config.node_env === 'production' ? 'none' : 'lax',
+    maxAge: 1000 * 60 * 60 * 24,
+  })
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: config.node_env === 'production',
+    sameSite: config.node_env === 'production' ? 'none' : 'lax',
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+  })
+
+  // res.redirect(`${config.frontend_url}/dashboard?success=true`)
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Facebook login successful',
+    data: {
+			accessToken,
+			refreshToken
+		},
+  })
+})
+
 export const authController = {
 	registerOTP,
 	verifyEmail,
@@ -168,4 +279,6 @@ export const authController = {
 	refreshToken,
 	forgotPassword,
 	resetPassword,
+	googleLogin,
+facebookLogin
 };

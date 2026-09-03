@@ -5,6 +5,9 @@ import cookieParser from "cookie-parser";
 import { globalErrorHandler } from "./app/middleware/globalErrorHandler";
 import { notFound } from "./app/middleware/notFound";
 import { authRouter } from "./app/module/auth/auth.route";
+import './app/lib/passport'
+import passport from "passport";
+
 
 const app: Application = express();
 
@@ -19,6 +22,8 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(express.json());
 app.use(cookieParser());
+
+app.use(passport.initialize())
 
 app.get("/", async (req: Request, res: Response) => {
 	res.status(200).json({

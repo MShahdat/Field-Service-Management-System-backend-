@@ -9,6 +9,7 @@ import {
 } from "./auth.validation";
 import { auth } from "../../middleware/auth";
 import { UserRole } from "../../../../generated/prisma/enums";
+import passport from "passport";
 
 const route = Router();
 
@@ -47,5 +48,31 @@ route.post(
 	zodValidation(resetPasswordZodSchema),
 	authController.resetPassword,
 );
+
+route.get('/google',
+  passport.authenticate("google", {
+    session: false,
+    scope: ["profile", "email"]
+  }
+  ))
+
+route.get(
+  '/google/callback',
+  passport.authenticate('google', { session: false }),
+  authController.googleLogin,
+)
+
+
+route.get('/facebook',
+  passport.authenticate('facebook', {
+    session: false,
+    scope: ['email'],
+  })
+)
+
+route.get('/facebook/callback',
+  passport.authenticate('facebook', { session: false }),
+  authController.facebookLogin,
+)
 
 export const authRouter = route;
