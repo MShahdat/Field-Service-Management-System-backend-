@@ -7,7 +7,6 @@ export interface IRequestUser {
 	userId: string;
 }
 
-
 export interface IQuery {
 	search?: string;
 	sortOrder?: string;

@@ -1,52 +1,54 @@
-import { prisma } from "../../lib/prisma"
-import { AppError } from "../../utils/appError"
-import { EmailVerify, IApproveManager, IManagerApplyPayload } from "./manager.interface"
-import httpStatus from 'http-status'
-import bcrypt from "bcryptjs"
-import config from "../../config/env"
-import { UserRole } from "../../../../generated/prisma/enums"
-import crypto from 'crypto'
-import { redisClient } from "../../lib/redis"
-import path from 'path'
-import ejs from 'ejs'
-import { transporter } from "../../lib/nodemailer"
-import { IRequestUser } from "../../interface"
-
-
+import { prisma } from "../../lib/prisma";
+import { AppError } from "../../utils/appError";
+import {
+	EmailVerify,
+	IApproveManager,
+	IManagerApplyPayload,
+} from "./manager.interface";
+import httpStatus from "http-status";
+import bcrypt from "bcryptjs";
+import config from "../../config/env";
+import { UserRole } from "../../../../generated/prisma/enums";
+import crypto from "crypto";
+import { redisClient } from "../../lib/redis";
+import path from "path";
+import ejs from "ejs";
+import { transporter } from "../../lib/nodemailer";
+import { IQuery, IRequestUser } from "../../interface";
+import { ManagerProfileWhereInput } from "../../../../generated/prisma/models";
 
 //& APPLY MANAGER
-const applyManager = async(payload: IManagerApplyPayload) => {
+const applyManager = async (payload: IManagerApplyPayload) => {
+	const isManager = await prisma.user.findUnique({
+		where: {
+			email: payload.user.email,
+		},
+	});
 
-  const isManager = await prisma.user.findUnique({
-    where: {
-      email: payload.user.email
-    }
-  })
+	if (isManager) {
+		throw new AppError(httpStatus.CONFLICT, "manager already exists");
+	}
 
-  if(isManager){
-    throw new AppError(httpStatus.CONFLICT, 'manager already exists')
-  }
+	const regionIds = payload.manager.region || [];
 
-  const regionIds = payload.manager.region || [];
-  
-  if (regionIds.length > 0) {
-    const existingRegions = await prisma.region.findMany({
-      where: { id: { in: regionIds } },
-      select: { id: true }
-    });
+	if (regionIds.length > 0) {
+		const existingRegions = await prisma.region.findMany({
+			where: { id: { in: regionIds } },
+			select: { id: true },
+		});
 
-    const existingIds = existingRegions.map(r => r.id);
-    const invalidIds = regionIds.filter(id => !existingIds.includes(id));
+		const existingIds = existingRegions.map((r) => r.id);
+		const invalidIds = regionIds.filter((id) => !existingIds.includes(id));
 
-    if (invalidIds.length > 0) {
-      throw new AppError(
-        httpStatus.BAD_REQUEST,
-        `Invalid region ID(s): ${invalidIds.join(', ')}. These regions do not exist.`
-      );
-    }
-  }
+		if (invalidIds.length > 0) {
+			throw new AppError(
+				httpStatus.BAD_REQUEST,
+				`Invalid region ID(s): ${invalidIds.join(", ")}. These regions do not exist.`,
+			);
+		}
+	}
 
-  const randomPass = Math.random().toString(36).slice(-8);
+	const randomPass = Math.random().toString(36).slice(-8);
 	console.log("random pass", randomPass);
 
 	const hashPass = await bcrypt.hash(
@@ -54,36 +56,36 @@ const applyManager = async(payload: IManagerApplyPayload) => {
 		Number(config.bcrypt_salt_rounds),
 	);
 
-  const { region, ...managerData } = payload.manager;
+	const { region, ...managerData } = payload.manager;
 
-  const apply = await prisma.user.create({
-    data: {
-      ...payload.user,
-      password: hashPass,
-      needPasswordChange: true,
-      role: UserRole.MANAGER,
-      manager: {
-        create: {
-          ...managerData,
-          region: {
-            connect: regionIds.map(id => ({ id }))
-          }
-        }
-      }
-    },
-    omit: {
-      password: true
-    },
-    include: {
-      manager: {
-        include: {
-          region: true
-        }
-      },
-    }
-  })
+	const apply = await prisma.user.create({
+		data: {
+			...payload.user,
+			password: hashPass,
+			needPasswordChange: true,
+			role: UserRole.MANAGER,
+			manager: {
+				create: {
+					...managerData,
+					region: {
+						connect: regionIds.map((id) => ({ id })),
+					},
+				},
+			},
+		},
+		omit: {
+			password: true,
+		},
+		include: {
+			manager: {
+				include: {
+					region: true,
+				},
+			},
+		},
+	});
 
-  const expirationTime = 60 * 60;
+	const expirationTime = 60 * 60;
 	const otpKey = `manager-otp-key: ${payload.user.email}`;
 	const otp = crypto.randomInt(99999, 1000000);
 
@@ -103,7 +105,7 @@ const applyManager = async(payload: IManagerApplyPayload) => {
 		name: payload.user.name,
 		otp,
 		expire: expirationTime / 60,
-    appName: config.app_name
+		appName: config.app_name,
 	};
 
 	const html = await ejs.renderFile(templatePath, templateData);
@@ -116,9 +118,7 @@ const applyManager = async(payload: IManagerApplyPayload) => {
 	});
 
 	return apply;
-}
-
-
+};
 
 //& VERIFY EMAIL BY OTP
 const emailVerify = async (payload: EmailVerify) => {
@@ -127,7 +127,7 @@ const emailVerify = async (payload: EmailVerify) => {
 	const isManager = await prisma.user.findUnique({
 		where: {
 			email,
-			role: UserRole.MANAGER
+			role: UserRole.MANAGER,
 		},
 	});
 
@@ -159,7 +159,7 @@ const emailVerify = async (payload: EmailVerify) => {
 	const updatedUser = await prisma.user.update({
 		where: {
 			email,
-			role: UserRole.MANAGER
+			role: UserRole.MANAGER,
 		},
 		data: {
 			emailVerified: true,
@@ -167,21 +167,19 @@ const emailVerify = async (payload: EmailVerify) => {
 		omit: {
 			password: true,
 		},
-    include: {
-      manager: {
-        include: {
-          region: true
-        }
-      }
-    }
+		include: {
+			manager: {
+				include: {
+					region: true,
+				},
+			},
+		},
 	});
 
 	await redisClient.del(otpKey);
 
 	return updatedUser;
 };
-
-
 
 //& APPROVE MANAGER (ADMIN)
 const approveManager = async (
@@ -230,7 +228,7 @@ const approveManager = async (
 
 	const updateStatus = await prisma.managerProfile.update({
 		where: {
-			id: isManager.manager.id
+			id: isManager.manager.id,
 		},
 		data: {
 			verificationStatus,
@@ -239,9 +237,9 @@ const approveManager = async (
 			reviewdBy: reviewer.userId,
 			reviewdAt: new Date(),
 		},
-    include: {
-      region: true
-    }
+		include: {
+			region: true,
+		},
 	});
 
 	const isApproved = updateStatus.verificationStatus === "APPROVED";
@@ -257,7 +255,7 @@ const approveManager = async (
 	const templateData = {
 		name: isManager.name,
 		reason: rejectionReason, // only used in the rejected template,
-    appName: config.app_name
+		appName: config.app_name,
 	};
 
 	const html = await ejs.renderFile(templatePath, templateData);
@@ -273,10 +271,102 @@ const approveManager = async (
 	return updateStatus;
 };
 
+//& GEL ALL MANAGERS (ADMIN)
+const getAllManagers = async (query: IQuery) => {
+	const sort = query.sortBy ? query.sortBy : "createdAt";
+	const order = query.sortOrder ? query.sortOrder : "desc";
+	const page = Number(query.page || 1);
+	const limit = Number(query.limit || 20);
 
+	const andConditions: ManagerProfileWhereInput[] = [
+		{
+			isDeleted: false,
+		},
+	];
+
+	//~ searching
+	if (query.search) {
+		andConditions.push({
+			OR: [
+				{
+					user: {
+						name: {
+							contains: query.search,
+							mode: "insensitive",
+						},
+					},
+				},
+				{
+					user: {
+						email: {
+							contains: query.search,
+							mode: "insensitive",
+						},
+					},
+				},
+			],
+		});
+	}
+
+	//~ filtering
+
+	// if(query.region){
+	// 	const region = query.region as string
+	// 	const arr = region.split(',').map((item) => item.trim())
+
+	// 	andConditions.push({
+	// 		region: {
+	// 			hasSome: arr
+	// 		}
+	// 	})
+	// }
+
+	if (query.verificationStatus) {
+		andConditions.push({
+			verificationStatus: query.verificationStatus,
+		});
+	}
+
+	const managers = await prisma.managerProfile.findMany({
+		where: {
+			AND: andConditions,
+		},
+		take: limit,
+		skip: (page - 1) * limit,
+		orderBy: {
+			[sort]: order,
+		},
+		include: {
+			user: {
+				omit: {
+					password: true,
+				},
+			},
+		},
+	});
+
+	const total = await prisma.managerProfile.count({
+		where: {
+			AND: andConditions,
+		},
+	});
+
+	const meta = {
+		total,
+		page,
+		limit,
+		totalPages: Math.ceil(total / limit),
+	};
+
+	return {
+		managers,
+		meta,
+	};
+};
 
 export const managerService = {
-  applyManager,
-  emailVerify,
-approveManager
-}
+	applyManager,
+	emailVerify,
+	approveManager,
+	getAllManagers,
+};

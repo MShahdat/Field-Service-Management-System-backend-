@@ -1,15 +1,10 @@
-
-
 export interface IRegionPayload {
-  area: string
-  description?: string
+	area: string;
+	description?: string;
 }
-
-
 
 export interface IUpdateRegionPayload {
-  area?: string
-  description?: string
-  isActive?: boolean
+	area?: string;
+	description?: string;
+	isActive?: boolean;
 }
-

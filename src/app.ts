@@ -9,6 +9,8 @@ import "./app/lib/passport";
 import passport from "passport";
 import { regionRouter } from "./app/module/region/region.route";
 import { managerRouter } from "./app/module/manager/manager.route";
+import { categoryRotuer } from "./app/module/category/category.route";
+import { serviceRouter } from "./app/module/service/service.route";
 
 const app: Application = express();
 
@@ -35,8 +37,10 @@ app.get("/", async (req: Request, res: Response) => {
 });
 
 app.use("/api/v1/auth", authRouter);
-app.use('/api/v1/region', regionRouter);
-app.use('/api/v1/manager', managerRouter)
+app.use("/api/v1/region", regionRouter);
+app.use("/api/v1/manager", managerRouter);
+app.use("/api/v1/category", categoryRotuer);
+app.use("/api/v1/service", serviceRouter);
 
 app.use(globalErrorHandler);
 app.use(notFound);

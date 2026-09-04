@@ -1,26 +1,27 @@
 import { Router } from "express";
+import { categoryController } from "./category.controller";
 import { auth } from "../../middleware/auth";
 import { UserRole } from "../../../../generated/prisma/enums";
-import { regionController } from "./region.controller";
 
 const route = Router();
-
 route.post(
 	"/",
 	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
-	regionController.createRegion,
+	categoryController.createCategory,
 );
 
+route.get("/all", categoryController.getCategories);
+
 route.get(
-	"/all-region",
+	"/all-category",
 	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
-	regionController.getAllRegion,
+	categoryController.getAllCategory,
 );
 
 route.put(
-	"/:regionId",
+	"/:categoryId",
 	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
-	regionController.updateRegion,
+	categoryController.udpateCategory,
 );
 
-export const regionRouter = route;
+export const categoryRotuer = route;

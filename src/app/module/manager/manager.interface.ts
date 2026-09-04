@@ -1,31 +1,26 @@
-import { ManagerVerificationStatus } from "../../../../generated/prisma/enums"
+import { ManagerVerificationStatus } from "../../../../generated/prisma/enums";
 
 interface Address {
-  [key: string]: string
+	[key: string]: string;
 }
-
-
 
 export interface IManagerApplyPayload {
-  user: {
-    name: string
-    email: string
-  },
-  manager: {
-  phone: string
-  address: Address
-  nid: string
-  region: string[]
-  }
+	user: {
+		name: string;
+		email: string;
+	};
+	manager: {
+		phone: string;
+		address: Address;
+		nid: string;
+		region: string[];
+	};
 }
-
-
 
 export interface EmailVerify {
-  email: string,
-  otp: string
+	email: string;
+	otp: string;
 }
-
 
 export interface IApproveManager {
 	email: string;

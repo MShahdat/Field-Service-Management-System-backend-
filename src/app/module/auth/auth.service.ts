@@ -417,6 +417,7 @@ const resetPassword = async (payload: IResetPasswordPayload) => {
 
 	const templateData = {
 		name: isExistUser.name,
+		appName: config.app_name,
 	};
 
 	const html = await ejs.renderFile(
