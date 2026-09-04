@@ -3,6 +3,7 @@ import { skillService } from "./skill.service";
 import { sendResponse } from "../../utils/sendResponse";
 import httpStatus from "http-status";
 import { AppError } from "../../utils/appError";
+//& CREATE SKILL
 const createSkill = catchAsync(async (req, res) => {
     const body = req.body;
     const user = req.user;
@@ -14,6 +15,7 @@ const createSkill = catchAsync(async (req, res) => {
         data: result,
     });
 });
+//& GET ALL SKILL
 const getAllSkill = catchAsync(async (req, res) => {
     const query = req.query;
     const { skill, meta } = await skillService.getAllSkill(query);
@@ -28,6 +30,7 @@ const getAllSkill = catchAsync(async (req, res) => {
         meta,
     });
 });
+//& GET ALL SKILL
 const getSkills = catchAsync(async (req, res) => {
     const query = req.query;
     const { skill, meta } = await skillService.getSkills(query);
@@ -42,6 +45,7 @@ const getSkills = catchAsync(async (req, res) => {
         meta,
     });
 });
+//& UPDATE SKILL
 const updateSkill = catchAsync(async (req, res) => {
     const id = req.params.skillId;
     const body = req.body;

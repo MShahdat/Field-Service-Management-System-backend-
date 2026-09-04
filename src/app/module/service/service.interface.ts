@@ -11,3 +11,11 @@ export interface IServicePayload {
 	address: Address;
 	categoryId: string;
 }
+
+type Status = "REJECTED" | "APPROVED";
+
+export interface IReviewPayload {
+	serviceId: string;
+	status: Status;
+	rejectionReason?: string;
+}

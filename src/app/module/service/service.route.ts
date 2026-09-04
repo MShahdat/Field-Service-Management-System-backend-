@@ -26,4 +26,12 @@ route.get(
 	serviceController.getAllServices,
 );
 
+route.get(
+	"/:serviceId",
+	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.CUSTOMER),
+	serviceController.getSingleService,
+);
+
+route.post("/review", auth(UserRole.MANAGER), serviceController.reviewService);
+
 export const serviceRouter = route;

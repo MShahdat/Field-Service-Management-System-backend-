@@ -58,8 +58,40 @@ const getAllServices = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+//& GET SINGLE SERVICES
+const getSingleService = catchAsync(async (req: Request, res: Response) => {
+	const user = req.user as IRequestUser;
+	const id = req.params.serviceId as string;
+
+	const result = await serviceService.getSingleService(id, user);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "service retrive successfully",
+		data: result,
+	});
+});
+
+//& REVIEW SERVICE (MANAGER)
+const reviewService = catchAsync(async (req: Request, res: Response) => {
+	const user = req.user as IRequestUser;
+	const body = req.body;
+
+	const result = await serviceService.reviewService(body, user);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "service reviewed successfully",
+		data: result,
+	});
+});
+
 export const serviceController = {
 	createService,
 	getMyServices,
 	getAllServices,
+	getSingleService,
+	reviewService,
 };

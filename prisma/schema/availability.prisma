@@ -15,5 +15,7 @@ model Availability {
   technicianId String
   technician   TechnicianProfile @relation(fields: [technicianId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
+  @@unique([technicianId, type, dayOfWeek])
+  @@unique([technicianId, type, date])
   @@map("availability")
 }

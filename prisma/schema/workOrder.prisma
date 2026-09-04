@@ -1,10 +1,9 @@
 model WorkOrder {
   id String @id @default(uuid())
 
-  scheduledStart DateTime
-  scheduledEnd   DateTime
-  actualStart    DateTime?
-  actualEnd      DateTime?
+  scheduledDate DateTime
+  actualStart   DateTime?
+  actualEnd     DateTime?
 
   status WorkOrderStatus @default(SCHEDULED)
   note   String?

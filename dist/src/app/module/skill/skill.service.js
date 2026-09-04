@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
 import httpStatus from "http-status";
+//& CREATE
 const createSkill = async (payload, user) => {
     const isUser = await prisma.user.findUnique({
         where: {
@@ -33,6 +34,7 @@ const createSkill = async (payload, user) => {
     });
     return skill;
 };
+//& GET ALL (PUBLIC)
 const getAllSkill = async (query) => {
     const sort = query.sortBy ? query.sortBy : "createdAt";
     const order = query.sortOrder ? query.sortOrder : "desc";
@@ -109,6 +111,7 @@ const getAllSkill = async (query) => {
         meta,
     };
 };
+//& GET ALL (ADMIN)
 const getSkills = async (query) => {
     const sort = query.sortBy ? query.sortBy : "createdAt";
     const order = query.sortOrder ? query.sortOrder : "desc";
@@ -184,6 +187,7 @@ const getSkills = async (query) => {
         meta,
     };
 };
+//& UDPATE SKILL
 const updateSkill = async (payload, id) => {
     const isSkill = await prisma.skill.findUnique({
         where: { id },

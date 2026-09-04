@@ -142,6 +142,12 @@ export const seedTesterManager = async () => {
 							village: "Tapadar Para",
 							PO: "Farazikandi",
 						},
+						verificationStatus: "APPROVED",
+						region: {
+							create: {
+								area: "All",
+							},
+						},
 					},
 				},
 			},
@@ -152,6 +158,18 @@ export const seedTesterManager = async () => {
 		console.log("error", error);
 		await prisma.user.delete({
 			where: { email: config.tester_manager_email },
+		});
+		await prisma.region.delete({
+			where: {
+				area: "All",
+				manager: {
+					some: {
+						user: {
+							email: config.tester_manager_email,
+						},
+					},
+				},
+			},
 		});
 	}
 };

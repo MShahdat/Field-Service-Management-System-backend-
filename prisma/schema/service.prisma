@@ -12,8 +12,8 @@ model Service {
   isDeletedAt DateTime?
 
   assignedAt      DateTime?
-  approvedAt      DateTime?
-  rejectedAt      DateTime?
+  reviewedBy      String?
+  reviewAt        DateTime?
   rejectionReason String?
 
   createdAt DateTime @default(now())

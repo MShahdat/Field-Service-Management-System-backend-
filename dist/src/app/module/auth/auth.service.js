@@ -39,7 +39,7 @@ const registerOTP = async (payload) => {
         name,
         email,
         password: hashedPassword,
-        role
+        role,
     };
     await redisClient.set(registerKey, JSON.stringify(registerValue), {
         expiration: {
@@ -103,7 +103,7 @@ const verifyEmail = async (payload) => {
         },
         include: {
             customer: true,
-            technician: true
+            technician: true,
         },
     });
     const templateData = {

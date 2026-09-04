@@ -1,9 +1,12 @@
-import { UserRole } from "../../../../generated/prisma/enums";
+import {
+	ManagerVerificationStatus,
+	UserRole,
+} from "../../../../generated/prisma/enums";
 import { ServiceWhereInput } from "../../../../generated/prisma/models";
 import { IQuery, IRequestUser } from "../../interface";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
-import { IServicePayload } from "./service.interface";
+import { IReviewPayload, IServicePayload } from "./service.interface";
 import httpStatus from "http-status";
 
 //& CREATE SERVICE REQUEST
@@ -178,16 +181,20 @@ const getALLServices = async (query: IQuery, user: IRequestUser) => {
 	};
 };
 
-//& REVIEW AND ASSIGN
-const reviewService = async (serviceId: string, user: IRequestUser) => {
-	const isManager = await prisma.managerProfile.findUnique({
+//& GET SINGLE SERVICE
+const getSingleService = async (serviceId: string, user: IRequestUser) => {
+	const isUser = await prisma.user.findUnique({
 		where: {
-			userId: user.userId,
+			id: user.userId,
+		},
+		include: {
+			customer: true,
+			manager: true,
 		},
 	});
 
-	if (!isManager) {
-		throw new AppError(httpStatus.NOT_FOUND, "manager not found");
+	if (!isUser) {
+		throw new AppError(httpStatus.NOT_FOUND, "user not found");
 	}
 
 	const isService = await prisma.service.findUnique({
@@ -202,11 +209,118 @@ const reviewService = async (serviceId: string, user: IRequestUser) => {
 	if (!isService) {
 		throw new AppError(httpStatus.NOT_FOUND, "service not found");
 	}
+
+	if (user.role === "CUSTOMER") {
+		if (isService.customerId !== isUser.customer?.id) {
+			throw new AppError(httpStatus.UNAUTHORIZED, "unauthorized access");
+		}
+	}
+
+	return isService;
+};
+
+//& APPROVE SERVICE (MANAGER)
+const reviewService = async (
+	payload: IReviewPayload,
+	reviewer: IRequestUser,
+) => {
+	const { serviceId, status, rejectionReason } = payload;
+
+	const isManager = await prisma.managerProfile.findUnique({
+		where: {
+			userId: reviewer.userId,
+		},
+	});
+
+	if (!isManager) {
+		throw new AppError(httpStatus.NOT_FOUND, "Manager not found");
+	}
+
+	if (isManager.isDeleted) {
+		throw new AppError(httpStatus.BAD_REQUEST, "Manager deleted");
+	}
+
+	if (isManager.verificationStatus !== ManagerVerificationStatus.APPROVED) {
+		throw new AppError(httpStatus.BAD_REQUEST, "manager not varified");
+	}
+
+	if (isManager.isDeleted) {
+		throw new AppError(httpStatus.FORBIDDEN, "Manager is deleted");
+	}
+
+	console.log("payload ", payload);
+
+	const isService = await prisma.service.findUnique({
+		where: {
+			id: serviceId,
+		},
+	});
+
+	if (!isService) {
+		throw new AppError(httpStatus.NOT_FOUND, "service not found");
+	}
+
+	if (isService.status !== "PENDING") {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			`you can't update varification status from  '${isService.status.toString()}'.`,
+		);
+	}
+
+	if (status === "REJECTED" && !rejectionReason) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"for rejection must need to rejection reason",
+		);
+	}
+
+	const transactionResult = await prisma.$transaction(
+		async (tx) => {
+			await tx.service.update({
+				where: {
+					id: isService.id,
+				},
+				data: {
+					status,
+					rejectionReason: status === "REJECTED" ? rejectionReason : null,
+					// reviewdBy: reviewer.userId,
+					reviewAt: new Date(),
+				},
+			});
+
+			if (status === "APPROVED") {
+				await tx.workOrder.create({
+					data: {
+						scheduledDate: isService.requestedDate,
+						customerId: isService.customerId,
+						serviceId: isService.id,
+						status: "SCHEDULED",
+					},
+				});
+			}
+
+			const service = await tx.service.findUnique({
+				where: {
+					id: isService.id,
+				},
+				include: {
+					workOrders: true,
+				},
+			});
+			return service;
+		},
+		{
+			maxWait: 10000,
+			timeout: 15000,
+		},
+	);
+	return transactionResult;
 };
 
 export const serviceService = {
 	createService,
 	getMyServices,
 	getALLServices,
+	getSingleService,
 	reviewService,
 };

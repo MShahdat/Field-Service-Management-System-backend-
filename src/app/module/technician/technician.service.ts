@@ -23,13 +23,12 @@ const completeProfile = async (
 		throw new AppError(httpStatus.FORBIDDEN, "This profile has been deleted");
 	}
 
-	// Only validate skills if they were actually submitted this call
+	// Validate skills
 	if (skills !== undefined) {
 		const existingSkills = await prisma.skill.findMany({
 			where: { id: { in: skills } },
 			select: { id: true },
 		});
-
 		if (existingSkills.length !== skills.length) {
 			const existingIds = existingSkills.map((s) => s.id);
 			const missingIds = skills.filter((id) => !existingIds.includes(id));
@@ -40,13 +39,11 @@ const completeProfile = async (
 		}
 	}
 
-	// Only validate regions if they were actually submitted this call
 	if (region !== undefined) {
 		const existingRegions = await prisma.region.findMany({
 			where: { id: { in: region }, isActive: true },
 			select: { id: true },
 		});
-
 		if (existingRegions.length !== region.length) {
 			const existingIds = existingRegions.map((r) => r.id);
 			const missingIds = region.filter((id) => !existingIds.includes(id));
@@ -59,6 +56,17 @@ const completeProfile = async (
 
 	const transactionResult = await prisma.$transaction(
 		async (tx) => {
+			// --- SKILLS: Merge with existing (Option B: merge) ---
+			let mergedSkills: string[] | undefined;
+			if (skills !== undefined) {
+				const existing = await tx.technicianProfile.findUnique({
+					where: { id: isTechnician.id },
+					select: { skills: { select: { id: true } } },
+				});
+				const existingIds = existing?.skills.map((s) => s.id) || [];
+				mergedSkills = [...new Set([...existingIds, ...skills])];
+			}
+
 			const update = await tx.technicianProfile.update({
 				where: { id: isTechnician.id },
 				data: {
@@ -66,8 +74,8 @@ const completeProfile = async (
 					...(address !== undefined && { address }),
 					...(bio !== undefined && { bio }),
 					...(nid !== undefined && { nid }),
-					...(skills !== undefined && {
-						skills: { set: skills.map((id) => ({ id })) },
+					...(mergedSkills !== undefined && {
+						skills: { set: mergedSkills.map((id) => ({ id })) },
 					}),
 					...(region !== undefined && {
 						regions: { set: region.map((id) => ({ id })) },
@@ -75,42 +83,88 @@ const completeProfile = async (
 				},
 			});
 
-			if (availability !== undefined) {
-				await tx.availability.deleteMany({
-					where: { technicianId: isTechnician.id },
-				});
+			// --- AVAILABILITY: Upsert by unique keys ---
+			if (availability !== undefined && availability.length > 0) {
+				const recurring = availability.filter((s) => s.type === "RECURRING");
+				const oneOffOrBlocked = availability.filter(
+					(s) => s.type !== "RECURRING",
+				);
 
-				await tx.availability.createMany({
-					data: availability.map((slot) => ({
-						technicianId: isTechnician.id,
-						type: slot.type,
-						dayOfWeek: slot.dayOfWeek,
-						date: slot.date ? new Date(slot.date) : null,
-						startTime: slot.startTime
-							? new Date(`1970-01-01T${slot.startTime}:00`)
-							: null,
-						endTime: slot.endTime
-							? new Date(`1970-01-01T${slot.endTime}:00`)
-							: null,
-					})),
-				});
+				// RECURRING: upsert by dayOfWeek
+				for (const slot of recurring) {
+					await tx.availability.upsert({
+						where: {
+							technicianId_type_dayOfWeek: {
+								technicianId: isTechnician.id,
+								type: "RECURRING",
+								dayOfWeek: slot.dayOfWeek!,
+							},
+						},
+						update: {
+							startTime: slot.startTime
+								? new Date(`1970-01-01T${slot.startTime}:00Z`)
+								: null,
+							endTime: slot.endTime
+								? new Date(`1970-01-01T${slot.endTime}:00Z`)
+								: null,
+							isActive: true,
+						},
+						create: {
+							technicianId: isTechnician.id,
+							type: "RECURRING",
+							dayOfWeek: slot.dayOfWeek!,
+							startTime: slot.startTime
+								? new Date(`1970-01-01T${slot.startTime}:00`)
+								: null,
+							endTime: slot.endTime
+								? new Date(`1970-01-01T${slot.endTime}:00`)
+								: null,
+						},
+					});
+				}
+
+				// ONE_OFF/BLOCKED: upsert by date
+				for (const slot of oneOffOrBlocked) {
+					await tx.availability.upsert({
+						where: {
+							technicianId_type_date: {
+								technicianId: isTechnician.id,
+								type: slot.type,
+								date: new Date(slot.date!),
+							},
+						},
+						update: {
+							startTime: slot.startTime
+								? new Date(`1970-01-01T${slot.startTime}:00Z`)
+								: null,
+							endTime: slot.endTime
+								? new Date(`1970-01-01T${slot.endTime}:00Z`)
+								: null,
+							isActive: true,
+						},
+						create: {
+							technicianId: isTechnician.id,
+							type: slot.type,
+							date: new Date(slot.date!),
+							startTime: slot.startTime
+								? new Date(`1970-01-01T${slot.startTime}:00Z`)
+								: null,
+							endTime: slot.endTime
+								? new Date(`1970-01-01T${slot.endTime}:00Z`)
+								: null,
+						},
+					});
+				}
 			}
 
 			return update;
 		},
-		{
-			maxWait: 10000,
-			timeout: 15000,
-		},
+		{ maxWait: 10000, timeout: 15000 },
 	);
 
 	const fullProfile = await prisma.technicianProfile.findUnique({
 		where: { id: transactionResult.id },
-		include: {
-			skills: true,
-			regions: true,
-			availability: true,
-		},
+		include: { skills: true, regions: true, availability: true },
 	});
 
 	const isNowComplete =
@@ -126,9 +180,20 @@ const completeProfile = async (
 		});
 	}
 
-	return fullProfile;
-};
+	// return fullProfile;
+	// Before returning fullProfile to the client:
+	const formattedAvailability = fullProfile?.availability.map((slot) => ({
+		...slot,
+		startTime: slot.startTime
+			? new Date(slot.startTime).toISOString().substring(11, 16)
+			: null,
+		endTime: slot.endTime
+			? new Date(slot.endTime).toISOString().substring(11, 16)
+			: null,
+	}));
 
+	return { ...fullProfile, availability: formattedAvailability };
+};
 export const technicianService = {
 	completeProfile,
 };

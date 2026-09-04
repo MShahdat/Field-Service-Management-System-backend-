@@ -12,6 +12,7 @@ import { managerRouter } from "./app/module/manager/manager.route";
 import { categoryRotuer } from "./app/module/category/category.route";
 import { serviceRouter } from "./app/module/service/service.route";
 import { skillRoute } from "./app/module/skill/skill.route";
+import { technicianRoutes } from "./app/module/technician/technician.route";
 const app = express();
 app.use(cors({
     origin: config.frontend_url,
@@ -34,6 +35,7 @@ app.use("/api/v1/manager", managerRouter);
 app.use("/api/v1/category", categoryRotuer);
 app.use("/api/v1/service", serviceRouter);
 app.use("/api/v1/skill", skillRoute);
+app.use('/api/v1/technician', technicianRoutes);
 app.use(globalErrorHandler);
 app.use(notFound);
 export default app;
