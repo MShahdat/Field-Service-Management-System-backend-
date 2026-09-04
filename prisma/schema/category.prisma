@@ -9,8 +9,8 @@ model Category {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  services       Service[]
-  requiredSkills Skill[]   @relation("CategorySkills")
+  services Service[]
+  skill    Skill[]
 
   @@map("categories")
 }

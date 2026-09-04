@@ -1,0 +1,31 @@
+import { Router } from "express";
+import { skillController } from "./skill.controller";
+import { auth } from "../../middleware/auth";
+import { UserRole } from "../../../../generated/prisma/enums";
+import { zodValidation } from "../../middleware/zodValidation";
+import { skillZodSchema, updateSkillZodSchema } from "./skill.validate";
+
+const route = Router();
+route.post(
+	"/",
+	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+	zodValidation(skillZodSchema),
+	skillController.createSkill,
+);
+
+route.get("/all", skillController.getSkills);
+
+route.get(
+	"/all-skill",
+	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+	skillController.getAllSkill,
+);
+
+route.put(
+	"/:skillId",
+	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+	zodValidation(updateSkillZodSchema),
+	skillController.updateSkill,
+);
+
+export const skillRoute = route;

@@ -20,4 +20,10 @@ route.get(
 	serviceController.getMyServices,
 );
 
+route.get(
+	"/all-services",
+	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+	serviceController.getAllServices,
+);
+
 export const serviceRouter = route;

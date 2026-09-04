@@ -3,6 +3,7 @@ import z from "zod";
 export const CustomerRegisterZodSchema = z.object({
 	name: z.string().min(3),
 	email: z.email(),
+	role: z.enum(["CUSTOMER", "TECHNICIAN"]),
 	password: z
 		.string()
 		.min(8)

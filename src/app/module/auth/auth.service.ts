@@ -7,6 +7,7 @@ import {
 	IRegisterCustomerPayload,
 	IResetPasswordPayload,
 	IVerifyEmailPayload,
+	RegisterRole,
 } from "./auth.interface";
 import httpStatus from "http-status";
 import config from "../../config/env";
@@ -20,9 +21,14 @@ import { jwtUtils } from "../../utils/jwt";
 import { JwtPayload, SignOptions } from "jsonwebtoken";
 import { IRequestUser } from "../../interface";
 
+const roleProfileMap: Record<RegisterRole, "customer" | "technician"> = {
+	CUSTOMER: "customer",
+	TECHNICIAN: "technician",
+};
+
 //& STORE REDIS AND OTP SEND
 const registerOTP = async (payload: IRegisterCustomerPayload) => {
-	const { name, password } = payload;
+	const { name, password, role } = payload;
 
 	const email = payload.email.trim().toLowerCase();
 
@@ -44,7 +50,7 @@ const registerOTP = async (payload: IRegisterCustomerPayload) => {
 
 	const expirationTime = 5 * 60;
 	const otp = crypto.randomInt(100000, 1000000);
-	const otpKey = `customer-register-otp: ${email}`;
+	const otpKey = `register-otp: ${email}`;
 
 	await redisClient.set(otpKey, otp, {
 		expiration: {
@@ -53,11 +59,12 @@ const registerOTP = async (payload: IRegisterCustomerPayload) => {
 		},
 	});
 
-	const registerKey = `customer-register-data: ${email}`;
+	const registerKey = `register-data: ${email}`;
 	const registerValue = {
 		name,
 		email,
 		password: hashedPassword,
+		role,
 	};
 
 	await redisClient.set(registerKey, JSON.stringify(registerValue), {
@@ -93,10 +100,10 @@ const registerOTP = async (payload: IRegisterCustomerPayload) => {
 const verifyEmail = async (payload: IVerifyEmailPayload) => {
 	const { email, otp } = payload;
 
-	const registerKey = `customer-register-data: ${email}`;
+	const registerKey = `register-data: ${email}`;
 	const redisData = await redisClient.get(registerKey);
 
-	const otpKey = `customer-register-otp: ${email}`;
+	const otpKey = `register-otp: ${email}`;
 	const redisOTP = await redisClient.get(otpKey);
 
 	if (!redisData || !redisOTP) {
@@ -113,23 +120,25 @@ const verifyEmail = async (payload: IVerifyEmailPayload) => {
 		throw new AppError(httpStatus.BAD_REQUEST, "OTP does not match!");
 	}
 
-	const isCustomer = await prisma.user.findUnique({
+	const isUser = await prisma.user.findUnique({
 		where: { email },
 	});
 
-	if (isCustomer) {
+	if (isUser) {
 		throw new AppError(httpStatus.CONFLICT, "Email alredy exist");
 	}
+
+	const profileKey = roleProfileMap[payloadData.role];
 
 	const customerCreated = await prisma.user.create({
 		data: {
 			name: payloadData.name,
 			email: payloadData.email,
 			password: payloadData.password,
-			role: UserRole.CUSTOMER,
+			role: payloadData.role,
 			emailVerified: true,
 			status: "ACTIVE",
-			customer: {
+			[profileKey]: {
 				create: {},
 			},
 		},
@@ -138,6 +147,7 @@ const verifyEmail = async (payload: IVerifyEmailPayload) => {
 		},
 		include: {
 			customer: true,
+			technician: true,
 		},
 	});
 

@@ -8,7 +8,9 @@ model Region {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  manager ManagerProfile[]
+  manager     ManagerProfile[]
+  services    Service[]
+  technicians TechnicianProfile[] @relation("TechnicianRegions")
 
-  @@map("Regions")
+  @@map("regions")
 }

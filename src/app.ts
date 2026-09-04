@@ -11,6 +11,7 @@ import { regionRouter } from "./app/module/region/region.route";
 import { managerRouter } from "./app/module/manager/manager.route";
 import { categoryRotuer } from "./app/module/category/category.route";
 import { serviceRouter } from "./app/module/service/service.route";
+import { skillRoute } from "./app/module/skill/skill.route";
 
 const app: Application = express();
 
@@ -41,6 +42,7 @@ app.use("/api/v1/region", regionRouter);
 app.use("/api/v1/manager", managerRouter);
 app.use("/api/v1/category", categoryRotuer);
 app.use("/api/v1/service", serviceRouter);
+app.use("/api/v1/skill", skillRoute);
 
 app.use(globalErrorHandler);
 app.use(notFound);

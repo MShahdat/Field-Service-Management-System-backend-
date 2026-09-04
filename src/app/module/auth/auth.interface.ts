@@ -1,7 +1,10 @@
+export type RegisterRole = "CUSTOMER" | "TECHNICIAN";
+
 export interface IRegisterCustomerPayload {
 	name: string;
 	email: string;
 	password: string;
+	role: RegisterRole;
 }
 
 export interface IVerifyEmailPayload {

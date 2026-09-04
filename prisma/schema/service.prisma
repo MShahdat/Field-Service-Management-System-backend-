@@ -11,6 +11,11 @@ model Service {
   isDeleted   Boolean   @default(false)
   isDeletedAt DateTime?
 
+  assignedAt      DateTime?
+  approvedAt      DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -19,6 +24,9 @@ model Service {
 
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
+
+  regionId String?
+  region   Region? @relation(fields: [regionId], references: [id])
 
   workOrders WorkOrder?
 

@@ -39,7 +39,27 @@ const getMyServices = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+//& GET ALL SERVICES
+const getAllServices = catchAsync(async (req: Request, res: Response) => {
+	const user = req.user as IRequestUser;
+	const query = req.query;
+
+	const { services, meta } = await serviceService.getALLServices(query, user);
+
+	if (services.length === 0) {
+		throw new AppError(httpStatus.NOT_FOUND, "service not found");
+	}
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "service retrive successfully",
+		data: services,
+		meta,
+	});
+});
+
 export const serviceController = {
 	createService,
 	getMyServices,
+	getAllServices,
 };

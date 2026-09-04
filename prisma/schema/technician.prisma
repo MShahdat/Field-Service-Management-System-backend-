@@ -1,14 +1,17 @@
 model TechnicianProfile {
   id String @id @default(uuid())
 
-  phone     String?
-  address   Json?
-  bio       String?
-  isDeleted Boolean   @default(false)
-  deletedAt DateTime?
+  phone              String?
+  address            Json?
+  bio                String?
+  nid                String?
+  isProfileCompleted Boolean   @default(false)
+  isDeleted          Boolean   @default(false)
+  deletedAt          DateTime?
 
   skills       Skill[]
   availability Availability[]
+  regions      Region[]       @relation("TechnicianRegions")
 
   status        TechStatus @default(AVAILABLE)
   rating        Float?     @default(0)
