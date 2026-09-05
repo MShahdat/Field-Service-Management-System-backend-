@@ -22,7 +22,6 @@ import { parseTimeOnDate } from "../../utils/utility";
 
 const toDateKey = (date: Date) => date.toISOString().slice(0, 10);
 
-
 const timeToDate = (time?: string) =>
 	time ? new Date(`1970-01-01T${time}:00.000Z`) : undefined;
 
@@ -41,7 +40,6 @@ const createService = async (payload: IServicePayload, user: IRequestUser) => {
 			},
 		},
 	});
-
 
 	if (!isCustomer?.customer?.id) {
 		throw new AppError(
@@ -594,16 +592,22 @@ const assignTechnician = async (
 		throw new AppError(httpStatus.NOT_FOUND, "Manager not found");
 	}
 
+	const isTechnician = await prisma.technicianProfile.findUnique({
+		where: {
+			userId: user.userId,
+		},
+	});
+
+	if (!isTechnician) {
+		throw new AppError(httpStatus.NOT_FOUND, "technicina not found");
+	}
+
 	const isWorkOrder = await prisma.workOrder.findUnique({
 		where: {
 			id: payload.workOrderId,
 		},
 		include: {
-			region: {
-				select: {
-					area: true,
-				},
-			},
+			service: true,
 		},
 	});
 
@@ -611,18 +615,54 @@ const assignTechnician = async (
 		throw new AppError(httpStatus.NOT_FOUND, "order not found");
 	}
 
-	const sameRegionTech = await prisma.technicianProfile.findMany({
-		where: {},
-		include: {
-			regions: {
-				select: {
-					area: true,
-				},
-			},
-		},
-	});
+	if (isWorkOrder.status !== "SCHEDULED") {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			`Status need to must be scheduled`,
+		);
+	}
 
-	console.log("all technician for same region ", sameRegionTech);
+	if (isWorkOrder.managerId !== isManager.id) {
+		throw new AppError(
+			httpStatus.UNAUTHORIZED,
+			"you are not eligible to assign technician",
+		);
+	}
+
+	const transactionResult = await prisma.$transaction(
+		async (tx) => {
+			await tx.service.update({
+				where: {
+					id: isWorkOrder.service.id,
+				},
+				data: {
+					status: "ASSIGNED",
+					assignedAt: new Date(),
+				},
+			});
+
+			const workOrder = await tx.workOrder.update({
+				where: {
+					id: isWorkOrder.id,
+				},
+				data: {
+					status: "EN_ROUTE",
+					technicianId: payload.technicianId,
+				},
+				include: {
+					customer: true,
+					technician: true,
+					service: true,
+				},
+			});
+			return workOrder;
+		},
+		{
+			maxWait: 10000,
+			timeout: 15000,
+		},
+	);
+	return transactionResult;
 };
 
 export const serviceService = {

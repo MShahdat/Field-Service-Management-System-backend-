@@ -42,8 +42,14 @@ route.post(
 
 route.get(
 	"/workOrder/:workOrderId",
-	// auth(UserRole.MANAGER),
+	auth(UserRole.MANAGER),
 	serviceController.getEligibleTechnician,
+);
+
+route.patch(
+	"/workOrder/technician-assign",
+	// auth(UserRole.MANAGER),
+	serviceController.assignTechnician,
 );
 
 export const serviceRouter = route;
