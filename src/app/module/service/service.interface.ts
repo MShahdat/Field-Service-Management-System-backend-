@@ -44,5 +44,4 @@ export interface IEligibleTechnician {
 export interface IAssignTechnician {
 	workOrderId: string;
 	technicianId: string;
-	amount: number;
 }

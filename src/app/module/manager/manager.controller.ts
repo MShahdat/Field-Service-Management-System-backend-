@@ -4,6 +4,7 @@ import { managerService } from "./manager.service";
 import { sendResponse } from "../../utils/sendResponse";
 import httpStatus from "http-status";
 import { IRequestUser } from "../../interface";
+import { AppError } from "../../utils/appError";
 
 //& APPLY AS A MANAGER
 const applyManger = catchAsync(async (req: Request, res: Response) => {

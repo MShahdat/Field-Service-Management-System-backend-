@@ -48,7 +48,7 @@ route.get(
 
 route.patch(
 	"/workOrder/technician-assign",
-	// auth(UserRole.MANAGER),
+	auth(UserRole.MANAGER),
 	serviceController.assignTechnician,
 );
 

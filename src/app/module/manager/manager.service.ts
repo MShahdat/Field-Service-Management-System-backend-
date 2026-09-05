@@ -15,7 +15,10 @@ import path from "path";
 import ejs from "ejs";
 import { transporter } from "../../lib/nodemailer";
 import { IQuery, IRequestUser } from "../../interface";
-import { ManagerProfileWhereInput } from "../../../../generated/prisma/models";
+import {
+	ManagerProfileWhereInput,
+	WorkOrderWhereInput,
+} from "../../../../generated/prisma/models";
 
 //& APPLY MANAGER
 const applyManager = async (payload: IManagerApplyPayload) => {

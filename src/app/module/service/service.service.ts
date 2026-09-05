@@ -19,6 +19,10 @@ import {
 } from "./service.interface";
 import httpStatus from "http-status";
 import { parseTimeOnDate } from "../../utils/utility";
+import path from "path";
+import config from "../../config/env";
+import ejs from "ejs";
+import { transporter } from "../../lib/nodemailer";
 
 const toDateKey = (date: Date) => date.toISOString().slice(0, 10);
 
@@ -594,7 +598,10 @@ const assignTechnician = async (
 
 	const isTechnician = await prisma.technicianProfile.findUnique({
 		where: {
-			userId: user.userId,
+			id: payload.technicianId,
+		},
+		include: {
+			user: true,
 		},
 	});
 
@@ -607,7 +614,18 @@ const assignTechnician = async (
 			id: payload.workOrderId,
 		},
 		include: {
-			service: true,
+			service: {
+				select: {
+					id: true,
+					category: true,
+					address: true,
+				},
+			},
+			customer: {
+				select: {
+					user: true,
+				},
+			},
 		},
 	});
 
@@ -662,6 +680,58 @@ const assignTechnician = async (
 			timeout: 15000,
 		},
 	);
+
+	const templatePathTech = path.join(
+		process.cwd(),
+		"src/app/template/technician-notification.ejs",
+	);
+
+	const templateDataTech = {
+		name: isTechnician.user.name,
+		serviceCategory: isWorkOrder.service.category.name,
+		customerName: isWorkOrder.customer.user.name,
+		address: isWorkOrder.service.address,
+		scheduledDate: isWorkOrder.servicingDate.toLocaleString(),
+		notes: isWorkOrder.note ?? null,
+		appName: config.app_name,
+	};
+
+	const htmlTech = await ejs.renderFile(templatePathTech, templateDataTech);
+
+	await transporter.sendMail({
+		from: config.smtp_sender,
+		to: isTechnician.user.email,
+		subject: `New Job Assigned: ${isWorkOrder.service.category.name} - ${isWorkOrder.id.slice(0, 8)}`,
+		html: htmlTech,
+	});
+
+	const templatePath = path.join(
+		process.cwd(),
+		"src/app/template/customer-notification.ejs",
+	);
+
+	const templateData = {
+		name: isWorkOrder.customer.user.name,
+		technicianName: isTechnician.user.name,
+		technicianRating: isTechnician.rating,
+		jobsCompleted: isTechnician.jobsCompleted,
+		technicianPhone: isTechnician.phone ?? null,
+		serviceCategory: isWorkOrder.service.category.name,
+		serviceId: isWorkOrder.service.id,
+		address: isWorkOrder.service.address,
+		scheduledDate: isWorkOrder.servicingDate.toLocaleString(),
+		appName: config.app_name,
+	};
+
+	const html = await ejs.renderFile(templatePath, templateData);
+
+	await transporter.sendMail({
+		from: config.smtp_sender,
+		to: isWorkOrder.customer.user.email,
+		subject: `Technician Assigned: ${isTechnician.user.name}`,
+		html,
+	});
+
 	return transactionResult;
 };
 

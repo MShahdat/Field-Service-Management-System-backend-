@@ -1,4 +1,5 @@
-import { IRequestUser } from "../../interface";
+import { WorkOrderWhereInput } from "../../../../generated/prisma/models";
+import { IQuery, IRequestUser } from "../../interface";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
 import { IUpdateTechnician } from "./technician.interface";
@@ -200,6 +201,7 @@ const completeProfile = async (
 
 	// return { ...fullProfile, availability: formattedAvailability };
 };
+
 export const technicianService = {
 	completeProfile,
 };

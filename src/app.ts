@@ -13,6 +13,7 @@ import { categoryRotuer } from "./app/module/category/category.route";
 import { serviceRouter } from "./app/module/service/service.route";
 import { skillRoute } from "./app/module/skill/skill.route";
 import { technicianRoutes } from "./app/module/technician/technician.route";
+import { workOrderRouter } from "./app/module/workOrder/workOrder.route";
 
 const app: Application = express();
 
@@ -45,6 +46,7 @@ app.use("/api/v1/category", categoryRotuer);
 app.use("/api/v1/service", serviceRouter);
 app.use("/api/v1/skill", skillRoute);
 app.use("/api/v1/technician", technicianRoutes);
+app.use("/api/v1/workorder", workOrderRouter);
 
 app.use(globalErrorHandler);
 app.use(notFound);
