@@ -14,6 +14,8 @@ import { serviceRouter } from "./app/module/service/service.route";
 import { skillRoute } from "./app/module/skill/skill.route";
 import { technicianRoutes } from "./app/module/technician/technician.route";
 import { workOrderRouter } from "./app/module/workOrder/workOrder.route";
+import { getBkashIdToken } from "./app/lib/bkash";
+import { sendResponse } from "./app/utils/sendResponse";
 
 const app: Application = express();
 
@@ -36,6 +38,14 @@ app.get("/", async (req: Request, res: Response) => {
 		success: true,
 		message: "Welcome to Field Service Management System",
 		author: "Md. Shahdat Hossain",
+	});
+});
+
+app.get("/bkash-test", async (req: Request, res: Response) => {
+	const result = await getBkashIdToken();
+	res.status(200).json({
+		message: true,
+		data: result,
 	});
 });
 

@@ -41,6 +41,13 @@ const config = {
 	facebook_app_key: process.env.FACEBOOK_APP_KEY!,
 	facebook_app_secret: process.env.FACEBOOK_APP_SECRET!,
 	facebook_callback_url: process.env.FACEBOOK_CALLBACK_URL!,
+
+	bkash_base_url: process.env.BKASH_BASE_URL!,
+	bkash_username: process.env.BKASH_USERNAME!,
+	bkash_password: process.env.BKASH_PASSWORD!,
+	bkash_app_key: process.env.BKASH_APP_KEY!,
+	bkash_app_secret: process.env.BKASH_APP_SECRET!,
+	bkash_callback_url: process.env.BKASH_CALLBACK_URL!,
 };
 
 export default config;
