@@ -34,4 +34,16 @@ route.get(
 
 route.post("/review", auth(UserRole.MANAGER), serviceController.reviewService);
 
+route.post(
+	"/assign-technician",
+	auth(UserRole.MANAGER),
+	serviceController.assignTechnician,
+);
+
+route.get(
+	"/workOrder/:workOrderId",
+	// auth(UserRole.MANAGER),
+	serviceController.getEligibleTechnician,
+);
+
 export const serviceRouter = route;

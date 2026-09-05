@@ -262,6 +262,8 @@ const getMe = async (user: IRequestUser) => {
 		},
 		include: {
 			customer: true,
+			technician: true,
+			manager: true,
 		},
 		omit: {
 			password: true,

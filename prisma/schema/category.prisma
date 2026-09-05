@@ -5,6 +5,7 @@ model Category {
   icon        String?
   description String?
   isActive    Boolean @default(true)
+  duration    Int
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

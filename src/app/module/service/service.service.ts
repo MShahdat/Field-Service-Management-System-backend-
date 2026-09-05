@@ -1,4 +1,10 @@
 import {
+	addMinutes,
+	areIntervalsOverlapping,
+	getDay,
+	isWithinInterval,
+} from "date-fns";
+import {
 	ManagerVerificationStatus,
 	UserRole,
 } from "../../../../generated/prisma/enums";
@@ -6,8 +12,19 @@ import { ServiceWhereInput } from "../../../../generated/prisma/models";
 import { IQuery, IRequestUser } from "../../interface";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
-import { IReviewPayload, IServicePayload } from "./service.interface";
+import {
+	IAssignTechnician,
+	IReviewPayload,
+	IServicePayload,
+} from "./service.interface";
 import httpStatus from "http-status";
+import { parseTimeOnDate } from "../../utils/utility";
+
+const toDateKey = (date: Date) => date.toISOString().slice(0, 10);
+
+
+const timeToDate = (time?: string) =>
+	time ? new Date(`1970-01-01T${time}:00.000Z`) : undefined;
 
 //& CREATE SERVICE REQUEST
 const createService = async (payload: IServicePayload, user: IRequestUser) => {
@@ -25,7 +42,8 @@ const createService = async (payload: IServicePayload, user: IRequestUser) => {
 		},
 	});
 
-	if (!isCustomer || !isCustomer.customer?.id) {
+
+	if (!isCustomer?.customer?.id) {
 		throw new AppError(
 			httpStatus.INTERNAL_SERVER_ERROR,
 			"Something went wrong",
@@ -34,7 +52,14 @@ const createService = async (payload: IServicePayload, user: IRequestUser) => {
 
 	const service = await prisma.service.create({
 		data: {
-			...payload,
+			description: payload.description,
+			servicingDate: new Date(payload.servicingDate),
+			address: payload.address,
+			categoryId: payload.categoryId,
+			priority: payload.priority,
+			regionId: payload.regionId,
+			preferredStartTime: timeToDate(payload.preferredStartTime),
+			preferredEndTime: timeToDate(payload.preferredEndTime),
 			customerId: isCustomer.customer?.id,
 		},
 		include: {
@@ -283,18 +308,20 @@ const reviewService = async (
 				data: {
 					status,
 					rejectionReason: status === "REJECTED" ? rejectionReason : null,
-					// reviewdBy: reviewer.userId,
-					reviewAt: new Date(),
+					reviewedBy: reviewer.userId,
+					reviewedAt: new Date(),
 				},
 			});
 
 			if (status === "APPROVED") {
 				await tx.workOrder.create({
 					data: {
-						scheduledDate: isService.requestedDate,
+						servicingDate: isService.servicingDate,
 						customerId: isService.customerId,
 						serviceId: isService.id,
 						status: "SCHEDULED",
+						regionId: isService.regionId,
+						managerId: isManager.id,
 					},
 				});
 			}
@@ -317,10 +344,293 @@ const reviewService = async (
 	return transactionResult;
 };
 
+//& ELIGIBLE TECHNICIAN
+const getEligibleTechnicians = async (workOrderId: string) => {
+	const isWorkOrder = await prisma.workOrder.findUnique({
+		where: {
+			id: workOrderId,
+		},
+		include: {
+			service: {
+				include: {
+					category: {
+						select: {
+							id: true,
+							duration: true,
+							name: true,
+						},
+					},
+				},
+			},
+			region: {
+				select: {
+					id: true,
+					area: true,
+				},
+			},
+		},
+	});
+
+	if (!isWorkOrder) {
+		throw new AppError(httpStatus.NOT_FOUND, "WorkOrder not found");
+	}
+
+	if (isWorkOrder.status !== "SCHEDULED") {
+		throw new AppError(httpStatus.CONFLICT, "WorkOrder not schedulable");
+	}
+
+	const { service, regionId, servicingDate } = isWorkOrder;
+
+	const serviceDate = new Date(servicingDate);
+	const dayOfWeek = getDay(serviceDate);
+
+	const categoryDuration = service.category.duration;
+	const preferredStart = service.preferredStartTime
+		? new Date(service.preferredStartTime).toISOString().substring(11, 16)
+		: "09:00";
+	const startTime = parseTimeOnDate(preferredStart, serviceDate);
+	const preferredEnd = service.preferredEndTime
+		? new Date(service.preferredEndTime).toISOString().substring(11, 16)
+		: null;
+	const endTime = preferredEnd
+		? parseTimeOnDate(preferredEnd, serviceDate)
+		: addMinutes(startTime, categoryDuration);
+
+	const candidates = await prisma.technicianProfile.findMany({
+		where: {
+			status: "AVAILABLE",
+			isDeleted: false,
+			isProfileCompleted: true,
+			regions: {
+				some: {
+					id: regionId,
+				},
+			},
+			skills: {
+				some: {
+					categoryId: service.categoryId,
+				},
+			},
+		},
+		include: {
+			skills: {
+				where: {
+					categoryId: service.categoryId,
+				},
+				select: {
+					id: true,
+					name: true,
+				},
+			},
+			regions: {
+				where: {
+					id: regionId,
+				},
+				select: {
+					id: true,
+					area: true,
+				},
+			},
+			availability: {
+				where: {
+					isActive: true,
+				},
+			},
+			workOrder: {
+				where: {
+					status: {
+						in: ["SCHEDULED", "EN_ROUTE", "STARTED"],
+					},
+					NOT: {
+						id: workOrderId,
+					},
+				},
+				include: {
+					service: {
+						select: {
+							duration: true,
+						},
+					},
+				},
+			},
+			user: {
+				select: {
+					name: true,
+					technician: {
+						select: {
+							phone: true,
+						},
+					},
+				},
+			},
+		},
+	});
+
+	if (candidates.length === 0) {
+		throw new AppError(httpStatus.NOT_FOUND, "no technicians found");
+	}
+	// console.log(candidates)
+
+	const eligible = candidates.filter((tech) => {
+		const serviceDay = serviceDate;
+
+		const isBlocked = tech.availability.some((slot) => {
+			return (
+				slot.type === "BLOCKED" &&
+				!!slot.date &&
+				toDateKey(slot.date) === toDateKey(serviceDate)
+			);
+		});
+		if (isBlocked) {
+			return false;
+		}
+
+		const hasAvailable = tech.availability.some((slot) => {
+			if (slot.type === "BLOCKED") {
+				return false;
+			}
+
+			const slotStart = slot.startTime
+				? parseTimeOnDate(
+						new Date(slot.startTime).toISOString().substring(11, 16),
+						serviceDay,
+					)
+				: null;
+
+			const slotEnd = slot.endTime
+				? parseTimeOnDate(
+						new Date(slot.endTime).toISOString().substring(11, 16),
+						serviceDay,
+					)
+				: null;
+
+			if (!slotStart || !slotEnd) {
+				return false;
+			}
+
+			let coversDate = false;
+			if (slot.type === "RECURRING") {
+				coversDate = slot.dayOfWeek === dayOfWeek;
+			} else if (slot.type === "ONE_OFF" && slot.date) {
+				coversDate = toDateKey(slot.date) === toDateKey(serviceDay);
+			}
+
+			if (!coversDate) {
+				return false;
+			}
+
+			return (
+				isWithinInterval(startTime, { start: slotStart, end: slotEnd }) &&
+				isWithinInterval(endTime, { start: slotStart, end: slotEnd })
+			);
+		});
+		if (!hasAvailable) {
+			return false;
+		}
+
+		const hasTimeConflict = tech.workOrder.some((wo) => {
+			const woStart = new Date(wo.servicingDate);
+			const woDuration = wo.service?.duration || categoryDuration;
+			const woEnd = addMinutes(woStart, woDuration);
+			return areIntervalsOverlapping(
+				{
+					start: startTime,
+					end: endTime,
+				},
+				{
+					start: woStart,
+					end: woEnd,
+				},
+			);
+		});
+		if (hasTimeConflict) {
+			return false;
+		}
+
+		return true;
+	});
+
+	eligible.sort(
+		(a, b) =>
+			(b.rating ?? 0) - (a.rating ?? 0) || a.jobsCompleted - b.jobsCompleted,
+	);
+
+	return eligible.map((tech) => ({
+		id: tech.id,
+		name: tech.user.name,
+		phone: tech.phone,
+		rating: tech.rating,
+		jobsCompleted: tech.jobsCompleted,
+		skills: tech.skills,
+		regions: tech.regions,
+		availability: tech.availability
+			.filter((slot) => slot.isActive)
+			.map((slot) => ({
+				type: slot.type,
+				dayOfWeek: slot.dayOfWeek ?? undefined,
+				date: slot.date ?? undefined,
+				startTime: slot.startTime
+					? new Date(slot.startTime).toISOString().substring(11, 16)
+					: "00:00",
+				endTime: slot.endTime
+					? new Date(slot.endTime).toISOString().substring(11, 16)
+					: "23:59",
+			})),
+	}));
+};
+
+//& ASSIGN TECHNICIAN
+const assignTechnician = async (
+	payload: IAssignTechnician,
+	user: IRequestUser,
+) => {
+	const isManager = await prisma.managerProfile.findUnique({
+		where: {
+			userId: user.userId,
+		},
+	});
+
+	if (!isManager) {
+		throw new AppError(httpStatus.NOT_FOUND, "Manager not found");
+	}
+
+	const isWorkOrder = await prisma.workOrder.findUnique({
+		where: {
+			id: payload.workOrderId,
+		},
+		include: {
+			region: {
+				select: {
+					area: true,
+				},
+			},
+		},
+	});
+
+	if (!isWorkOrder) {
+		throw new AppError(httpStatus.NOT_FOUND, "order not found");
+	}
+
+	const sameRegionTech = await prisma.technicianProfile.findMany({
+		where: {},
+		include: {
+			regions: {
+				select: {
+					area: true,
+				},
+			},
+		},
+	});
+
+	console.log("all technician for same region ", sameRegionTech);
+};
+
 export const serviceService = {
 	createService,
 	getMyServices,
 	getALLServices,
 	getSingleService,
 	reviewService,
+	getEligibleTechnicians,
+	assignTechnician,
 };

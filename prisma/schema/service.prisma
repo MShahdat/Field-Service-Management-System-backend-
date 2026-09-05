@@ -4,16 +4,19 @@ model Service {
   description String?
   priority    Priority      @default(MEDIUM)
   status      ServiceStatus @default(PENDING)
+  address     Json
 
-  address       Json
-  requestedDate DateTime @db.Date
+  servicingDate      DateTime  @db.Date
+  preferredStartTime DateTime? @db.Time()
+  preferredEndTime   DateTime? @db.Time()
+  duration           Int?
 
   isDeleted   Boolean   @default(false)
   isDeletedAt DateTime?
 
   assignedAt      DateTime?
   reviewedBy      String?
-  reviewAt        DateTime?
+  reviewedAt      DateTime?
   rejectionReason String?
 
   createdAt DateTime @default(now())
@@ -25,8 +28,8 @@ model Service {
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
 
-  regionId String?
-  region   Region? @relation(fields: [regionId], references: [id])
+  regionId String
+  region   Region @relation(fields: [regionId], references: [id])
 
   workOrders WorkOrder?
 

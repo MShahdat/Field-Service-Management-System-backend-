@@ -88,10 +88,48 @@ const reviewService = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+//& ELIGIBLE TECHNICIAN (MANAGER)
+const getEligibleTechnician = catchAsync(
+	async (req: Request, res: Response) => {
+		const user = req.user as IRequestUser;
+		const id = req.params.workOrderId as string;
+
+		const result = await serviceService.getEligibleTechnicians(id);
+
+		if (result.length === 0) {
+			throw new AppError(httpStatus.NOT_FOUND, "technician not found");
+		}
+
+		sendResponse(res, {
+			statusCode: httpStatus.OK,
+			success: true,
+			message: "technician assign successfully",
+			data: result,
+		});
+	},
+);
+
+//& ASSIGN TECHNICIAN (MANAGER)
+const assignTechnician = catchAsync(async (req: Request, res: Response) => {
+	const user = req.user as IRequestUser;
+	const body = req.body;
+
+	const result = await serviceService.assignTechnician(body, user);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "technician assign successfully",
+		data: result,
+	});
+});
+
 export const serviceController = {
 	createService,
 	getMyServices,
 	getAllServices,
 	getSingleService,
 	reviewService,
+	getEligibleTechnician,
+	assignTechnician,
 };

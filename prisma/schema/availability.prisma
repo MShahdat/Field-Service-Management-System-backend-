@@ -2,7 +2,7 @@ model Availability {
   id String @id @default(uuid())
 
   type      AvailabilityType
-  dayOfWeek Int?
+  dayOfWeek Int? // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
   date      DateTime?        @db.Date
 
   startTime DateTime? @db.Time()

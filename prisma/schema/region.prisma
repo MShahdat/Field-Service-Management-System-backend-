@@ -11,6 +11,7 @@ model Region {
   manager     ManagerProfile[]
   services    Service[]
   technicians TechnicianProfile[] @relation("TechnicianRegions")
+  workOrders  WorkOrder[]
 
   @@map("regions")
 }

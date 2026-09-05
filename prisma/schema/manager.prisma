@@ -16,9 +16,11 @@ model ManagerProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  region Region[]
-  userId String   @unique
-  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  region    Region[]
+  workOrder WorkOrder[]
 
   @@map("managerProfiles")
 }

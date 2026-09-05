@@ -157,13 +157,19 @@ const completeProfile = async (
 				}
 			}
 
-			return update;
+			const tech = await tx.technicianProfile.findUnique({
+				where: {
+					id: isTechnician.id,
+				},
+			});
+
+			return tech;
 		},
 		{ maxWait: 10000, timeout: 15000 },
 	);
 
 	const fullProfile = await prisma.technicianProfile.findUnique({
-		where: { id: transactionResult.id },
+		where: { id: transactionResult?.id },
 		include: { skills: true, regions: true, availability: true },
 	});
 
@@ -180,19 +186,19 @@ const completeProfile = async (
 		});
 	}
 
-	// return fullProfile;
+	return fullProfile;
 	// Before returning fullProfile to the client:
-	const formattedAvailability = fullProfile?.availability.map((slot) => ({
-		...slot,
-		startTime: slot.startTime
-			? new Date(slot.startTime).toISOString().substring(11, 16)
-			: null,
-		endTime: slot.endTime
-			? new Date(slot.endTime).toISOString().substring(11, 16)
-			: null,
-	}));
+	// const formattedAvailability = fullProfile?.availability.map((slot) => ({
+	// 	...slot,
+	// 	startTime: slot.startTime
+	// 		? new Date(slot.startTime).toISOString().substring(11, 16)
+	// 		: null,
+	// 	endTime: slot.endTime
+	// 		? new Date(slot.endTime).toISOString().substring(11, 16)
+	// 		: null,
+	// }));
 
-	return { ...fullProfile, availability: formattedAvailability };
+	// return { ...fullProfile, availability: formattedAvailability };
 };
 export const technicianService = {
 	completeProfile,
