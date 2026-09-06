@@ -1,11 +1,14 @@
 import { PaymentStatus } from "../../../../generated/prisma/enums";
+import { PaymentWhereInput } from "../../../../generated/prisma/models";
 import config from "../../config/env";
-import { IRequestUser } from "../../interface";
+import { IQuery, IRequestUser } from "../../interface";
 import { getBkashIdToken } from "../../lib/bkash";
+import { transporter } from "../../lib/nodemailer";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
 import { IPaymentPayload } from "./payment.interface";
 import httpStatus from "http-status";
+import PDFDocument from "pdfkit";
 
 //& CREATE PAYMENT
 const createPayment = async (payload: IPaymentPayload, user: IRequestUser) => {
@@ -152,7 +155,7 @@ const bkashCallback = async (query: Record<string, any>) => {
 							status === "failure"
 								? PaymentStatus.FAILED
 								: PaymentStatus.CANCELLED,
-						gatewayResponse: { statusCode: status },
+						getwayResponse: { statusCode: status },
 					},
 				});
 				return {
@@ -176,14 +179,36 @@ const bkashCallback = async (query: Record<string, any>) => {
 				const result = await executePayment.json();
 				console.log("execute payment", result);
 
-				// const workOrder = await tx.workOrder.findUnique({
-				//   where: {
-				//     id: result.merchantInvoiceNumber
-				//   }
-				// })
-				// if(!workOrder){
-				//   throw new AppError(httpStatus.NOT_FOUND, 'work order not found')
-				// }
+				const workOrder = await tx.workOrder.findUnique({
+					where: {
+						id: result.merchantInvoiceNumber,
+					},
+					include: {
+						service: {
+							select: {
+								customer: {
+									select: {
+										user: true,
+									},
+								},
+							},
+						},
+						technician: {
+							include: {
+								user: true,
+							},
+						},
+						manager: {
+							include: {
+								user: true,
+							},
+						},
+						payment: true,
+					},
+				});
+				if (!workOrder) {
+					throw new AppError(httpStatus.NOT_FOUND, "work order not found");
+				}
 
 				await tx.payment.update({
 					where: {
@@ -192,11 +217,77 @@ const bkashCallback = async (query: Record<string, any>) => {
 					data: {
 						paymentId: result.paymentID,
 						status: "PAID",
-						paidAt: result.paymentExecuteTime.toIOSString(),
+						paidAt: new Date(),
 						getwayResponse: result,
 						transectionId: result.trxID,
 					},
 				});
+
+				const doc = new PDFDocument({ margin: 50 });
+
+				const pdfChunks: Buffer[] = [];
+
+				doc.on("data", (chunk: Buffer) => {
+					pdfChunks.push(chunk);
+				});
+
+				const pdfReadyPromise = new Promise<Buffer>((resolve) => {
+					doc.on("end", () => {
+						resolve(Buffer.concat(pdfChunks));
+					});
+				});
+
+				doc
+					.fontSize(20)
+					.text("Field Service Management System", { align: "center" });
+				doc.fontSize(14).text("Payment Invoice", { align: "center" });
+				doc.moveDown(2);
+
+				doc
+					.fontSize(12)
+					.text(`Customer Name: ${workOrder.service.customer.user.name}`);
+				doc.text(`Customer Email: ${workOrder.service.customer.user.email}`);
+				doc.moveDown();
+
+				doc.text(`Servicing date ${workOrder.servicingDate.toString()}`);
+
+				doc.text(`Technician Name: ${workOrder.technician?.user.name}`);
+				doc.text(`Technician Rating: ${workOrder.technician?.rating}`);
+				doc.text(
+					`Technician Completed Jobs: ${workOrder.technician?.jobsCompleted}`,
+				);
+				doc.text(`Technician Phone: ${workOrder.technician?.phone}`);
+				doc.moveDown();
+
+				doc.text(`Manager Name: ${workOrder.manager?.user.name}`);
+				doc.text(`Manager Phone: ${workOrder.manager.phone}`);
+
+				doc.moveDown();
+
+				doc.text(`Amount Paid: ${result.amount}`);
+				doc.text(`Payment Method : bKash`);
+				doc.text(`TransectionId : ${result.trxID}`);
+				doc.text(`Paid At : ${result.paymentExecuteTime}`);
+				doc.moveDown();
+
+				doc.end();
+
+				const pdfBuffer = await pdfReadyPromise;
+
+				await transporter.sendMail({
+					from: config.smtp_sender,
+					to: workOrder.service.customer.user.email,
+					subject:
+						"Your Service Payment Invoice - Field Service Management System",
+					text: "your payment is completed",
+					attachments: [
+						{
+							filename: "invoice.pdf",
+							content: pdfBuffer,
+						},
+					],
+				});
+
 				return {
 					result,
 					redirectUrl: `${config.frontend_url}/dashboard/my-workorder?status=success`,
@@ -213,7 +304,420 @@ const bkashCallback = async (query: Record<string, any>) => {
 	return transactionResult;
 };
 
+//& GET MY PAYMENT (CUSTOMER)
+const getMyPayment = async (query: IQuery, user: IRequestUser) => {
+	const sort = query.sortBy ? query.sortBy : "createdAt";
+	const order = query.sortOrder ? query.sortOrder : "desc";
+	const page = Number(query.page || 1);
+	const limit = Number(query.limit || 9);
+
+	const isCustomer = await prisma.customerProfile.findUnique({
+		where: {
+			userId: user.userId,
+		},
+	});
+
+	if (!isCustomer) {
+		throw new AppError(httpStatus.NOT_FOUND, "patient not found");
+	}
+
+	const andCondition: PaymentWhereInput[] = [
+		{
+			workOrder: {
+				customer: {
+					userId: user.userId,
+				},
+			},
+		},
+	];
+
+	//* searching
+	if (query.search) {
+		andCondition.push({
+			OR: [
+				{
+					workOrder: {
+						technician: {
+							user: {
+								name: {
+									contains: query.search,
+									mode: "insensitive",
+								},
+							},
+						},
+					},
+				},
+				{
+					workOrder: {
+						manager: {
+							user: {
+								name: {
+									contains: query.search,
+									mode: "insensitive",
+								},
+							},
+						},
+					},
+				},
+			],
+		});
+	}
+
+	//* filtering
+	if (query.status) {
+		andCondition.push({
+			status: query.status,
+		});
+	}
+
+	const payment = await prisma.payment.findMany({
+		where: {
+			AND: andCondition,
+		},
+		take: limit,
+		skip: (page - 1) * limit,
+
+		orderBy: {
+			[sort]: order,
+		},
+		omit: {
+			getwayResponse: true,
+		},
+	});
+
+	const total = await prisma.payment.count({
+		where: {
+			AND: andCondition,
+		},
+	});
+
+	const meta = {
+		total,
+		page,
+		limit,
+		totalPages: Math.ceil(total / limit),
+	};
+
+	return {
+		payment,
+		meta,
+	};
+};
+
+//& GET MY PAYMENT (TECHNICIAN)
+const getTechnicianPayment = async (query: IQuery, user: IRequestUser) => {
+	const sort = query.sortBy ? query.sortBy : "createdAt";
+	const order = query.sortOrder ? query.sortOrder : "desc";
+	const page = Number(query.page || 1);
+	const limit = Number(query.limit || 9);
+
+	const isTech = await prisma.technicianProfile.findUnique({
+		where: {
+			userId: user.userId,
+		},
+	});
+
+	if (!isTech) {
+		throw new AppError(httpStatus.NOT_FOUND, "technician not found");
+	}
+
+	const andCondition: PaymentWhereInput[] = [
+		{
+			workOrder: {
+				technician: {
+					userId: user.userId,
+				},
+			},
+		},
+	];
+
+	//* searching
+	if (query.search) {
+		andCondition.push({
+			OR: [
+				{
+					workOrder: {
+						customer: {
+							user: {
+								name: {
+									contains: query.search,
+									mode: "insensitive",
+								},
+							},
+						},
+					},
+				},
+				{
+					workOrder: {
+						manager: {
+							user: {
+								name: {
+									contains: query.search,
+									mode: "insensitive",
+								},
+							},
+						},
+					},
+				},
+			],
+		});
+	}
+
+	//* filtering
+	if (query.status) {
+		andCondition.push({
+			status: query.status,
+		});
+	}
+
+	const payment = await prisma.payment.findMany({
+		where: {
+			AND: andCondition,
+		},
+		take: limit,
+		skip: (page - 1) * limit,
+
+		orderBy: {
+			[sort]: order,
+		},
+		omit: {
+			getwayResponse: true,
+		},
+	});
+
+	const total = await prisma.payment.count({
+		where: {
+			AND: andCondition,
+		},
+	});
+
+	const meta = {
+		total,
+		page,
+		limit,
+		totalPages: Math.ceil(total / limit),
+	};
+
+	return {
+		payment,
+		meta,
+	};
+};
+
+//& GET MY PAYMENT (MANAGER)
+const getManagerPayment = async (query: IQuery, user: IRequestUser) => {
+	const sort = query.sortBy ? query.sortBy : "createdAt";
+	const order = query.sortOrder ? query.sortOrder : "desc";
+	const page = Number(query.page || 1);
+	const limit = Number(query.limit || 9);
+
+	const isManager = await prisma.managerProfile.findUnique({
+		where: {
+			userId: user.userId,
+		},
+	});
+
+	if (!isManager) {
+		throw new AppError(httpStatus.NOT_FOUND, "Manager not found");
+	}
+
+	const andCondition: PaymentWhereInput[] = [
+		{
+			workOrder: {
+				manager: {
+					userId: user.userId,
+				},
+			},
+		},
+	];
+
+	//* searching
+	if (query.search) {
+		andCondition.push({
+			OR: [
+				{
+					workOrder: {
+						customer: {
+							user: {
+								name: {
+									contains: query.search,
+									mode: "insensitive",
+								},
+							},
+						},
+					},
+				},
+				{
+					workOrder: {
+						technician: {
+							user: {
+								name: {
+									contains: query.search,
+									mode: "insensitive",
+								},
+							},
+						},
+					},
+				},
+			],
+		});
+	}
+
+	//* filtering
+	if (query.status) {
+		andCondition.push({
+			status: query.status,
+		});
+	}
+
+	const payment = await prisma.payment.findMany({
+		where: {
+			AND: andCondition,
+		},
+		take: limit,
+		skip: (page - 1) * limit,
+
+		orderBy: {
+			[sort]: order,
+		},
+		omit: {
+			getwayResponse: true,
+		},
+	});
+
+	const total = await prisma.payment.count({
+		where: {
+			AND: andCondition,
+		},
+	});
+
+	const meta = {
+		total,
+		page,
+		limit,
+		totalPages: Math.ceil(total / limit),
+	};
+
+	return {
+		payment,
+		meta,
+	};
+};
+
+//& GET ALL PAYMENT (ADMIN)
+const getAllPayments = async (query: IQuery) => {
+	const sort = query.sortBy ? query.sortBy : "createdAt";
+	const order = query.sortOrder ? query.sortOrder : "desc";
+	const page = Number(query.page || 1);
+	const limit = Number(query.limit || 9);
+
+	const andCondition: PaymentWhereInput[] = [];
+
+	//* searching
+	if (query.search) {
+		andCondition.push({
+			OR: [
+				{
+					workOrder: {
+						technician: {
+							user: {
+								name: {
+									contains: query.search,
+									mode: "insensitive",
+								},
+							},
+						},
+					},
+				},
+				{
+					workOrder: {
+						manager: {
+							user: {
+								name: {
+									contains: query.search,
+									mode: "insensitive",
+								},
+							},
+						},
+					},
+				},
+				{
+					workOrder: {
+						customer: {
+							user: {
+								name: {
+									contains: query.search,
+									mode: "insensitive",
+								},
+							},
+						},
+					},
+				},
+			],
+		});
+	}
+
+	//* filtering
+	if (query.status) {
+		andCondition.push({
+			status: query.status,
+		});
+	}
+
+	if (query.workOrderId) {
+		andCondition.push({
+			workOrderId: query.workOrderId,
+		});
+	}
+
+	const payment = await prisma.payment.findMany({
+		where: {
+			AND: andCondition,
+		},
+		take: limit,
+		skip: (page - 1) * limit,
+
+		orderBy: {
+			[sort]: order,
+		},
+		omit: {
+			getwayResponse: true,
+		},
+		include: {
+			workOrder: {
+				include: {
+					customer: true,
+					technician: true,
+					manager: true,
+				},
+			},
+		},
+	});
+
+	const total = await prisma.payment.count({
+		where: {
+			AND: andCondition,
+		},
+	});
+
+	const meta = {
+		total,
+		page,
+		limit,
+		totalPages: Math.ceil(total / limit),
+	};
+
+	return {
+		payment,
+		meta,
+	};
+};
+
 export const paymentService = {
 	createPayment,
 	bkashCallback,
+	getMyPayment,
+	getTechnicianPayment,
+	getAllPayments,
+	getManagerPayment,
 };
