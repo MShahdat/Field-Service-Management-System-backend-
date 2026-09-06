@@ -1,8 +1,7 @@
 model Attachment {
   id String @id @default(uuid())
 
-  url         String
-  publicId    String
+  files       Json
   description String?
 
   type AttachmentType

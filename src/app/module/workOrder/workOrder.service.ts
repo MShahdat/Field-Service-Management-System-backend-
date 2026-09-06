@@ -215,7 +215,7 @@ const udpateStatus = async (
 	if (isExist.status === "SCHEDULED") {
 		throw new AppError(
 			httpStatus.BAD_REQUEST,
-			`You can't update from status from ${isExist.status.toLocaleLowerCase()}`,
+			`You can't update status from ${isExist.status.toLocaleLowerCase()}`,
 		);
 	}
 

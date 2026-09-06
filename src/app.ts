@@ -17,6 +17,7 @@ import { workOrderRouter } from "./app/module/workOrder/workOrder.route";
 import { getBkashIdToken } from "./app/lib/bkash";
 import { sendResponse } from "./app/utils/sendResponse";
 import { paymentRouter } from "./app/module/payment/payment.route";
+import { attachmentRouter } from "./app/module/attachment/attachment.route";
 
 const app: Application = express();
 
@@ -59,6 +60,7 @@ app.use("/api/v1/skill", skillRoute);
 app.use("/api/v1/technician", technicianRoutes);
 app.use("/api/v1/workorder", workOrderRouter);
 app.use("/api/v1/payment", paymentRouter);
+app.use("/api/v1/attachment", attachmentRouter);
 
 app.use(globalErrorHandler);
 app.use(notFound);

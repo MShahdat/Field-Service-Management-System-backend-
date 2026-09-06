@@ -1,9 +1,9 @@
 model ServiceReport {
   id String @id @default(uuid())
 
-  summary    String
-  partsUsed  Json?
-  laborHours Float?
+  reportUrl      String
+  reportPublicId String
+  description    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
