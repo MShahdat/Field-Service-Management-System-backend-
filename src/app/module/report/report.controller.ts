@@ -8,11 +8,7 @@ import { AppError } from "../../utils/appError";
 
 //& SERVICE REPORT ATTACHMENT
 const attachReport = catchAsync(async (req: Request, res: Response) => {
-	const files = req.files as
-		| { [fieldname: string]: Express.Multer.File[] }
-		| undefined;
-
-	const report = files?.["report"]?.[0];
+	const report = req.file;
 
 	if (!report) {
 		throw new AppError(httpStatus.BAD_REQUEST, "report must be added");
@@ -83,15 +79,7 @@ const getAllReport = catchAsync(async (req: Request, res: Response) => {
 
 //& UPDATE SERVICE REPORT
 const updateReport = catchAsync(async (req: Request, res: Response) => {
-	const files = req.files as
-		| { [fieldname: string]: Express.Multer.File[] }
-		| undefined;
-
-	const report = files?.["report"]?.[0];
-
-	if (!report) {
-		throw new AppError(httpStatus.BAD_REQUEST, "report must be added");
-	}
+	const report = req.file;
 
 	let data = null;
 	if (req.body.data) {
@@ -101,7 +89,7 @@ const updateReport = catchAsync(async (req: Request, res: Response) => {
 	const user = req.user as IRequestUser;
 	const id = req.params.reportId as string;
 
-	const result = await reportService.updateReport(data, report, id, user);
+	const result = await reportService.updateReport(data, report!, id, user);
 
 	sendResponse(res, {
 		statusCode: httpStatus.CREATED,

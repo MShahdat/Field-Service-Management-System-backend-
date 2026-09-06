@@ -20,6 +20,7 @@ import { paymentRouter } from "./app/module/payment/payment.route";
 import { attachmentRouter } from "./app/module/attachment/attachment.route";
 import { reportRouter } from "./app/module/report/report.route";
 import { feedbackRouter } from "./app/module/feedback/feedback.route";
+import { userRouter } from "./app/module/user/user.route";
 
 const app: Application = express();
 
@@ -65,6 +66,7 @@ app.use("/api/v1/payment", paymentRouter);
 app.use("/api/v1/attachment", attachmentRouter);
 app.use("/api/v1/service-report", reportRouter);
 app.use("/api/v1/feedback", feedbackRouter);
+app.use("/api/v1/user", userRouter);
 
 app.use(globalErrorHandler);
 app.use(notFound);

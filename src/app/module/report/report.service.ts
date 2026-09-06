@@ -343,30 +343,32 @@ const updateReport = async (
 		}
 	}
 
-	const reportRes = await new Promise<UploadApiResponse>((resolve, reject) => {
-		Cloudinary.cloudinary.uploader
-			.upload_stream(
-				{
-					folder: "Field-Service-Management/Service/Report",
-					resource_type: "auto",
-				},
-				async (error, result) => {
-					if (error) {
-						return reject(error);
-					}
-					if (!result) {
-						return reject(
-							new AppError(
-								httpStatus.BAD_GATEWAY,
-								"No result returned from cloudinary",
-							),
-						);
-					}
-					return resolve(result);
-				},
-			)
-			.end(report?.buffer);
-	});
+	const reportRes = report
+		? await new Promise<UploadApiResponse>((resolve, reject) => {
+				Cloudinary.cloudinary.uploader
+					.upload_stream(
+						{
+							folder: "Field-Service-Management/Service/Report",
+							resource_type: "auto",
+						},
+						async (error, result) => {
+							if (error) {
+								return reject(error);
+							}
+							if (!result) {
+								return reject(
+									new AppError(
+										httpStatus.BAD_GATEWAY,
+										"No result returned from cloudinary",
+									),
+								);
+							}
+							return resolve(result);
+						},
+					)
+					.end(report?.buffer);
+			})
+		: null;
 
 	const udpatedReport = await prisma.serviceReport.update({
 		where: {
@@ -374,8 +376,8 @@ const updateReport = async (
 		},
 		data: {
 			...payload,
-			reportUrl: reportRes.secure_url,
-			reportPublicId: reportRes.public_id,
+			reportUrl: reportRes ? reportRes.secure_url : isReport.reportUrl,
+			reportPublicId: reportRes ? reportRes.public_id : isReport.reportPublicId,
 		},
 		include: {
 			workOrder: true,

@@ -7,7 +7,7 @@ import { Cloudinary } from "../../lib/cloudinary";
 const route = Router();
 
 route.post(
-	"/create",
+	"/",
 	Cloudinary.upload.fields([
 		{
 			name: "attachment",

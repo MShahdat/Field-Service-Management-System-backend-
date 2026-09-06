@@ -5,11 +5,7 @@ import { feedbackController } from "./feedbck.controller";
 
 const route = Router();
 
-route.post(
-	"/create",
-	auth(UserRole.CUSTOMER),
-	feedbackController.createFeedback,
-);
+route.post("/", auth(UserRole.CUSTOMER), feedbackController.createFeedback);
 
 route.get(
 	"/:feedbackId",
@@ -17,7 +13,7 @@ route.get(
 	feedbackController.getById,
 );
 
-route.get("/all-feedback", feedbackController.getAllFeedbacks);
+route.get("/", feedbackController.getAllFeedbacks);
 
 route.put(
 	"/update/:feedbackId",

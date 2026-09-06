@@ -275,6 +275,29 @@ const facebookLogin = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+//& LOGOUT
+const logout = catchAsync(async (req: Request, res: Response) => {
+	const user = req.user as IRequestUser;
+
+	res.clearCookie("accessToken", {
+		path: "/",
+		secure: true,
+		sameSite: "strict",
+	});
+	res.clearCookie("refreshToken", {
+		path: "/",
+		secure: true,
+		sameSite: "strict",
+	});
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "logout successfully successful",
+		data: null,
+	});
+});
+
 export const authController = {
 	registerOTP,
 	verifyEmail,
@@ -285,4 +308,5 @@ export const authController = {
 	resetPassword,
 	googleLogin,
 	facebookLogin,
+	logout,
 };

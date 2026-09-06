@@ -16,7 +16,7 @@ import { redisClient } from "../../lib/redis";
 import path from "path";
 import ejs from "ejs";
 import { transporter } from "../../lib/nodemailer";
-import { UserRole, UserStatus } from "../../../../generated/prisma/enums";
+import { UserStatus } from "../../../../generated/prisma/enums";
 import { jwtUtils } from "../../utils/jwt";
 import { JwtPayload, SignOptions } from "jsonwebtoken";
 import { IRequestUser } from "../../interface";
@@ -256,15 +256,22 @@ const loginUser = async (payload: ILoginUserPayload) => {
 
 //& GET ME
 const getMe = async (user: IRequestUser) => {
+	const dynamicInclude: Record<string, boolean> = {};
+
+	const userRoleLower = user.role?.toLowerCase();
+
+	if (
+		userRoleLower &&
+		["customer", "technician", "manager"].includes(userRoleLower)
+	) {
+		dynamicInclude[userRoleLower] = true;
+	}
+
 	const isUserExists = await prisma.user.findUnique({
 		where: {
 			id: user.userId,
 		},
-		include: {
-			customer: true,
-			technician: true,
-			manager: true,
-		},
+		include: dynamicInclude,
 		omit: {
 			password: true,
 		},
@@ -446,6 +453,9 @@ const resetPassword = async (payload: IResetPasswordPayload) => {
 
 	await redisClient.del(key);
 };
+
+//& LOGOUT
+const logout = (user: IRequestUser) => {};
 
 export const AuthService = {
 	registerOTP,

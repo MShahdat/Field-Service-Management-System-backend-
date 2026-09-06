@@ -77,4 +77,15 @@ route.get(
 	authController.facebookLogin,
 );
 
+route.get(
+	"/logout",
+	auth(
+		UserRole.ADMIN,
+		UserRole.CUSTOMER,
+		UserRole.MANAGER,
+		UserRole.SUPER_ADMIN,
+		UserRole.TECHNICIAN,
+	),
+	authController.logout,
+);
 export const authRouter = route;

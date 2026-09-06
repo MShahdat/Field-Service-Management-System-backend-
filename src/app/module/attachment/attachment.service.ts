@@ -52,7 +52,7 @@ const createAttachment = async (
 	) {
 		throw new AppError(
 			httpStatus.BAD_REQUEST,
-			"you can not attached any files",
+			`you can not attached files from ${isWrokOrder.status} status`,
 		);
 	}
 
@@ -585,19 +585,28 @@ const udpateAttach = async (
 
 	if (user.role === "CUSTOMER") {
 		if (attachment.workOrder.customerId !== isUser.customer?.id) {
-			throw new AppError(httpStatus.UNAUTHORIZED, "you can not attach files");
+			throw new AppError(
+				httpStatus.UNAUTHORIZED,
+				"you can not attach files unauthorized",
+			);
 		}
 	}
 
 	if (user.role === "MANAGER") {
 		if (attachment.workOrder.managerId !== isUser.manager?.id) {
-			throw new AppError(httpStatus.UNAUTHORIZED, "you can not attach files");
+			throw new AppError(
+				httpStatus.UNAUTHORIZED,
+				"you can not attach files unauthorized",
+			);
 		}
 	}
 
 	if (user.role === "TECHNICIAN") {
 		if (attachment.workOrder.technicianId !== isUser.technician?.id) {
-			throw new AppError(httpStatus.UNAUTHORIZED, "you can not attach files");
+			throw new AppError(
+				httpStatus.UNAUTHORIZED,
+				"you can not attach files unauthorized",
+			);
 		}
 	}
 
@@ -613,7 +622,7 @@ const udpateAttach = async (
 	return updated;
 };
 
-//& UPDATE ATTACHMENT
+//& DELETE ATTACHMENT
 const deleteAttach = async (id: string, user: IRequestUser) => {
 	const isUser = await prisma.user.findUnique({
 		where: {
@@ -644,6 +653,10 @@ const deleteAttach = async (id: string, user: IRequestUser) => {
 
 	if (!attachment) {
 		throw new AppError(httpStatus.NOT_FOUND, "Attachment not found");
+	}
+
+	if (attachment.isDelete) {
+		throw new AppError(httpStatus.BAD_REQUEST, "attachment already deleted");
 	}
 
 	if (user.role === "CUSTOMER") {

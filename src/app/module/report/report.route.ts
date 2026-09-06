@@ -7,7 +7,7 @@ import { Cloudinary } from "../../lib/cloudinary";
 const route = Router();
 
 route.post(
-	"/attach",
+	"/",
 	Cloudinary.upload.single("report"),
 	auth(UserRole.TECHNICIAN),
 	reportController.attachReport,
@@ -35,7 +35,7 @@ route.patch(
 route.patch(
 	"/delete/:reportId",
 	auth(UserRole.TECHNICIAN, UserRole.SUPER_ADMIN, UserRole.ADMIN),
-	reportController.updateReport,
+	reportController.deleteReport,
 );
 
 export const reportRouter = route;
