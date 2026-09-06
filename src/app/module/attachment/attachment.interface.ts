@@ -5,3 +5,8 @@ export interface IAttachmentPayload {
 	description?: string;
 	type: AttachmentType;
 }
+
+export interface IUpdateAttachmentPayload {
+	description?: string;
+	type?: AttachmentType;
+}

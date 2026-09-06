@@ -18,4 +18,52 @@ route.post(
 	attachmentController.createAttach,
 );
 
+route.get(
+	"/my-attachments",
+	auth(UserRole.CUSTOMER),
+	attachmentController.getMyAttach,
+);
+
+route.get(
+	"/technician-attachments",
+	auth(UserRole.TECHNICIAN),
+	attachmentController.getAttachTech,
+);
+
+route.get(
+	"/manager-attachments",
+	auth(UserRole.MANAGER),
+	attachmentController.getAttachManager,
+);
+
+route.get(
+	"/all-attachments",
+	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+	attachmentController.getAllTech,
+);
+
+route.patch(
+	"/update/:attachmentId",
+	auth(
+		UserRole.ADMIN,
+		UserRole.SUPER_ADMIN,
+		UserRole.CUSTOMER,
+		UserRole.MANAGER,
+		UserRole.TECHNICIAN,
+	),
+	attachmentController.updateAttach,
+);
+
+route.patch(
+	"/delete/:attachmentId",
+	auth(
+		UserRole.ADMIN,
+		UserRole.SUPER_ADMIN,
+		UserRole.CUSTOMER,
+		UserRole.MANAGER,
+		UserRole.TECHNICIAN,
+	),
+	attachmentController.deletedAttach,
+);
+
 export const attachmentRouter = route;
