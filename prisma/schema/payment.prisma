@@ -1,7 +1,7 @@
 model Payment {
   id String @id @default(uuid())
 
-  paymentId             String?
+  paymentId             String        @unique
   amount                Decimal       @db.Decimal(10, 2)
   method                String        @default("bKash")
   transectionId         String?       @unique

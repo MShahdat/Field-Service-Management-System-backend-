@@ -23,6 +23,7 @@ import path from "path";
 import config from "../../config/env";
 import ejs from "ejs";
 import { transporter } from "../../lib/nodemailer";
+import { getBkashIdToken } from "../../lib/bkash";
 
 const toDateKey = (date: Date) => date.toISOString().slice(0, 10);
 
@@ -668,11 +669,64 @@ const assignTechnician = async (
 					technicianId: payload.technicianId,
 				},
 				include: {
+					service: {
+						select: {
+							region: true,
+						},
+					},
 					customer: true,
 					technician: true,
-					service: true,
 				},
 			});
+
+			//* create bkash payment url
+
+			const id_token = await getBkashIdToken();
+
+			if (!id_token) {
+				throw new AppError(httpStatus.BAD_GATEWAY, "bkash id token faild");
+			}
+
+			const createPayment = await fetch(
+				`${config.bkash_base_url}/tokenized/checkout/create`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Accept: "application/json",
+						authorization: id_token,
+						"x-app-key": config.bkash_app_key,
+					},
+					body: JSON.stringify({
+						agreementID: "TokenizedMerchant01L3IKB6H1565072174986",
+						mode: "0011",
+						payerReference: isWorkOrder.customer.user.email,
+						callbackURL: `${config.bkash_callback_url}/payment/service/callback`,
+						merchantAssociationInfo: "MI05MID54RF09123456One",
+						amount: payload.amount,
+						currency: "BDT",
+						intent: "sale",
+						merchantInvoiceNumber: isWorkOrder.id,
+					}),
+				},
+			);
+
+			const result = await createPayment.json();
+			console.log("result ", result.bkashURL);
+
+			await tx.payment.create({
+				data: {
+					amount: result.amount,
+					merchantInvoiceNumber: result.merchantInvoiceNumber,
+					status: "UNPAID",
+					currency: result.currency,
+					getwayResponse: result,
+					workOrderId: isWorkOrder.id,
+					paymentId: result.paymentID,
+					payerReference: isWorkOrder.customer.user.email,
+				},
+			});
+
 			return workOrder;
 		},
 		{
