@@ -4,6 +4,7 @@ import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
 import httpStatus from "http-status";
 import { IRequestUser } from "../../interface";
+import { IUpdateCustomer } from "./user.interface";
 
 //& PROFILE IMAGE UPLOAD
 const profileImageUpload = async (
@@ -70,6 +71,24 @@ const profileImageUpload = async (
 	return updateImage;
 };
 
+//& PROFILE UPDATE
+const updateCustomer = async (payload: IUpdateCustomer, user: IRequestUser) => {
+	const res = await prisma.customerProfile.update({
+		where: {
+			userId: user.userId,
+		},
+		data: {
+			...payload,
+		},
+		include: {
+			user: true,
+		},
+	});
+
+	return res;
+};
+
 export const userService = {
 	profileImageUpload,
+	updateCustomer,
 };

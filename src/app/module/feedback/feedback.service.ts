@@ -62,15 +62,51 @@ const createFeedback = async (
 		throw new Error("You have already reviewed this service work");
 	}
 
-	const createFeedback = await prisma.feedback.create({
-		data: {
-			...payload,
+	const transactionRes = await prisma.$transaction(
+		async (tx) => {
+			const createFeedback = await tx.feedback.create({
+				data: {
+					...payload,
+				},
+				include: {
+					workOrder: {
+						include: {
+							technician: true,
+						},
+					},
+				},
+			});
+
+			const result = await tx.feedback.aggregate({
+				_avg: {
+					rating: true,
+				},
+				where: {
+					workOrder: {
+						technicianId: createFeedback.workOrder.technician?.id,
+					},
+				},
+			});
+
+			const avgRating = result._avg.rating ?? 0;
+
+			await tx.technicianProfile.update({
+				where: {
+					id: createFeedback.workOrder.technician?.id,
+				},
+				data: {
+					rating: avgRating,
+				},
+			});
+			return createFeedback;
 		},
-		include: {
-			workOrder: true,
+		{
+			maxWait: 10000,
+			timeout: 15000,
 		},
-	});
-	return createFeedback;
+	);
+
+	return transactionRes;
 };
 
 //& GET FEEDBACK BY ID

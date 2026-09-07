@@ -466,15 +466,15 @@ const getEligibleTechnicians = async (workOrderId: string) => {
 		? parseTimeOnDate(preferredEnd, serviceDate)
 		: addMinutes(startTime, categoryDuration);
 
-		console.log({
-			serviceDate,
-			dayOfWeek,
-			categoryDuration,
-			preferredStart,
-			startTime,
-			preferredEnd,
-			endTime
-		})
+	console.log({
+		serviceDate,
+		dayOfWeek,
+		categoryDuration,
+		preferredStart,
+		startTime,
+		preferredEnd,
+		endTime,
+	});
 
 	const candidates = await prisma.technicianProfile.findMany({
 		where: {

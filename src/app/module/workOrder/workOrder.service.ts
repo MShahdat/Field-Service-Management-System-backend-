@@ -206,10 +206,17 @@ const udpateStatus = async (
 			id: payload.workOrderId,
 			technicianId: isTech.id,
 		},
+		include: {
+			service: true,
+		},
 	});
 
 	if (!isExist) {
 		throw new AppError(httpStatus.NOT_FOUND, "order not found");
+	}
+
+	if (isExist.status === "COMPLETED") {
+		throw new AppError(httpStatus.NOT_FOUND, "service work already completed");
 	}
 
 	if (isExist.status === "SCHEDULED") {
@@ -243,12 +250,23 @@ const udpateStatus = async (
 			});
 
 			if (payload.status === "COMPLETED") {
+				await tx.service.update({
+					where: {
+						id: isExist.service.id,
+					},
+					data: {
+						status: "COMPLETED",
+					},
+				});
 				await tx.technicianProfile.update({
 					where: {
 						id: isTech.id,
 					},
 					data: {
 						status: "AVAILABLE",
+						jobsCompleted: {
+							increment: 1,
+						},
 					},
 				});
 			}

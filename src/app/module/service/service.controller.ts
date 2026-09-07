@@ -103,7 +103,7 @@ const getEligibleTechnicians = catchAsync(
 		sendResponse(res, {
 			statusCode: httpStatus.OK,
 			success: true,
-			message: "technician assign successfully",
+			message: "eligible technician find successfully",
 			data: result,
 		});
 	},

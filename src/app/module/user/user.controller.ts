@@ -26,6 +26,22 @@ const profileImageUpload = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+//& UPDATE CUSTOMER PROFILE
+const udpateCustomer = catchAsync(async (req: Request, res: Response) => {
+	const body = req.body;
+	const user = req.user as IRequestUser;
+
+	const result = await userService.updateCustomer(body, user);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: `customer profile updated successfully`,
+		data: result,
+	});
+});
+
 export const userController = {
 	profileImageUpload,
+	udpateCustomer,
 };
