@@ -31,13 +31,19 @@ const createReport = async (
 			id: payload.workOrderId,
 			technicianId: isTech.id,
 		},
+		include: {
+			service: true,
+		},
 	});
 
 	if (!isWrokOrder) {
 		throw new AppError(httpStatus.NOT_FOUND, "work order not found");
 	}
 
-	if (isWrokOrder.status !== "COMPLETED") {
+	if (
+		isWrokOrder.status !== "COMPLETED" ||
+		isWrokOrder.service.status !== "COMPLETED"
+	) {
 		throw new AppError(
 			httpStatus.BAD_REQUEST,
 			`you can't attach summary report before completed work`,

@@ -2,10 +2,6 @@ model WorkOrder {
   id String @id @default(uuid())
 
   servicingDate DateTime
-  startedTime   DateTime?
-  endTime       DateTime?
-  actualStart   DateTime?
-  actualEnd     DateTime?
 
   status WorkOrderStatus @default(SCHEDULED)
   note   String?
@@ -32,6 +28,7 @@ model WorkOrder {
   serviceReport ServiceReport?
   feedback      Feedback?
   payment       Payment?
+  schedule      Schedule?
 
   @@map("workOrders")
 }

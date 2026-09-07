@@ -60,6 +60,13 @@ enum WorkOrderStatus {
   CANCELLED
 }
 
+enum ScheduleStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
 enum AttachmentType {
   BEFORE_PHOTO
   AFTER_PHOTO

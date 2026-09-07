@@ -1,7 +1,14 @@
-export const parseTimeOnDate = (timeStr: string, baseDate: Date): Date => {
+export const parseTimeOnDate = (
+	timeValue: string | Date,
+	baseDate: Date,
+): Date => {
+	const timeStr =
+		typeof timeValue === "string"
+			? timeValue
+			: timeValue.toISOString().substring(11, 16);
 	const [hours, minutes] = timeStr.split(":").map(Number);
 	const parsedDate = new Date(baseDate);
-	parsedDate.setUTCHours(hours, minutes, 0, 0);
+	parsedDate.setHours(hours, minutes, 0, 0);
 	return parsedDate;
 };
 

@@ -35,13 +35,19 @@ const createFeedback = async (
 		where: {
 			id: payload.workOrderId,
 		},
+		include: {
+			service: true,
+		},
 	});
 
 	if (!workOrder) {
 		throw new AppError(httpStatus.NOT_FOUND, "work order not found");
 	}
 
-	if (workOrder.status !== "COMPLETED") {
+	if (
+		workOrder.status !== "COMPLETED" ||
+		workOrder.service.status !== "COMPLETED"
+	) {
 		throw new AppError(
 			httpStatus.BAD_REQUEST,
 			"without complete you can not crate review",

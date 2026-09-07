@@ -24,6 +24,7 @@ model TechnicianProfile {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   workOrder WorkOrder[]
+  schedule  Schedule[]
 
   @@map("technicians")
 }

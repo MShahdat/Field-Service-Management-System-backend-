@@ -242,12 +242,28 @@ const udpateStatus = async (
 				},
 				data: {
 					status: payload.status,
-					actualStart:
-						payload.status === "STARTED" ? new Date() : isExist.actualStart,
-					actualEnd:
-						payload.status === "COMPLETED" ? new Date() : isExist.actualEnd,
 				},
 			});
+
+			if (payload.status === "STARTED") {
+				await tx.service.update({
+					where: {
+						id: isExist.serviceId,
+					},
+					data: {
+						status: "IN_PROGRESS",
+					},
+				});
+
+				await tx.schedule.update({
+					where: {
+						workOrderId: workOrder.id,
+					},
+					data: {
+						actualStart: new Date(),
+					},
+				});
+			}
 
 			if (payload.status === "COMPLETED") {
 				await tx.service.update({
@@ -258,6 +274,16 @@ const udpateStatus = async (
 						status: "COMPLETED",
 					},
 				});
+
+				await tx.schedule.update({
+					where: {
+						workOrderId: isExist.id,
+					},
+					data: {
+						actualEnd: new Date(),
+					},
+				});
+
 				await tx.technicianProfile.update({
 					where: {
 						id: isTech.id,
@@ -267,6 +293,15 @@ const udpateStatus = async (
 						jobsCompleted: {
 							increment: 1,
 						},
+					},
+				});
+
+				await tx.workOrder.update({
+					where: {
+						id: isExist.id,
+					},
+					data: {
+						status: "COMPLETED",
 					},
 				});
 			}
