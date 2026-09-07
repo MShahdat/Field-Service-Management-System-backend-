@@ -2,6 +2,7 @@ import {
 	addMinutes,
 	areIntervalsOverlapping,
 	getDay,
+	isBefore,
 	isWithinInterval,
 } from "date-fns";
 import {
@@ -18,17 +19,42 @@ import {
 	IServicePayload,
 } from "./service.interface";
 import httpStatus from "http-status";
-import { parseTimeOnDate } from "../../utils/utility";
+import {
+	formatDateToYYYYMMDD,
+	formatTimeToHHmm,
+	parseTimeOnDate,
+} from "../../utils/utility";
 import path from "path";
 import config from "../../config/env";
 import ejs from "ejs";
 import { transporter } from "../../lib/nodemailer";
 import { getBkashIdToken } from "../../lib/bkash";
 
-const toDateKey = (date: Date) => date.toISOString().slice(0, 10);
+const toDateKey = (date: Date) => {
+	const d = new Date(date);
+	const year = d.getFullYear();
+	const month = String(d.getMonth() + 1).padStart(2, "0");
+	const day = String(d.getDate()).padStart(2, "0");
+	return `${year}-${month}-${day}`;
+};
 
 const timeToDate = (time?: string) =>
 	time ? new Date(`1970-01-01T${time}:00.000Z`) : undefined;
+
+const formatServiceDates = <
+	T extends {
+		servicingDate: Date;
+		preferredStartTime: Date | null;
+		preferredEndTime: Date | null;
+	},
+>(
+	service: T,
+) => ({
+	...service,
+	servicingDate: formatDateToYYYYMMDD(service.servicingDate),
+	preferredStartTime: formatTimeToHHmm(service.preferredStartTime),
+	preferredEndTime: formatTimeToHHmm(service.preferredEndTime),
+});
 
 //& CREATE SERVICE REQUEST
 const createService = async (payload: IServicePayload, user: IRequestUser) => {
@@ -47,17 +73,38 @@ const createService = async (payload: IServicePayload, user: IRequestUser) => {
 	});
 
 	if (!isCustomer?.customer?.id) {
+		throw new AppError(httpStatus.NOT_FOUND, "customer not found");
+	}
+
+	const category = await prisma.category.findUnique({
+		where: {
+			id: payload.categoryId,
+		},
+	});
+
+	if (!category) {
+		throw new AppError(httpStatus.NOT_FOUND, "this category not found");
+	}
+
+	const now = new Date();
+	console.log({
+		now,
+		serviceing: payload.servicingDate,
+	});
+
+	if (isBefore(payload.servicingDate, now)) {
 		throw new AppError(
-			httpStatus.INTERNAL_SERVER_ERROR,
-			"Something went wrong",
+			httpStatus.BAD_REQUEST,
+			"serviceing date can not be before current date",
 		);
 	}
 
 	const service = await prisma.service.create({
 		data: {
 			description: payload.description,
-			servicingDate: new Date(payload.servicingDate),
+			servicingDate: payload.servicingDate,
 			address: payload.address,
+			duration: category.duration,
 			categoryId: payload.categoryId,
 			priority: payload.priority,
 			regionId: payload.regionId,
@@ -70,7 +117,7 @@ const createService = async (payload: IServicePayload, user: IRequestUser) => {
 		},
 	});
 
-	return service;
+	return formatServiceDates(service);
 };
 
 //& GET MY SERVICES
@@ -138,7 +185,7 @@ const getMyServices = async (query: IQuery, user: IRequestUser) => {
 	};
 
 	return {
-		services,
+		services: services.map(formatServiceDates),
 		meta,
 	};
 };
@@ -204,7 +251,7 @@ const getALLServices = async (query: IQuery, user: IRequestUser) => {
 	};
 
 	return {
-		services,
+		services: services.map(formatServiceDates),
 		meta,
 	};
 };
@@ -244,7 +291,7 @@ const getSingleService = async (serviceId: string, user: IRequestUser) => {
 		}
 	}
 
-	return isService;
+	return formatServiceDates(isService);
 };
 
 //& APPROVE SERVICE (MANAGER)
@@ -257,6 +304,14 @@ const reviewService = async (
 	const isManager = await prisma.managerProfile.findUnique({
 		where: {
 			userId: reviewer.userId,
+		},
+		include: {
+			region: {
+				select: {
+					id: true,
+					area: true,
+				},
+			},
 		},
 	});
 
@@ -272,10 +327,6 @@ const reviewService = async (
 		throw new AppError(httpStatus.BAD_REQUEST, "manager not varified");
 	}
 
-	if (isManager.isDeleted) {
-		throw new AppError(httpStatus.FORBIDDEN, "Manager is deleted");
-	}
-
 	console.log("payload ", payload);
 
 	const isService = await prisma.service.findUnique({
@@ -286,6 +337,20 @@ const reviewService = async (
 
 	if (!isService) {
 		throw new AppError(httpStatus.NOT_FOUND, "service not found");
+	}
+
+	const canReviewAnyService = isManager.region.some(
+		(region) => region.area === "All",
+	);
+	const canReviewService =
+		canReviewAnyService ||
+		isManager.region.some((region) => region.id === isService.regionId);
+
+	if (!canReviewService) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"You can only review services in your assigned regions",
+		);
 	}
 
 	if (isService.status !== "PENDING") {
@@ -344,7 +409,9 @@ const reviewService = async (
 			timeout: 15000,
 		},
 	);
-	return transactionResult;
+	return transactionResult
+		? formatServiceDates(transactionResult)
+		: transactionResult;
 };
 
 //& ELIGIBLE TECHNICIAN
@@ -399,6 +466,16 @@ const getEligibleTechnicians = async (workOrderId: string) => {
 		? parseTimeOnDate(preferredEnd, serviceDate)
 		: addMinutes(startTime, categoryDuration);
 
+		console.log({
+			serviceDate,
+			dayOfWeek,
+			categoryDuration,
+			preferredStart,
+			startTime,
+			preferredEnd,
+			endTime
+		})
+
 	const candidates = await prisma.technicianProfile.findMany({
 		where: {
 			status: "AVAILABLE",
@@ -452,6 +529,7 @@ const getEligibleTechnicians = async (workOrderId: string) => {
 					service: {
 						select: {
 							duration: true,
+							preferredStartTime: true,
 						},
 					},
 				},
@@ -532,18 +610,20 @@ const getEligibleTechnicians = async (workOrderId: string) => {
 		}
 
 		const hasTimeConflict = tech.workOrder.some((wo) => {
-			const woStart = new Date(wo.servicingDate);
+			const woServiceStart = wo.service?.preferredStartTime
+				? parseTimeOnDate(
+						new Date(wo.service.preferredStartTime)
+							.toISOString()
+							.substring(11, 16),
+						new Date(wo.servicingDate),
+					)
+				: new Date(wo.servicingDate); // fallback: midnight UTC
+
 			const woDuration = wo.service?.duration || categoryDuration;
-			const woEnd = addMinutes(woStart, woDuration);
+			const woEnd = addMinutes(woServiceStart, woDuration);
 			return areIntervalsOverlapping(
-				{
-					start: startTime,
-					end: endTime,
-				},
-				{
-					start: woStart,
-					end: woEnd,
-				},
+				{ start: startTime, end: endTime },
+				{ start: woServiceStart, end: woEnd },
 			);
 		});
 		if (hasTimeConflict) {
@@ -608,6 +688,10 @@ const assignTechnician = async (
 
 	if (!isTechnician) {
 		throw new AppError(httpStatus.NOT_FOUND, "technicina not found");
+	}
+
+	if (isTechnician.status !== "AVAILABLE") {
+		throw new AppError(httpStatus.CONFLICT, "technician no longer available");
 	}
 
 	const isWorkOrder = await prisma.workOrder.findUnique({
@@ -676,6 +760,15 @@ const assignTechnician = async (
 					},
 					customer: true,
 					technician: true,
+				},
+			});
+
+			await tx.technicianProfile.update({
+				where: {
+					id: payload.technicianId,
+				},
+				data: {
+					status: "BUSY",
 				},
 			});
 

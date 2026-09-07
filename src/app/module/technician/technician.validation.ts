@@ -26,7 +26,7 @@ const availabilitySchema = z
 			if (data.type === "RECURRING") return data.dayOfWeek !== undefined;
 			return true;
 		},
-		{ message: "dayOfWeek is required when type is RECURRING" },
+		{ message: "dayOfWeek is required for RECURRING availability" },
 	)
 	.refine(
 		(data) => {
@@ -62,5 +62,36 @@ export const completeProfileZodSchema = z.object({
 	nid: z.string().optional(),
 	skills: z.array(z.string().uuid()).optional(),
 	region: z.array(z.string().uuid()).optional(),
-	availability: z.array(availabilitySchema).optional(),
+	availability: z
+		.array(availabilitySchema)
+		.superRefine((slots, ctx) => {
+			const recurring = slots.filter((slot) => slot.type === "RECURRING");
+
+			for (let i = 0; i < recurring.length; i++) {
+				for (let j = i + 1; j < recurring.length; j++) {
+					const first = recurring[i];
+					const second = recurring[j];
+
+					if (first.dayOfWeek !== second.dayOfWeek) continue;
+
+					const firstStart = parse(first.startTime!, "HH:mm", new Date());
+					const firstEnd = parse(first.endTime!, "HH:mm", new Date());
+					const secondStart = parse(second.startTime!, "HH:mm", new Date());
+					const secondEnd = parse(second.endTime!, "HH:mm", new Date());
+
+					if (
+						isBefore(firstStart, secondEnd) &&
+						isBefore(secondStart, firstEnd)
+					) {
+						ctx.addIssue({
+							code: "custom",
+							message:
+								"RECURRING availability slots must not overlap on the same day",
+							path: [i],
+						});
+					}
+				}
+			}
+		})
+		.optional(),
 });

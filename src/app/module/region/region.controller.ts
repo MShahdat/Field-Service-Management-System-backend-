@@ -40,6 +40,25 @@ const getAllRegion = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+//& GET ALL REGION (PUBLIC)
+const getRegions = catchAsync(async (req: Request, res: Response) => {
+	const query = req.query;
+
+	const { area, meta } = await regionService.getRegions(query);
+
+	if (area.length === 0) {
+		throw new AppError(httpStatus.NOT_FOUND, "region not found");
+	}
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "region retrive successfully",
+		data: area,
+		meta,
+	});
+});
+
 //& UPDATE REGION (ADMIN)
 const updateRegion = catchAsync(async (req: Request, res: Response) => {
 	const id = req.params.regionId;
@@ -59,5 +78,6 @@ const updateRegion = catchAsync(async (req: Request, res: Response) => {
 export const regionController = {
 	createRegion,
 	getAllRegion,
+	getRegions,
 	updateRegion,
 };

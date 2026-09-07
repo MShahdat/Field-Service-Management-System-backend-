@@ -215,41 +215,53 @@ const udpateStatus = async (
 	if (isExist.status === "SCHEDULED") {
 		throw new AppError(
 			httpStatus.BAD_REQUEST,
-			`You can't update status from ${isExist.status.toLocaleLowerCase()}`,
+			`You can't update status from ${isExist.status.toLocaleLowerCase()} to ${payload.status}`,
 		);
 	}
 
-	if (isExist.status === "CANCELLED" || isExist.status === "COMPLETED") {
+	if (isExist.status === "CANCELLED") {
 		throw new AppError(
 			httpStatus.BAD_REQUEST,
-			`work order already ${isExist.status}. You can't update`,
+			`work order already cancelled. You can't update`,
 		);
 	}
 
-	if (isExist.status === "STARTED") {
-		if (payload.status === "EN_ROUTE") {
-			throw new AppError(
-				httpStatus.BAD_REQUEST,
-				`you can't updated from ${isExist.status.toLowerCase} to ${payload.status.toLocaleLowerCase}`,
-			);
-		}
-	}
+	const transactionResult = await prisma.$transaction(
+		async (tx) => {
+			const workOrder = await tx.workOrder.update({
+				where: {
+					id: isExist.id,
+					technicianId: isTech.id,
+				},
+				data: {
+					status: payload.status,
+					actualStart:
+						payload.status === "STARTED" ? new Date() : isExist.actualStart,
+					actualEnd:
+						payload.status === "COMPLETED" ? new Date() : isExist.actualEnd,
+				},
+			});
 
-	const workOrder = await prisma.workOrder.update({
-		where: {
-			id: isExist.id,
-			technicianId: isTech.id,
-		},
-		data: {
-			status: payload.status,
-			actualStart:
-				payload.status === "STARTED" ? new Date() : isExist.actualStart,
-			actualEnd:
-				payload.status === "COMPLETED" ? new Date() : isExist.actualEnd,
-		},
-	});
+			if (payload.status === "COMPLETED") {
+				await tx.technicianProfile.update({
+					where: {
+						id: isTech.id,
+					},
+					data: {
+						status: "AVAILABLE",
+					},
+				});
+			}
 
-	return workOrder;
+			return workOrder;
+		},
+		{
+			maxWait: 10000,
+			timeout: 15000,
+		},
+	);
+
+	return transactionResult;
 };
 
 export const workOrderService = {

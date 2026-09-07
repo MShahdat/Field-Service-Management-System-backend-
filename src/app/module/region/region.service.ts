@@ -70,6 +70,68 @@ const getAllRegion = async (query: IQuery, user: IRequestUser) => {
 		});
 	}
 
+	if (query.isActive) {
+		andCondition.push({
+			isActive: query.isActive,
+		});
+	}
+
+	const area = await prisma.region.findMany({
+		where: {
+			AND: andCondition,
+		},
+		take: limit,
+		skip: (page - 1) * limit,
+		orderBy: {
+			[sort]: order,
+		},
+	});
+
+	const total = await prisma.region.count({
+		where: {
+			AND: andCondition,
+		},
+	});
+
+	const meta = {
+		total,
+		page,
+		limit,
+		totalPages: Math.ceil(total / limit),
+	};
+
+	return {
+		area,
+		meta,
+	};
+};
+
+//& GET REGION (PUBLIC)
+const getRegions = async (query: IQuery) => {
+	const sort = query.sortBy ? query.sortBy : "createdAt";
+	const order = query.sortOrder ? query.sortOrder : "desc";
+	const page = Number(query.page || 1);
+	const limit = Number(query.limit || 9);
+
+	const andCondition: RegionWhereInput[] = [
+		{
+			isActive: true,
+		},
+	];
+
+	if (query.search) {
+		andCondition.push({
+			OR: [
+				{
+					area: {
+						contains: query.search,
+						mode: "insensitive",
+					},
+				},
+			],
+		});
+	}
+
 	const area = await prisma.region.findMany({
 		where: {
 			AND: andCondition,
@@ -141,5 +203,6 @@ const updateRegion = async (
 export const regionService = {
 	createRegion,
 	getAllRegion,
+	getRegions,
 	updateRegion,
 };

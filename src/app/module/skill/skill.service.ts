@@ -46,7 +46,7 @@ const createSkill = async (payload: ISkillPayload, user: IRequestUser) => {
 	return skill;
 };
 
-//& GET ALL (PUBLIC)
+//& GET ALL (ADMIN)
 const getAllSkill = async (query: IQuery) => {
 	const sort = query.sortBy ? query.sortBy : "createdAt";
 	const order = query.sortOrder ? query.sortOrder : "desc";
@@ -70,6 +70,14 @@ const getAllSkill = async (query: IQuery) => {
 						mode: "insensitive",
 					},
 				},
+				{
+					category: {
+						name: {
+							contains: query.search,
+							mode: "insensitive",
+						},
+					},
+				},
 			],
 		});
 	}
@@ -91,6 +99,14 @@ const getAllSkill = async (query: IQuery) => {
 	if (query.categoryId) {
 		andConditions.push({
 			categoryId: query.categoryId,
+		});
+	}
+
+	if (query.category) {
+		andConditions.push({
+			category: {
+				name: query.category,
+			},
 		});
 	}
 
@@ -133,7 +149,7 @@ const getAllSkill = async (query: IQuery) => {
 	};
 };
 
-//& GET ALL (ADMIN)
+//& GET ALL (PUBLIC)
 const getSkills = async (query: IQuery) => {
 	const sort = query.sortBy ? query.sortBy : "createdAt";
 	const order = query.sortOrder ? query.sortOrder : "desc";
@@ -163,6 +179,14 @@ const getSkills = async (query: IQuery) => {
 						mode: "insensitive",
 					},
 				},
+				{
+					category: {
+						name: {
+							contains: query.search,
+							mode: "insensitive",
+						},
+					},
+				},
 			],
 		});
 	}
@@ -176,6 +200,14 @@ const getSkills = async (query: IQuery) => {
 	if (query.categoryId) {
 		andConditions.push({
 			categoryId: query.categoryId,
+		});
+	}
+
+	if (query.category) {
+		andConditions.push({
+			category: {
+				name: query.category,
+			},
 		});
 	}
 

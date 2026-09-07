@@ -27,7 +27,7 @@ const verifyEmail = catchAsync(async (req: Request, res: Response) => {
 	const payload = req.body;
 	const result = await AuthService.verifyEmail(payload);
 
-	const { user, customer, accessToken, refreshToken } = result;
+	const { accessToken, refreshToken, userCreated } = result;
 
 	res.cookie("accessToken", accessToken, {
 		httpOnly: true,
@@ -45,12 +45,11 @@ const verifyEmail = catchAsync(async (req: Request, res: Response) => {
 	sendResponse(res, {
 		statusCode: httpStatus.CREATED,
 		success: true,
-		message: "Customer created successfully",
+		message: "User created successfully",
 		data: {
 			accessToken,
 			refreshToken,
-			user,
-			customer,
+			userCreated,
 		},
 	});
 });

@@ -212,6 +212,10 @@ const approveManager = async (
 		throw new AppError(httpStatus.FORBIDDEN, "Manager is deleted");
 	}
 
+	if (isManager.manager?.verificationStatus === "APPROVED") {
+		throw new AppError(httpStatus.CONFLICT, "manager already approved");
+	}
+
 	if (isManager.manager?.verificationStatus !== "PENDING") {
 		throw new AppError(
 			httpStatus.CONFLICT,

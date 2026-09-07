@@ -89,7 +89,7 @@ const reviewService = catchAsync(async (req: Request, res: Response) => {
 });
 
 //& ELIGIBLE TECHNICIAN (MANAGER)
-const getEligibleTechnician = catchAsync(
+const getEligibleTechnicians = catchAsync(
 	async (req: Request, res: Response) => {
 		const user = req.user as IRequestUser;
 		const id = req.params.workOrderId as string;
@@ -130,6 +130,6 @@ export const serviceController = {
 	getAllServices,
 	getSingleService,
 	reviewService,
-	getEligibleTechnician,
+	getEligibleTechnicians,
 	assignTechnician,
 };

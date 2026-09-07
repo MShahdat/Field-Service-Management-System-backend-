@@ -17,6 +17,8 @@ route.get(
 	regionController.getAllRegion,
 );
 
+route.get("/", regionController.getRegions);
+
 route.put(
 	"/:regionId",
 	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),

@@ -20,7 +20,7 @@ const createSkill = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
-//& GET ALL SKILL
+//& GET ALL SKILL (ADMIN)
 const getAllSkill = catchAsync(async (req: Request, res: Response) => {
 	const query = req.query;
 
@@ -39,7 +39,7 @@ const getAllSkill = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
-//& GET ALL SKILL
+//& GET ALL SKILL (PUBLIC)
 const getSkills = catchAsync(async (req: Request, res: Response) => {
 	const query = req.query;
 

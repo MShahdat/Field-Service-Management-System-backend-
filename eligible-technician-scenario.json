@@ -1,0 +1,269 @@
+{
+  "category": {
+    "id": "cat-001",
+    "name": "Electrical Repair",
+    "icon": "⚡",
+    "description": "Electrical repair and installation services",
+    "isActive": true,
+    "duration": 120
+  },
+  "skills": [
+    {
+      "id": "skill-001",
+      "name": "Circuit Breaker Repair",
+      "icon": "🔧",
+      "description": "Repair and replacement of circuit breakers",
+      "isActive": true,
+      "categoryId": "cat-001"
+    },
+    {
+      "id": "skill-002",
+      "name": "Wiring Installation",
+      "icon": "🔌",
+      "description": "New wiring and rewiring services",
+      "isActive": true,
+      "categoryId": "cat-001"
+    },
+    {
+      "id": "skill-003",
+      "name": "Outlet & Switch Repair",
+      "icon": "🔘",
+      "description": "Repair and replacement of outlets and switches",
+      "isActive": true,
+      "categoryId": "cat-001"
+    }
+  ],
+  "region": {
+    "id": "region-001",
+    "area": "Dhaka North",
+    "description": "Northern districts of Dhaka city",
+    "isActive": true
+  },
+  "manager": {
+    "id": "mgr-001",
+    "userId": "user-mgr-001",
+    "phone": "+8801712345678",
+    "address": {
+      "street": "123 Manager Road",
+      "city": "Dhaka",
+      "postalCode": "1200"
+    },
+    "nid": "NID-MGR-001",
+    "verificationStatus": "APPROVED",
+    "rejectionReason": null,
+    "reviewedBy": "user-super-admin",
+    "reviewedAt": "2026-08-15T10:00:00.000Z",
+    "isDeleted": false,
+    "createdAt": "2026-08-10T08:00:00.000Z",
+    "updatedAt": "2026-08-15T10:00:00.000Z",
+    "user": {
+      "id": "user-mgr-001",
+      "name": "Ahmed Hassan",
+      "email": "manager@servicepro.com",
+      "profileImg": null,
+      "googleId": null,
+      "facebookId": null,
+      "authProvider": "CREDENTIAL",
+      "emailVerified": true,
+      "role": "MANAGER",
+      "status": "ACTIVE",
+      "needPasswordChange": false,
+      "isDeleted": false,
+      "createdAt": "2026-08-10T08:00:00.000Z",
+      "updatedAt": "2026-08-15T10:00:00.000Z"
+    },
+    "regions": ["region-001"]
+  },
+  "customer": {
+    "id": "cust-001",
+    "userId": "user-cust-001",
+    "phone": "+8801812345678",
+    "address": {
+      "street": "45 Customer Lane",
+      "city": "Dhaka",
+      "area": "Gulshan",
+      "postalCode": "1212",
+      "coordinates": { "lat": 23.7806, "lng": 90.4152 }
+    },
+    "isDeleted": false,
+    "createdAt": "2026-08-01T09:00:00.000Z",
+    "updatedAt": "2026-08-01T09:00:00.000Z",
+    "user": {
+      "id": "user-cust-001",
+      "name": "Fatima Rahman",
+      "email": "customer@servicepro.com",
+      "profileImg": null,
+      "googleId": null,
+      "facebookId": null,
+      "authProvider": "CREDENTIAL",
+      "emailVerified": true,
+      "role": "CUSTOMER",
+      "status": "ACTIVE",
+      "needPasswordChange": false,
+      "isDeleted": false,
+      "createdAt": "2026-08-01T09:00:00.000Z",
+      "updatedAt": "2026-08-01T09:00:00.000Z"
+    }
+  },
+  "technician": {
+    "id": "tech-001",
+    "userId": "user-tech-001",
+    "phone": "+8801912345678",
+    "address": {
+      "street": "78 Technician Street",
+      "city": "Dhaka",
+      "area": "Banani",
+      "postalCode": "1213"
+    },
+    "bio": "Certified electrician with 8+ years experience in residential and commercial electrical systems.",
+    "nid": "NID-TECH-001",
+    "isProfileCompleted": true,
+    "isDeleted": false,
+    "status": "AVAILABLE",
+    "rating": 4.8,
+    "jobsCompleted": 156,
+    "createdAt": "2026-07-15T08:00:00.000Z",
+    "updatedAt": "2026-09-01T10:00:00.000Z",
+    "user": {
+      "id": "user-tech-001",
+      "name": "Mohammad Karim",
+      "email": "technician@servicepro.com",
+      "profileImg": null,
+      "googleId": null,
+      "facebookId": null,
+      "authProvider": "CREDENTIAL",
+      "emailVerified": true,
+      "role": "TECHNICIAN",
+      "status": "ACTIVE",
+      "needPasswordChange": false,
+      "isDeleted": false,
+      "createdAt": "2026-07-15T08:00:00.000Z",
+      "updatedAt": "2026-09-01T10:00:00.000Z"
+    },
+    "skills": ["skill-001", "skill-002", "skill-003"],
+    "regions": ["region-001"],
+    "availability": [
+      {
+        "id": "avail-001",
+        "type": "RECURRING",
+        "dayOfWeek": 1,
+        "date": null,
+        "startTime": "1970-01-01T08:00:00.000Z",
+        "endTime": "1970-01-01T18:00:00.000Z",
+        "isActive": true,
+        "createdAt": "2026-08-01T08:00:00.000Z",
+        "updatedAt": "2026-08-01T08:00:00.000Z",
+        "technicianId": "tech-001"
+      },
+      {
+        "id": "avail-002",
+        "type": "RECURRING",
+        "dayOfWeek": 2,
+        "date": null,
+        "startTime": "1970-01-01T08:00:00.000Z",
+        "endTime": "1970-01-01T18:00:00.000Z",
+        "isActive": true,
+        "createdAt": "2026-08-01T08:00:00.000Z",
+        "updatedAt": "2026-08-01T08:00:00.000Z",
+        "technicianId": "tech-001"
+      },
+      {
+        "id": "avail-003",
+        "type": "RECURRING",
+        "dayOfWeek": 3,
+        "date": null,
+        "startTime": "1970-01-01T08:00:00.000Z",
+        "endTime": "1970-01-01T18:00:00.000Z",
+        "isActive": true,
+        "createdAt": "2026-08-01T08:00:00.000Z",
+        "updatedAt": "2026-08-01T08:00:00.000Z",
+        "technicianId": "tech-001"
+      },
+      {
+        "id": "avail-004",
+        "type": "RECURRING",
+        "dayOfWeek": 4,
+        "date": null,
+        "startTime": "1970-01-01T08:00:00.000Z",
+        "endTime": "1970-01-01T18:00:00.000Z",
+        "isActive": true,
+        "createdAt": "2026-08-01T08:00:00.000Z",
+        "updatedAt": "2026-08-01T08:00:00.000Z",
+        "technicianId": "tech-001"
+      },
+      {
+        "id": "avail-005",
+        "type": "RECURRING",
+        "dayOfWeek": 5,
+        "date": null,
+        "startTime": "1970-01-01T08:00:00.000Z",
+        "endTime": "1970-01-01T16:00:00.000Z",
+        "isActive": true,
+        "createdAt": "2026-08-01T08:00:00.000Z",
+        "updatedAt": "2026-08-01T08:00:00.000Z",
+        "technicianId": "tech-001"
+      }
+    ]
+  },
+  "serviceRequest": {
+    "id": "svc-001",
+    "description": "Circuit breaker keeps tripping in main panel. Need inspection and repair.",
+    "priority": "HIGH",
+    "status": "APPROVED",
+    "address": {
+      "street": "45 Customer Lane",
+      "city": "Dhaka",
+      "area": "Gulshan",
+      "postalCode": "1212",
+      "coordinates": { "lat": 23.7806, "lng": 90.4152 }
+    },
+    "servicingDate": "2026-09-08",
+    "preferredStartTime": "09:00",
+    "preferredEndTime": "12:00",
+    "duration": 120,
+    "categoryId": "cat-001",
+    "regionId": "region-001",
+    "customerId": "cust-001",
+    "createdAt": "2026-09-05T14:30:00.000Z",
+    "updatedAt": "2026-09-05T14:30:00.000Z"
+  },
+  "workOrder": {
+    "id": "wo-001",
+    "servicingDate": "2026-09-08",
+    "startedTime": null,
+    "endTime": null,
+    "actualStart": null,
+    "actualEnd": null,
+    "status": "SCHEDULED",
+    "note": null,
+    "regionId": "region-001",
+    "customerId": "cust-001",
+    "technicianId": null,
+    "serviceId": "svc-001",
+    "managerId": "mgr-001",
+    "createdAt": "2026-09-05T15:00:00.000Z",
+    "updatedAt": "2026-09-05T15:00:00.000Z"
+  },
+  "availabilityAnalysis": {
+    "serviceDate": "2026-09-08",
+    "serviceDayOfWeek": 2,
+    "serviceStartTime": "2026-09-08T09:00:00.000Z",
+    "serviceEndTime": "2026-09-08T11:00:00.000Z",
+    "technicianAvailabilityMatch": {
+      "matchedSlot": "avail-002",
+      "slotType": "RECURRING",
+      "slotDayOfWeek": 2,
+      "slotStartTime": "08:00",
+      "slotEndTime": "18:00",
+      "coversServiceTime": true,
+      "isBlocked": false
+    },
+    "conflictCheck": {
+      "hasBlockingSlot": false,
+      "hasTimeConflict": false,
+      "existingWorkOrdersOnDate": [],
+      "isEligible": true
+    },
+    "eligibilityReason": "Technician has RECURRING availability on Tuesday (dayOfWeek=2) from 08:00-18:00 which covers the requested 09:00-11:00 slot. No BLOCKED slots on 2026-09-08. No conflicting work orders. Technician has required skills (Circuit Breaker Repair) in the Electrical Repair category and covers Dhaka North region. Profile is complete and status is AVAILABLE."
+  }
+}

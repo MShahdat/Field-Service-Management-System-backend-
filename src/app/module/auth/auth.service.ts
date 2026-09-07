@@ -130,7 +130,7 @@ const verifyEmail = async (payload: IVerifyEmailPayload) => {
 
 	const profileKey = roleProfileMap[payloadData.role];
 
-	const customerCreated = await prisma.user.create({
+	const userCreated = await prisma.user.create({
 		data: {
 			name: payloadData.name,
 			email: payloadData.email,
@@ -146,8 +146,7 @@ const verifyEmail = async (payload: IVerifyEmailPayload) => {
 			password: true,
 		},
 		include: {
-			customer: true,
-			technician: true,
+			[profileKey]: true,
 		},
 	});
 
@@ -170,13 +169,11 @@ const verifyEmail = async (payload: IVerifyEmailPayload) => {
 
 	await redisClient.del([otpKey, registerKey]);
 
-	const { customer, ...user } = customerCreated;
-
 	const jwtPayload = {
-		userId: user.id,
-		name: user.name,
-		email: user.email,
-		role: user.role,
+		userId: userCreated.id,
+		name: userCreated.name,
+		email: userCreated.email,
+		role: userCreated.role,
 	};
 
 	const accessToken = jwtUtils.createToken(
@@ -192,10 +189,9 @@ const verifyEmail = async (payload: IVerifyEmailPayload) => {
 	);
 
 	return {
-		user,
 		accessToken,
 		refreshToken,
-		customer,
+		userCreated,
 	};
 };
 

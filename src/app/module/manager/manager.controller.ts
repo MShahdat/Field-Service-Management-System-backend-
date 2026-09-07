@@ -14,8 +14,8 @@ const applyManger = catchAsync(async (req: Request, res: Response) => {
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
-		message: `Manager apply successfully`,
-		data: result,
+		message: `Manager apply and OTP send successfully`,
+		data: null,
 	});
 });
 

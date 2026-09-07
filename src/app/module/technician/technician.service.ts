@@ -1,5 +1,4 @@
-import { WorkOrderWhereInput } from "../../../../generated/prisma/models";
-import { IQuery, IRequestUser } from "../../interface";
+import { IRequestUser } from "../../interface";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
 import { IUpdateTechnician } from "./technician.interface";
@@ -115,10 +114,10 @@ const completeProfile = async (
 							type: "RECURRING",
 							dayOfWeek: slot.dayOfWeek!,
 							startTime: slot.startTime
-								? new Date(`1970-01-01T${slot.startTime}:00`)
+								? new Date(`1970-01-01T${slot.startTime}:00Z`)
 								: null,
 							endTime: slot.endTime
-								? new Date(`1970-01-01T${slot.endTime}:00`)
+								? new Date(`1970-01-01T${slot.endTime}:00Z`)
 								: null,
 						},
 					});

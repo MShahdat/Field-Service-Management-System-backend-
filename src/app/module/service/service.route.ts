@@ -43,7 +43,7 @@ route.post(
 route.get(
 	"/workOrder/:workOrderId",
 	auth(UserRole.MANAGER),
-	serviceController.getEligibleTechnician,
+	serviceController.getEligibleTechnicians,
 );
 
 route.patch(
