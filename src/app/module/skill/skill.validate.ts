@@ -12,4 +12,5 @@ export const updateSkillZodSchema = z.object({
 	icon: z.string().optional(),
 	description: z.string().optional(),
 	categoryId: z.uuid().optional(),
+	isActive: z.boolean().optional(),
 });

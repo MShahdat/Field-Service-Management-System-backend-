@@ -93,7 +93,11 @@ const getMyWrokOrders = async (query: IQuery, user: IRequestUser) => {
 		include: {
 			customer: true,
 			manager: true,
-			payment: true,
+			payment: {
+				omit: {
+					getwayResponse: true,
+				},
+			},
 			service: true,
 		},
 	});

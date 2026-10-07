@@ -16,6 +16,7 @@ import ejs from "ejs";
 import { transporter } from "../../lib/nodemailer";
 import { IQuery, IRequestUser } from "../../interface";
 import { ManagerProfileWhereInput } from "../../../../generated/prisma/models";
+import { generateRandomPass } from "../../utils/randomPassword";
 
 //& APPLY MANAGER
 const applyManager = async (payload: IManagerApplyPayload) => {
@@ -48,20 +49,12 @@ const applyManager = async (payload: IManagerApplyPayload) => {
 		}
 	}
 
-	const randomPass = Math.random().toString(36).slice(-8);
-	console.log("random pass", randomPass);
-
-	const hashPass = await bcrypt.hash(
-		randomPass,
-		Number(config.bcrypt_salt_rounds),
-	);
 
 	const { region, ...managerData } = payload.manager;
 
 	const apply = await prisma.user.create({
 		data: {
 			...payload.user,
-			password: hashPass,
 			needPasswordChange: true,
 			role: UserRole.MANAGER,
 			manager: {
@@ -230,49 +223,82 @@ const approveManager = async (
 		);
 	}
 
-	const updateStatus = await prisma.managerProfile.update({
-		where: {
-			id: isManager.manager.id,
+	let password = null;
+	let hashPass = null;
+
+	if (payload.verificationStatus === "APPROVED") {
+		password = generateRandomPass();
+		hashPass = await bcrypt.hash(
+			password as string,
+			Number(config.bcrypt_salt_rounds),
+		);
+	}
+
+	const transactionRes = await prisma.$transaction(
+		async (tx) => {
+
+			await tx.user.update({
+				where: {
+					id: isManager.id
+				},
+				data: {
+					password: hashPass
+				}
+			})
+
+			const updateStatus = await tx.managerProfile.update({
+				where: {
+					id: isManager.manager?.id,
+				},
+				data: {
+					verificationStatus,
+					rejectionReason:
+						verificationStatus === "REJECTED" ? rejectionReason : null,
+					reviewdBy: reviewer.userId,
+					reviewdAt: new Date(),
+				},
+				include: {
+					region: true,
+				},
+			});
+
+			const isApproved = updateStatus.verificationStatus === "APPROVED";
+			const templateName = isApproved
+				? "manager-apply-approved.ejs"
+				: "manager-apply-rejected.ejs";
+
+			const templatePath = path.join(
+				process.cwd(),
+				`src/app/template/${templateName}`,
+			);
+
+			const templateData = {
+				name: isManager.name,
+				email: isManager.email,
+				password,
+				reason: rejectionReason, // only used in the rejected template,
+				appName: config.app_name,
+				loginUrl: `${config.frontend_url}/login`,
+			};
+
+			const html = await ejs.renderFile(templatePath, templateData);
+			await transporter.sendMail({
+				from: config.smtp_sender,
+				to: isManager.email,
+				subject: isApproved
+					? "Your Manager Application Has Been Approved"
+					: "Your Manager Application Has Been Rejected",
+				html,
+			});
+
+			return updateStatus;
 		},
-		data: {
-			verificationStatus,
-			rejectionReason:
-				verificationStatus === "REJECTED" ? rejectionReason : null,
-			reviewdBy: reviewer.userId,
-			reviewdAt: new Date(),
-		},
-		include: {
-			region: true,
-		},
-	});
-
-	const isApproved = updateStatus.verificationStatus === "APPROVED";
-	const templateName = isApproved
-		? "manager-apply-approved.ejs"
-		: "manager-apply-rejected.ejs";
-
-	const templatePath = path.join(
-		process.cwd(),
-		`src/app/template/${templateName}`,
-	);
-
-	const templateData = {
-		name: isManager.name,
-		reason: rejectionReason, // only used in the rejected template,
-		appName: config.app_name,
-	};
-
-	const html = await ejs.renderFile(templatePath, templateData);
-	await transporter.sendMail({
-		from: config.smtp_sender,
-		to: isManager.email,
-		subject: isApproved
-			? "Your Manager Application Has Been Approved"
-			: "Your Manager Application Has Been Rejected",
-		html,
-	});
-
-	return updateStatus;
+		{
+			maxWait: 10000,
+			timeout: 15000
+		}
+	)
+	return transactionRes
 };
 
 //& GEL ALL MANAGERS (ADMIN)
@@ -308,6 +334,18 @@ const getAllManagers = async (query: IQuery) => {
 						},
 					},
 				},
+				{
+					phone: {
+						contains: query.search,
+						mode: "insensitive"
+					}
+				},
+				{
+					nid: {
+						contains: query.search,
+						mode: 'insensitive'
+					}
+				}
 			],
 		});
 	}
@@ -331,6 +369,14 @@ const getAllManagers = async (query: IQuery) => {
 		});
 	}
 
+	if (query.emailVerified) {
+		andConditions.push({
+			user: {
+				emailVerified: Boolean(query.emailVerified)
+			}
+		})
+	}
+
 	const managers = await prisma.managerProfile.findMany({
 		where: {
 			AND: andConditions,
@@ -341,6 +387,7 @@ const getAllManagers = async (query: IQuery) => {
 			[sort]: order,
 		},
 		include: {
+			region: true,
 			user: {
 				omit: {
 					password: true,

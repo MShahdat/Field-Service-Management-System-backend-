@@ -27,10 +27,6 @@ const getAllRegion = catchAsync(async (req: Request, res: Response) => {
 
 	const { area, meta } = await regionService.getAllRegion(query, user);
 
-	if (area.length === 0) {
-		throw new AppError(httpStatus.NOT_FOUND, "region not found");
-	}
-
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
@@ -46,9 +42,6 @@ const getRegions = catchAsync(async (req: Request, res: Response) => {
 
 	const { area, meta } = await regionService.getRegions(query);
 
-	if (area.length === 0) {
-		throw new AppError(httpStatus.NOT_FOUND, "region not found");
-	}
 
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
@@ -75,9 +68,26 @@ const updateRegion = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+
+
+//& STATUS UPDATE (ADMIN)
+const statusUpdate = catchAsync(async (req: Request, res: Response) => {
+	const id = req.params.regionId;
+
+	const result = await regionService.statusUpdate(id as string);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: `region status updated successfully`,
+		data: result,
+	});
+});
+
 export const regionController = {
 	createRegion,
 	getAllRegion,
 	getRegions,
 	updateRegion,
+	statusUpdate,
 };

@@ -3047,11 +3047,6 @@ var assignTechnician = async (payload, user) => {
   const serviceDate = new Date(isWorkOrder.servicingDate);
   const startTime = isWorkOrder.service.preferredStartTime ? parseTimeOnDate(isWorkOrder.service.preferredStartTime, serviceDate) : new Date(serviceDate);
   const endTime = isWorkOrder.service.preferredEndTime ? parseTimeOnDate(isWorkOrder.service.preferredEndTime, serviceDate) : addMinutes(startTime, isWorkOrder.service.category.duration ?? 60);
-  console.log({
-    serviceDate,
-    startTime,
-    endTime
-  });
   const transactionResult = await prisma.$transaction(
     async (tx) => {
       const tech = await tx.technicianProfile.findUnique({
@@ -3116,8 +3111,14 @@ var assignTechnician = async (payload, user) => {
           }
         }
       });
-      const scheduleStartTime = workOrder.service.preferredStartTime ?? parseTimeOnDate("09:00", workOrder.servicingDate);
-      const scheduleEndTime = workOrder.service.preferredEndTime ?? addMinutes(
+      const scheduleStartTime = parseTimeOnDate(
+        workOrder.service.preferredStartTime ?? "09:00",
+        workOrder.servicingDate
+      );
+      const scheduleEndTime = workOrder.service.preferredEndTime ? parseTimeOnDate(
+        workOrder.service.preferredEndTime,
+        workOrder.servicingDate
+      ) : addMinutes(
         scheduleStartTime,
         workOrder.service.category.duration ?? 60
       );
@@ -3539,6 +3540,9 @@ var getSkills = async (query) => {
       category: {
         isActive: true
       }
+    },
+    {
+      isActive: true
     }
   ];
   if (query.search) {
@@ -3730,7 +3734,8 @@ var updateSkillZodSchema = z4.object({
   name: z4.string().optional(),
   icon: z4.string().optional(),
   description: z4.string().optional(),
-  categoryId: z4.uuid().optional()
+  categoryId: z4.uuid().optional(),
+  isActive: z4.boolean().optional()
 });
 
 // src/app/module/skill/skill.route.ts
@@ -3953,24 +3958,35 @@ var completeProfile = async (payload, user) => {
       const tech = await tx.technicianProfile.findUnique({
         where: {
           id: isTechnician.id
+        },
+        include: {
+          skills: true,
+          availability: true,
+          regions: true
         }
       });
-      return tech;
+      if (!tech) {
+        throw new AppError(
+          httpStatus17.INTERNAL_SERVER_ERROR,
+          "Failed to retrieve updated technician profile"
+        );
+      }
+      const isProfileCompleted = Boolean(
+        tech.phone && tech.address && tech.nid && tech.skills.length > 0 && tech.availability.length > 0 && tech.regions.length > 0
+      );
+      await tx.technicianProfile.update({
+        where: {
+          id: tech.id
+        },
+        data: {
+          isProfileCompleted
+        }
+      });
+      return { ...tech, isProfileCompleted };
     },
     { maxWait: 1e4, timeout: 15e3 }
   );
-  const fullProfile = await prisma.technicianProfile.findUnique({
-    where: { id: transactionResult?.id },
-    include: { skills: true, regions: true, availability: true }
-  });
-  const isNowComplete = !!fullProfile.phone && fullProfile.skills.length > 0 && fullProfile.regions.length > 0 && fullProfile.availability.length > 0;
-  if (isNowComplete !== fullProfile.isProfileCompleted) {
-    await prisma.technicianProfile.update({
-      where: { id: fullProfile.id },
-      data: { isProfileCompleted: isNowComplete }
-    });
-  }
-  return fullProfile;
+  return transactionResult;
 };
 var technicianService = {
   completeProfile
@@ -4092,7 +4108,11 @@ var getMyWrokOrders = async (query, user) => {
     include: {
       customer: true,
       manager: true,
-      payment: true,
+      payment: {
+        omit: {
+          getwayResponse: true
+        }
+      },
       service: true
     }
   });
@@ -5066,22 +5086,22 @@ var route9 = Router9();
 route9.post("/create", auth(UserRole.CUSTOMER), paymentController.createpayment);
 route9.get("/service/callback", paymentController.bkashCallback);
 route9.get(
-  "my-payments",
+  "/my-payments",
   auth(UserRole.CUSTOMER),
   paymentController.getMyPayment
 );
 route9.get(
-  "technician-payments",
+  "/technician-payments",
   auth(UserRole.TECHNICIAN),
   paymentController.getTechPayment
 );
 route9.get(
-  "manager-payments",
+  "/manager-payments",
   auth(UserRole.MANAGER),
   paymentController.getManagerPayment
 );
 route9.get(
-  "all-payments",
+  "/all-payments",
   auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
   paymentController.getAllPayments
 );
@@ -6431,7 +6451,8 @@ var createFeedback = async (payload, user) => {
       id: payload.workOrderId
     },
     include: {
-      service: true
+      service: true,
+      payment: true
     }
   });
   if (!workOrder) {
@@ -6444,7 +6465,10 @@ var createFeedback = async (payload, user) => {
     );
   }
   if (workOrder.customerId !== isCustomer.id) {
-    throw new Error("You are not authorized to review");
+    throw new AppError(httpStatus27.UNAUTHORIZED, "You are not authorized to review");
+  }
+  if (workOrder.payment?.status !== "PAID") {
+    throw new AppError(httpStatus27.BAD_REQUEST, "you can not feedback before payment");
   }
   const existingFeedback = await prisma.feedback.findFirst({
     where: {
@@ -6468,20 +6492,24 @@ var createFeedback = async (payload, user) => {
           }
         }
       });
+      const technicianId = createFeedback3.workOrder.technician?.id;
+      if (!technicianId) {
+        throw new AppError(httpStatus27.BAD_REQUEST, "technician not found");
+      }
       const result = await tx.feedback.aggregate({
         _avg: {
           rating: true
         },
         where: {
           workOrder: {
-            technicianId: createFeedback3.workOrder.technician?.id
+            technicianId
           }
         }
       });
       const avgRating = result._avg.rating ?? 0;
       await tx.technicianProfile.update({
         where: {
-          id: createFeedback3.workOrder.technician?.id
+          id: technicianId
         },
         data: {
           rating: avgRating
@@ -6496,7 +6524,20 @@ var createFeedback = async (payload, user) => {
   );
   return transactionRes;
 };
-var getById = async (id) => {
+var getById = async (id, user) => {
+  const isUser = await prisma.user.findUnique({
+    where: {
+      id: user.userId
+    },
+    include: {
+      customer: true,
+      manager: true,
+      technician: true
+    }
+  });
+  if (!isUser) {
+    throw new AppError(httpStatus27.NOT_FOUND, "user not found");
+  }
   const result = await prisma.feedback.findUnique({
     where: {
       id
@@ -6507,6 +6548,21 @@ var getById = async (id) => {
   });
   if (!result) {
     throw new AppError(httpStatus27.NOT_FOUND, "feedback not found");
+  }
+  if (user.role === "TECHNICIAN") {
+    if (result.workOrder.technicianId !== isUser.technician?.id) {
+      throw new AppError(httpStatus27.UNAUTHORIZED, "unauthorized");
+    }
+  }
+  if (user.role === "MANAGER") {
+    if (result.workOrder.managerId !== isUser.manager?.id) {
+      throw new AppError(httpStatus27.UNAUTHORIZED, "unauthorized");
+    }
+  }
+  if (user.role === "CUSTOMER") {
+    if (result.workOrder.customerId !== isUser.customer?.id) {
+      throw new AppError(httpStatus27.UNAUTHORIZED, "unauthorized");
+    }
   }
   return result;
 };
@@ -6597,18 +6653,49 @@ var updateFeedback = async (payload, id, user) => {
   if (!feedback) {
     throw new AppError(httpStatus27.NOT_FOUND, "feedback not found");
   }
-  const result = await prisma.feedback.update({
-    where: {
-      id: feedback.id,
-      workOrder: {
-        customerId: isCustomer.id
-      }
+  const transactionRes = await prisma.$transaction(
+    async (tx) => {
+      const result = await tx.feedback.update({
+        where: {
+          id: feedback.id,
+          workOrder: {
+            customerId: isCustomer.id
+          }
+        },
+        data: {
+          ...payload
+        },
+        include: {
+          workOrder: true
+        }
+      });
+      const res = await tx.feedback.aggregate({
+        _avg: {
+          rating: true
+        },
+        where: {
+          workOrder: {
+            technicianId: result.workOrder.technicianId
+          }
+        }
+      });
+      const avgRating = res._avg.rating ?? 0;
+      await tx.technicianProfile.update({
+        where: {
+          id: result.workOrder.technicianId
+        },
+        data: {
+          rating: avgRating
+        }
+      });
+      return result;
     },
-    data: {
-      ...payload
+    {
+      maxWait: 1e4,
+      timeout: 15e3
     }
-  });
-  return result;
+  );
+  return transactionRes;
 };
 var deleteFeedback = async (id, user) => {
   const isCustomer = await prisma.customerProfile.findUnique({
@@ -6633,13 +6720,36 @@ var deleteFeedback = async (id, user) => {
   if (!feedback) {
     throw new AppError(httpStatus27.NOT_FOUND, "feedback not found");
   }
-  const result = await prisma.feedback.delete({
-    where: {
-      id: feedback.id,
-      workOrder: {
-        customerId: isCustomer.id
+  const result = await prisma.$transaction(async (tx) => {
+    const deletedFeedback = await tx.feedback.delete({
+      where: {
+        id: feedback.id
+      },
+      include: {
+        workOrder: true
       }
+    });
+    if (deletedFeedback.workOrder.technicianId) {
+      const average = await tx.feedback.aggregate({
+        _avg: {
+          rating: true
+        },
+        where: {
+          workOrder: {
+            technicianId: deletedFeedback.workOrder.technicianId
+          }
+        }
+      });
+      await tx.technicianProfile.update({
+        where: {
+          id: deletedFeedback.workOrder.technicianId
+        },
+        data: {
+          rating: average._avg.rating ?? 0
+        }
+      });
     }
+    return deletedFeedback;
   });
   return result;
 };
@@ -6666,7 +6776,8 @@ var createFeedback2 = catchAsync(async (req, res) => {
 });
 var getById2 = catchAsync(async (req, res) => {
   const id = req.params.feedbackId;
-  const result = await feedbackService.getById(id);
+  const user = req.user;
+  const result = await feedbackService.getById(id, user);
   sendResponse(res, {
     statusCode: httpStatus28.OK,
     success: true,
@@ -6729,11 +6840,17 @@ var route12 = Router12();
 route12.post("/", auth(UserRole.CUSTOMER), feedbackController.createFeedback);
 route12.get(
   "/:feedbackId",
-  auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+  auth(
+    UserRole.ADMIN,
+    UserRole.SUPER_ADMIN,
+    UserRole.CUSTOMER,
+    UserRole.TECHNICIAN,
+    UserRole.MANAGER
+  ),
   feedbackController.getById
 );
-route12.get("/", feedbackController.getAllFeedbacks);
-route12.put(
+route12.get("/all-feedback", feedbackController.getAllFeedbacks);
+route12.patch(
   "/update/:feedbackId",
   auth(UserRole.CUSTOMER),
   feedbackController.updateFeedback
@@ -7263,6 +7380,252 @@ router.get(
 );
 var analyticsRoutes = router;
 
+// src/app/module/schedule/schedule.route.ts
+import { Router as Router15 } from "express";
+
+// src/app/module/schedule/schedule.service.ts
+import httpStatus32 from "http-status";
+var getAllSchedule = async (query) => {
+  const sort = query.sortBy ? query.sortBy : "createdAt";
+  const order = query.sortOrder ? query.sortOrder : "desc";
+  const page = Number(query.page || 1);
+  const limit = Number(query.limit || 20);
+  const andConditions = [];
+  if (query.status) {
+    andConditions.push({
+      status: query.status
+    });
+  }
+  const schedules = await prisma.schedule.findMany({
+    where: {
+      AND: andConditions
+    },
+    take: limit,
+    skip: (page - 1) * limit,
+    orderBy: {
+      [sort]: order
+    },
+    include: {
+      workOrder: {
+        select: {
+          service: true
+        }
+      }
+    }
+  });
+  const total = await prisma.schedule.count({
+    where: {
+      AND: andConditions
+    }
+  });
+  const meta = {
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit)
+  };
+  return {
+    schedules,
+    meta
+  };
+};
+var getScheduleTech = async (query, user) => {
+  const sort = query.sortBy ? query.sortBy : "createdAt";
+  const order = query.sortOrder ? query.sortOrder : "desc";
+  const page = Number(query.page || 1);
+  const limit = Number(query.limit || 20);
+  const technician = await prisma.technicianProfile.findUnique({
+    where: {
+      userId: user.userId
+    }
+  });
+  if (!technician) {
+    throw new AppError(httpStatus32.NOT_FOUND, "technician not found");
+  }
+  const andConditions = [
+    {
+      technicianId: technician.id
+    }
+  ];
+  if (query.status) {
+    andConditions.push({
+      status: query.status
+    });
+  }
+  const schedules = await prisma.schedule.findMany({
+    where: {
+      AND: andConditions
+    },
+    take: limit,
+    skip: (page - 1) * limit,
+    orderBy: {
+      [sort]: order
+    },
+    include: {
+      workOrder: {
+        select: {
+          service: true
+        }
+      }
+    }
+  });
+  const total = await prisma.schedule.count({
+    where: {
+      AND: andConditions
+    }
+  });
+  const meta = {
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit)
+  };
+  return {
+    schedules,
+    meta
+  };
+};
+var singleSchedule = async (id, user) => {
+  const isUser = await prisma.user.findUnique({
+    where: {
+      id: user.userId
+    },
+    include: {
+      customer: true,
+      manager: true,
+      technician: true
+    }
+  });
+  if (!isUser) {
+    throw new AppError(httpStatus32.NOT_FOUND, "user nto found");
+  }
+  const schedule = await prisma.schedule.findUnique({
+    where: {
+      id
+    },
+    include: {
+      workOrder: {
+        include: {
+          service: true,
+          manager: true,
+          technician: true,
+          customer: true
+        }
+      }
+    }
+  });
+  if (!schedule) {
+    throw new AppError(httpStatus32.NOT_FOUND, "schedule not found");
+  }
+  if (user.role === "CUSTOMER") {
+    if (schedule.workOrder.customer.id !== isUser.customer?.id) {
+      throw new AppError(httpStatus32.UNAUTHORIZED, "unauthorized access");
+    }
+  }
+  if (user.role === "MANAGER") {
+    if (schedule.workOrder.manager.id !== isUser.manager?.id) {
+      throw new AppError(httpStatus32.UNAUTHORIZED, "unauthorized access");
+    }
+  }
+  if (user.role === "TECHNICIAN") {
+    if (schedule.workOrder.technician?.id !== isUser.technician?.id) {
+      throw new AppError(httpStatus32.UNAUTHORIZED, "unauthorized access");
+    }
+  }
+  return schedule;
+};
+var scheduleService = {
+  getAllSchedule,
+  getScheduleTech,
+  singleSchedule
+};
+
+// src/app/module/schedule/schedule.controller.ts
+import httpStatus33 from "http-status";
+var getAllSchedule2 = catchAsync(async (req, res) => {
+  const query = req.query;
+  const { schedules, meta } = await scheduleService.getAllSchedule(query);
+  if (schedules.length === 0) {
+    return sendResponse(res, {
+      statusCode: httpStatus33.NOT_FOUND,
+      success: false,
+      message: `scheule not found`,
+      data: null
+    });
+  }
+  sendResponse(res, {
+    statusCode: httpStatus33.OK,
+    success: true,
+    message: `all scheudle retrived successfully`,
+    data: schedules,
+    meta
+  });
+});
+var getSchedulesTech = catchAsync(async (req, res) => {
+  const query = req.query;
+  const user = req.user;
+  const { schedules, meta } = await scheduleService.getScheduleTech(
+    query,
+    user
+  );
+  if (schedules.length === 0) {
+    return sendResponse(res, {
+      statusCode: httpStatus33.NOT_FOUND,
+      success: false,
+      message: `schedule not found`,
+      data: null
+    });
+  }
+  sendResponse(res, {
+    statusCode: httpStatus33.OK,
+    success: true,
+    message: `schudel retrived successfully`,
+    data: schedules,
+    meta
+  });
+});
+var singleSchedule2 = catchAsync(async (req, res) => {
+  const user = req.user;
+  const id = req.params.scheduleId;
+  const result = await scheduleService.singleSchedule(id, user);
+  sendResponse(res, {
+    statusCode: httpStatus33.OK,
+    success: true,
+    message: `scheule retrived successfully`,
+    data: result
+  });
+});
+var scheduleController = {
+  getAllSchedule: getAllSchedule2,
+  getSchedulesTech,
+  singleSchedule: singleSchedule2
+};
+
+// src/app/module/schedule/schedule.route.ts
+var route14 = Router15();
+route14.get(
+  "/all-schedule",
+  auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+  scheduleController.getAllSchedule
+);
+route14.get(
+  "/my-schedule",
+  auth(UserRole.TECHNICIAN),
+  scheduleController.getSchedulesTech
+);
+route14.get(
+  "/:scheduleId",
+  auth(
+    UserRole.ADMIN,
+    UserRole.SUPER_ADMIN,
+    UserRole.CUSTOMER,
+    UserRole.MANAGER,
+    UserRole.TECHNICIAN
+  ),
+  scheduleController.singleSchedule
+);
+var scheduleRouter = route14;
+
 // src/app.ts
 var app = express();
 app.use(
@@ -7303,13 +7666,14 @@ app.use("/api/v1/service-report", reportRouter);
 app.use("/api/v1/feedback", feedbackRouter);
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/analytics", analyticsRoutes);
+app.use("/api/v1/schedule", scheduleRouter);
 app.use(globalErrorHandler);
 app.use(notFound);
 var app_default = app;
 
 // src/app/utils/seed.ts
 import bcrypt3 from "bcryptjs";
-import httpStatus32 from "http-status";
+import httpStatus34 from "http-status";
 var seedSuperAdmin = async () => {
   try {
     const existSuperAdmin = await prisma.user.findFirst({
@@ -7324,7 +7688,7 @@ var seedSuperAdmin = async () => {
     const password = env_default.super_admin_password;
     if (!name || !email || !password) {
       throw new AppError(
-        httpStatus32.INTERNAL_SERVER_ERROR,
+        httpStatus34.INTERNAL_SERVER_ERROR,
         "no super admin name, email, password"
       );
     }
@@ -7357,7 +7721,7 @@ var seedTesterAdmin = async () => {
     const password = env_default.tester_admin_password;
     if (!name || !email || !password) {
       throw new AppError(
-        httpStatus32.INTERNAL_SERVER_ERROR,
+        httpStatus34.INTERNAL_SERVER_ERROR,
         "no tester admin name, email, password"
       );
     }
@@ -7397,7 +7761,7 @@ var seedTesterManager = async () => {
     const password = env_default.tester_manager_password;
     if (!name || !email || !password) {
       throw new AppError(
-        httpStatus32.INTERNAL_SERVER_ERROR,
+        httpStatus34.INTERNAL_SERVER_ERROR,
         "no tester manager name, email, password"
       );
     }

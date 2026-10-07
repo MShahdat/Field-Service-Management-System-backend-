@@ -54,14 +54,6 @@ const getAllMangers = catchAsync(async (req: Request, res: Response) => {
 
 	const { managers, meta } = await managerService.getAllManagers(query);
 
-	if (managers.length === 0) {
-		return sendResponse(res, {
-			statusCode: httpStatus.NOT_FOUND,
-			success: false,
-			message: `mangers not found`,
-			data: null,
-		});
-	}
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,

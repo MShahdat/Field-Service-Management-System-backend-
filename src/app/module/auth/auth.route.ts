@@ -49,13 +49,12 @@ route.post(
 	authController.resetPassword,
 );
 
-route.get(
-	"/google",
+route.get('/google',
 	passport.authenticate("google", {
 		session: false,
-		scope: ["profile", "email"],
-	}),
-);
+		scope: ["profile", "email"]
+	}
+	))
 
 route.get(
 	"/google/callback",
@@ -63,21 +62,19 @@ route.get(
 	authController.googleLogin,
 );
 
-route.get(
-	"/facebook",
-	passport.authenticate("facebook", {
+route.get('/facebook',
+	passport.authenticate('facebook', {
 		session: false,
-		scope: ["email"],
-	}),
-);
+		scope: ['email'],
+	})
+)
 
-route.get(
-	"/facebook/callback",
-	passport.authenticate("facebook", { session: false }),
+route.get('/facebook/callback',
+	passport.authenticate('facebook', { session: false }),
 	authController.facebookLogin,
-);
+)
 
-route.get(
+route.post(
 	"/logout",
 	auth(
 		UserRole.ADMIN,

@@ -28,4 +28,16 @@ route.put(
 	skillController.updateSkill,
 );
 
+route.patch(
+	"/:skillId",
+	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+	skillController.statusUpdate,
+);
+
+route.patch(
+	"/delete/:skillId",
+	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+	skillController.deleteSkill,
+);
+
 export const skillRoute = route;

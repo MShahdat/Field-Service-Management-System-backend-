@@ -9,13 +9,19 @@ route.post("/", auth(UserRole.CUSTOMER), feedbackController.createFeedback);
 
 route.get(
 	"/:feedbackId",
-	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+	auth(
+		UserRole.ADMIN,
+		UserRole.SUPER_ADMIN,
+		UserRole.CUSTOMER,
+		UserRole.TECHNICIAN,
+		UserRole.MANAGER,
+	),
 	feedbackController.getById,
 );
 
-route.get("/", feedbackController.getAllFeedbacks);
+route.get("/all-feedback", feedbackController.getAllFeedbacks);
 
-route.put(
+route.patch(
 	"/update/:feedbackId",
 	auth(UserRole.CUSTOMER),
 	feedbackController.updateFeedback,

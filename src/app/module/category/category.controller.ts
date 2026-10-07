@@ -4,7 +4,7 @@ import { categoryService } from "./category.service";
 import { IRequestUser } from "../../interface";
 import { sendResponse } from "../../utils/sendResponse";
 import httpStatus from "http-status";
-import { AppError } from "../../utils/appError";
+
 
 //& CREATE CATEGORY
 const createCategory = catchAsync(async (req: Request, res: Response) => {
@@ -26,10 +26,6 @@ const getAllCategory = catchAsync(async (req: Request, res: Response) => {
 
 	const { category, meta } = await categoryService.getAllCategory(query);
 
-	if (category.length === 0) {
-		throw new AppError(httpStatus.NOT_FOUND, "category not found");
-	}
-
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
@@ -44,10 +40,6 @@ const getCategories = catchAsync(async (req: Request, res: Response) => {
 	const query = req.query;
 
 	const { category, meta } = await categoryService.getCategories(query);
-
-	if (category.length === 0) {
-		throw new AppError(httpStatus.NOT_FOUND, "category not found");
-	}
 
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
@@ -73,9 +65,27 @@ const udpateCategory = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+
+//& STATUS UPDATE (ADMIN)
+const statusUpdate = catchAsync(async (req: Request, res: Response) => {
+	const id = req.params.categoryId;
+
+	const result = await categoryService.statusUpdate(id as string);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: `category status updated successfully`,
+		data: result,
+	});
+});
+
+
+
 export const categoryController = {
 	createCategory,
 	getAllCategory,
 	getCategories,
 	udpateCategory,
+	statusUpdate,
 };

@@ -20,6 +20,26 @@ const createService = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+
+
+
+//& UPDATE SERVICE REQUEST
+const updateService = catchAsync(async (req: Request, res: Response) => {
+	const body = req.body;
+	const user = req.user as IRequestUser;
+	const serviceId = req.params.serviceId as string;
+
+	const result = await serviceService.updateService(serviceId, body, user);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "service updated successfully",
+		data: result,
+	});
+});
+
+
 //& GET MY SERVICES
 const getMyServices = catchAsync(async (req: Request, res: Response) => {
 	const user = req.user as IRequestUser;
@@ -27,9 +47,6 @@ const getMyServices = catchAsync(async (req: Request, res: Response) => {
 
 	const { services, meta } = await serviceService.getMyServices(query, user);
 
-	if (services.length === 0) {
-		throw new AppError(httpStatus.NOT_FOUND, "schedule not found");
-	}
 	sendResponse(res, {
 		statusCode: httpStatus.CREATED,
 		success: true,
@@ -46,9 +63,6 @@ const getAllServices = catchAsync(async (req: Request, res: Response) => {
 
 	const { services, meta } = await serviceService.getALLServices(query, user);
 
-	if (services.length === 0) {
-		throw new AppError(httpStatus.NOT_FOUND, "service not found");
-	}
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
@@ -57,6 +71,28 @@ const getAllServices = catchAsync(async (req: Request, res: Response) => {
 		meta,
 	});
 });
+
+
+//& GET MY REGION SERVICES
+const getMyRegionServices = catchAsync(async (req: Request, res: Response) => {
+	const user = req.user as IRequestUser;
+	const query = req.query;
+
+	const { services, meta } = await serviceService.getMyRegionServices(
+		query,
+		user,
+	);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "service retrive successfully",
+		data: services,
+		meta,
+	});
+});
+
+
 
 //& GET SINGLE SERVICES
 const getSingleService = catchAsync(async (req: Request, res: Response) => {
@@ -124,6 +160,24 @@ const assignTechnician = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+
+
+//& SOFT DELETE SERVICE (CUSTOMER)
+const softDelete = catchAsync(async (req: Request, res: Response) => {
+	const user = req.user as IRequestUser;
+	const serviceId = req.params.serviceId as string;
+
+	await serviceService.softDelete(serviceId, user);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "service deleted successfully",
+		data: null,
+	});
+});
+
+
 export const serviceController = {
 	createService,
 	getMyServices,
@@ -132,4 +186,8 @@ export const serviceController = {
 	reviewService,
 	getEligibleTechnicians,
 	assignTechnician,
+	updateService,
+	softDelete,
+	getMyRegionServices,
+
 };

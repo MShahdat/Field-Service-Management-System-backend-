@@ -41,7 +41,7 @@ export const auth = (...requiredRoles: UserRole[]) => {
 			throw new AppError(httpStatus.UNAUTHORIZED, verifiedToken.error);
 		}
 
-		const { email, name, userId, role } = verifiedToken.data as JwtPayload;
+		const { userId, name, email, role } = verifiedToken.data as JwtPayload;
 
 		if (requiredRoles.length && !requiredRoles.includes(role)) {
 			throw new AppError(
@@ -74,10 +74,10 @@ export const auth = (...requiredRoles: UserRole[]) => {
 		}
 
 		req.user = {
-			email,
-			name,
 			userId,
-			role,
+			name,
+			email,
+			role
 		};
 
 		next();

@@ -3,7 +3,7 @@ import { auth } from "../../middleware/auth";
 import { UserRole } from "../../../../generated/prisma/enums";
 import { serviceController } from "./service.controller";
 import { zodValidation } from "../../middleware/zodValidation";
-import { serviceZodSchema } from "./service.validation";
+import { serviceUpdateZodSchema, serviceZodSchema } from "./service.validation";
 
 const route = Router();
 
@@ -13,6 +13,14 @@ route.post(
 	auth(UserRole.CUSTOMER),
 	serviceController.createService,
 );
+
+route.put(
+	"/:serviceId",
+	zodValidation(serviceUpdateZodSchema),
+	auth(UserRole.CUSTOMER),
+	serviceController.updateService,
+);
+
 
 route.get(
 	"/my-services",
@@ -26,9 +34,17 @@ route.get(
 	serviceController.getAllServices,
 );
 
+
+route.get(
+	"/my-region",
+	auth(UserRole.MANAGER),
+	serviceController.getMyRegionServices
+);
+
+
 route.get(
 	"/:serviceId",
-	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.CUSTOMER),
+	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.CUSTOMER, UserRole.MANAGER, UserRole.TECHNICIAN),
 	serviceController.getSingleService,
 );
 
@@ -50,6 +66,13 @@ route.patch(
 	"/workOrder/technician-assign",
 	auth(UserRole.MANAGER),
 	serviceController.assignTechnician,
+);
+
+
+route.patch(
+	"/delete/:serviceId",
+	auth(UserRole.CUSTOMER),
+	serviceController.softDelete,
 );
 
 export const serviceRouter = route;

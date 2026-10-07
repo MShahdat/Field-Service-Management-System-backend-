@@ -9,7 +9,7 @@ import "./app/lib/passport";
 import passport from "passport";
 import { regionRouter } from "./app/module/region/region.route";
 import { managerRouter } from "./app/module/manager/manager.route";
-import { categoryRotuer } from "./app/module/category/category.route";
+import { categoryRouter } from "./app/module/category/category.route";
 import { serviceRouter } from "./app/module/service/service.route";
 import { skillRoute } from "./app/module/skill/skill.route";
 import { technicianRoutes } from "./app/module/technician/technician.route";
@@ -22,6 +22,7 @@ import { reportRouter } from "./app/module/report/report.route";
 import { feedbackRouter } from "./app/module/feedback/feedback.route";
 import { userRouter } from "./app/module/user/user.route";
 import { analyticsRoutes } from "./app/module/analytics/analytics.route";
+import { scheduleRouter } from "./app/module/schedule/schedule.route";
 
 const app: Application = express();
 
@@ -58,7 +59,7 @@ app.get("/bkash-test", async (req: Request, res: Response) => {
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/region", regionRouter);
 app.use("/api/v1/manager", managerRouter);
-app.use("/api/v1/category", categoryRotuer);
+app.use("/api/v1/category", categoryRouter);
 app.use("/api/v1/service", serviceRouter);
 app.use("/api/v1/skill", skillRoute);
 app.use("/api/v1/technician", technicianRoutes);
@@ -69,6 +70,7 @@ app.use("/api/v1/service-report", reportRouter);
 app.use("/api/v1/feedback", feedbackRouter);
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/analytics", analyticsRoutes);
+app.use("/api/v1/schedule", scheduleRouter);
 
 app.use(globalErrorHandler);
 app.use(notFound);

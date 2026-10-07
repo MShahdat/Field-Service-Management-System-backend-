@@ -200,9 +200,44 @@ const updateRegion = async (
 	return updateRegion;
 };
 
+
+
+//& UPDATE REGION STATUS (ADMIN)
+const statusUpdate = async (regionId: string) => {
+	const isRegion = await prisma.region.findUnique({
+		where: { id: regionId },
+	});
+
+	if (!isRegion) {
+		throw new AppError(httpStatus.NOT_FOUND, "region not found");
+	}
+
+	if (isRegion.isActive === true) {
+		await prisma.region.update({
+			where: {
+				id: regionId,
+			},
+			data: {
+				isActive: false,
+			},
+		});
+	} else {
+		await prisma.region.update({
+			where: {
+				id: regionId,
+			},
+			data: {
+				isActive: true,
+			},
+		});
+	}
+};
+
+
 export const regionService = {
 	createRegion,
 	getAllRegion,
 	getRegions,
 	updateRegion,
+	statusUpdate,
 };

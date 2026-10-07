@@ -33,3 +33,22 @@ export const assignTechnicianZodSchema = z.object({
 	workOrderId: z.uuid(),
 	technicianId: z.uuid(),
 });
+
+
+
+export const serviceUpdateZodSchema = z.object({
+	description: z.string().min(5).optional(),
+	servicingDate: z.coerce.date().optional(),
+	address: z.object({}).passthrough().optional(),
+	categoryId: z.uuid().optional(),
+	priority: z.string().optional(),
+	regionId: z.uuid().optional(),
+	preferredStartTime: z
+		.string()
+		.regex(timeRegex, "preferredStartTime must be HH:mm format")
+		.optional(),
+	preferredEndTime: z
+		.string()
+		.regex(timeRegex, "preferredEndTime must be HH:mm format")
+		.optional(),
+});

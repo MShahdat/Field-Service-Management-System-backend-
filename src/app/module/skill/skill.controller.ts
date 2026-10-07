@@ -73,9 +73,43 @@ const updateSkill = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+
+
+//& STATUS UPDATE (ADMIN)
+const statusUpdate = catchAsync(async (req: Request, res: Response) => {
+	const id = req.params.skillId;
+
+	const result = await skillService.statusUpdate(id as string);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: `skill status updated successfully`,
+		data: result,
+	});
+});
+
+
+
+//& SOFT DELETE SKILL (ADMIN)
+const deleteSkill = catchAsync(async (req: Request, res: Response) => {
+	const id = req.params.skillId;
+
+	const result = await skillService.deleteSkill(id as string);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: `skill soft deleted update successfully`,
+		data: result,
+	});
+});
+
 export const skillController = {
 	createSkill,
 	getAllSkill,
 	getSkills,
 	updateSkill,
+	statusUpdate,
+	deleteSkill,
 };

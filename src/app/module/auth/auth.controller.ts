@@ -8,6 +8,18 @@ import { AppError } from "../../utils/appError";
 import { jwtUtils } from "../../utils/jwt";
 import config from "../../config/env";
 import { SignOptions } from "jsonwebtoken";
+import { UserRole } from "../../../../generated/prisma/enums";
+import { redirectUrl } from "../../utils/redirect";
+
+
+const isProduction = config.node_env === "production";
+
+const getAuthCookieOptions = (maxAge: number) => ({
+	httpOnly: true,
+	secure: isProduction,
+	sameSite: isProduction ? ("none" as const) : ("lax" as const),
+	maxAge,
+});
 
 //& REGISTER USER
 const registerOTP = catchAsync(async (req: Request, res: Response) => {
@@ -60,18 +72,16 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
 	const result = await AuthService.loginUser(payload);
 	const { accessToken, refreshToken } = result;
 
-	res.cookie("accessToken", accessToken, {
-		httpOnly: true,
-		secure: false,
-		sameSite: "none",
-		maxAge: 1000 * 60 * 60 * 24, // 24 hour or 1 day
-	});
-	res.cookie("refreshToken", refreshToken, {
-		httpOnly: true,
-		secure: false,
-		sameSite: "none",
-		maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-	});
+	res.cookie(
+		"accessToken",
+		accessToken,
+		getAuthCookieOptions(1000 * 60 * 60 * 24),
+	);
+	res.cookie(
+		"refreshToken",
+		refreshToken,
+		getAuthCookieOptions(1000 * 60 * 60 * 24 * 7),
+	);
 
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
@@ -112,18 +122,16 @@ const refreshToken = catchAsync(async (req: Request, res: Response) => {
 	const result = await AuthService.refreshToken(req.cookies.refreshToken);
 	const { accessToken, refreshToken: newRefreshToken } = result;
 
-	res.cookie("accessToken", accessToken, {
-		httpOnly: true,
-		secure: false,
-		sameSite: "none",
-		maxAge: 1000 * 60 * 60 * 24, // 24 hour or 1 day
-	});
-	res.cookie("refreshToken", newRefreshToken, {
-		httpOnly: true,
-		secure: false,
-		sameSite: "none",
-		maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-	});
+	res.cookie(
+		"accessToken",
+		accessToken,
+		getAuthCookieOptions(1000 * 60 * 60 * 24),
+	);
+	res.cookie(
+		"refreshToken",
+		refreshToken,
+		getAuthCookieOptions(1000 * 60 * 60 * 24 * 7),
+	);
 
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
@@ -174,7 +182,7 @@ const googleLogin = catchAsync(async (req: Request, res: Response) => {
 	}
 
 	const jwtPayload = {
-		userId: user.userId,
+		userId: (user as any).id,
 		name: user.name,
 		email: user.email,
 		role: user.role,
@@ -192,20 +200,20 @@ const googleLogin = catchAsync(async (req: Request, res: Response) => {
 		config.jwt_refresh_expires_in as SignOptions,
 	);
 
-	res.cookie("accessToken", accessToken, {
-		httpOnly: true,
-		secure: config.node_env === "production",
-		sameSite: config.node_env === "production" ? "none" : "lax",
-		maxAge: 1000 * 60 * 60 * 24,
-	});
-	res.cookie("refreshToken", refreshToken, {
-		httpOnly: true,
-		secure: config.node_env === "production",
-		sameSite: config.node_env === "production" ? "none" : "lax",
-		maxAge: 1000 * 60 * 60 * 24 * 7,
-	});
+	res.cookie(
+		"accessToken",
+		accessToken,
+		getAuthCookieOptions(1000 * 60 * 60 * 24),
+	);
+	res.cookie(
+		"refreshToken",
+		refreshToken,
+		getAuthCookieOptions(1000 * 60 * 60 * 24 * 7),
+	);
 
-	// res.redirect(`${config.frontend_url}/dashboard?success=true`)
+	const url = redirectUrl(user.role)
+
+	res.redirect(`${config.frontend_url}/${url}`)
 
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
@@ -230,7 +238,7 @@ const facebookLogin = catchAsync(async (req: Request, res: Response) => {
 	}
 
 	const jwtPayload = {
-		userId: user.userId,
+		userId: (user as any).id,
 		name: user.name,
 		email: user.email,
 		role: user.role,
@@ -248,20 +256,20 @@ const facebookLogin = catchAsync(async (req: Request, res: Response) => {
 		config.jwt_refresh_expires_in as SignOptions,
 	);
 
-	res.cookie("accessToken", accessToken, {
-		httpOnly: true,
-		secure: config.node_env === "production",
-		sameSite: config.node_env === "production" ? "none" : "lax",
-		maxAge: 1000 * 60 * 60 * 24,
-	});
-	res.cookie("refreshToken", refreshToken, {
-		httpOnly: true,
-		secure: config.node_env === "production",
-		sameSite: config.node_env === "production" ? "none" : "lax",
-		maxAge: 1000 * 60 * 60 * 24 * 7,
-	});
+	res.cookie(
+		"accessToken",
+		accessToken,
+		getAuthCookieOptions(1000 * 60 * 60 * 24),
+	);
+	res.cookie(
+		"refreshToken",
+		refreshToken,
+		getAuthCookieOptions(1000 * 60 * 60 * 24 * 7),
+	);
 
-	// res.redirect(`${config.frontend_url}/dashboard?success=true`)
+	const url = redirectUrl(user.role)
+
+	res.redirect(`${config.frontend_url}/${url}`)
 
 	sendResponse(res, {
 		statusCode: httpStatus.OK,

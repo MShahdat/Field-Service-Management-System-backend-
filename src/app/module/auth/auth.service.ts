@@ -450,8 +450,6 @@ const resetPassword = async (payload: IResetPasswordPayload) => {
 	await redisClient.del(key);
 };
 
-//& LOGOUT
-const logout = (user: IRequestUser) => {};
 
 export const AuthService = {
 	registerOTP,

@@ -15,6 +15,19 @@ export interface IServicePayload {
 	preferredEndTime?: string;
 }
 
+
+export interface IUpdateServicePayload {
+	description?: string;
+	servicingDate?: string;
+	priority?: Priority;
+	address?: Address;
+	categoryId?: string;
+	regionId?: string;
+	preferredStartTime?: string;
+	preferredEndTime?: string;
+}
+
+
 type Status = "REJECTED" | "APPROVED";
 
 export interface IReviewPayload {

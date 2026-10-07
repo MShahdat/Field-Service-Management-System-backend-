@@ -192,9 +192,44 @@ const udpateCategory = async (payload: IUpdateCategoryPayload, id: string) => {
 	return update;
 };
 
+
+
+//& STATUS UPDATE (ADMIN)
+const statusUpdate = async (id: string) => {
+	const isCategory = await prisma.category.findUnique({
+		where: { id },
+	});
+
+	if (!isCategory) {
+		throw new AppError(httpStatus.NOT_FOUND, "category not found");
+	}
+
+	if (isCategory.isActive === true) {
+		await prisma.category.update({
+			where: {
+				id,
+			},
+			data: {
+				isActive: false,
+			},
+		});
+	} else {
+		await prisma.category.update({
+			where: {
+				id,
+			},
+			data: {
+				isActive: true,
+			},
+		});
+	}
+};
+
+
 export const categoryService = {
 	createCategory,
 	getAllCategory,
 	getCategories,
 	udpateCategory,
+	statusUpdate,
 };

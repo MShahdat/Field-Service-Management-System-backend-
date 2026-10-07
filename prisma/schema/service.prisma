@@ -1,6 +1,7 @@
 model Service {
   id String @id @default(uuid())
 
+  // title       String        @default("Service Request")
   description String?
   priority    Priority      @default(MEDIUM)
   status      ServiceStatus @default(PENDING)

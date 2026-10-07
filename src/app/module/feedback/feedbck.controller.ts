@@ -23,8 +23,9 @@ const createFeedback = catchAsync(async (req: Request, res: Response) => {
 //& GET BY ID
 const getById = catchAsync(async (req: Request, res: Response) => {
 	const id = req.params.feedbackId as string;
+	const user = req.user as IRequestUser;
 
-	const result = await feedbackService.getById(id);
+	const result = await feedbackService.getById(id, user);
 
 	sendResponse(res, {
 		statusCode: httpStatus.OK,

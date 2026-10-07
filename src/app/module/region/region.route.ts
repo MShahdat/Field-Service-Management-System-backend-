@@ -25,4 +25,11 @@ route.put(
 	regionController.updateRegion,
 );
 
+route.patch(
+	"/:regionId",
+	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+	regionController.statusUpdate,
+);
+
+
 export const regionRouter = route;

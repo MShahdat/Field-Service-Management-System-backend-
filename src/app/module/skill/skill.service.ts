@@ -162,6 +162,9 @@ const getSkills = async (query: IQuery) => {
 				isActive: true,
 			},
 		},
+		{
+			isActive: true,
+		}
 	];
 
 	if (query.search) {
@@ -292,9 +295,78 @@ const updateSkill = async (payload: IUpdateSkillPayload, id: string) => {
 	return update;
 };
 
+
+//& UPDATE STATUS (ADMIN)
+const statusUpdate = async (skillId: string) => {
+	const isSkill = await prisma.skill.findUnique({
+		where: { id: skillId },
+	});
+
+	if (!isSkill) {
+		throw new AppError(httpStatus.NOT_FOUND, "skill not found");
+	}
+
+	if (isSkill.isActive) {
+		await prisma.skill.update({
+			where: {
+				id: skillId,
+			},
+			data: {
+				isActive: false,
+			},
+		});
+	} else {
+		await prisma.skill.update({
+			where: {
+				id: skillId,
+			},
+			data: {
+				isActive: true,
+			},
+		});
+	}
+};
+
+
+
+//& DELETE SKILL (ADMIN)
+const deleteSkill = async (skillId: string) => {
+	const isSkill = await prisma.skill.findUnique({
+		where: { id: skillId },
+	});
+
+	if (!isSkill) {
+		throw new AppError(httpStatus.NOT_FOUND, "skill not found");
+	}
+
+	if (isSkill.isDelete === true) {
+		await prisma.skill.update({
+			where: {
+				id: skillId,
+			},
+			data: {
+				isDelete: false,
+				deletedAt: null
+			},
+		})
+	} else {
+		await prisma.skill.update({
+			where: {
+				id: skillId,
+			},
+			data: {
+				isDelete: true,
+				deletedAt: new Date(),
+			},
+		});
+	};
+}
+
 export const skillService = {
 	createSkill,
 	getAllSkill,
 	getSkills,
 	updateSkill,
-};
+	statusUpdate,
+	deleteSkill,
+}

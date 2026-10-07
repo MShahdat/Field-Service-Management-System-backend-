@@ -37,6 +37,7 @@ const createFeedback = async (
 		},
 		include: {
 			service: true,
+			payment: true
 		},
 	});
 
@@ -55,7 +56,11 @@ const createFeedback = async (
 	}
 
 	if (workOrder.customerId !== isCustomer.id) {
-		throw new Error("You are not authorized to review");
+		throw new AppError(httpStatus.UNAUTHORIZED, "You are not authorized to review");
+	}
+
+	if(workOrder.payment?.status !== 'PAID'){
+		throw new AppError(httpStatus.BAD_REQUEST, 'you can not feedback before payment')
 	}
 
 	const existingFeedback = await prisma.feedback.findFirst({
@@ -82,6 +87,11 @@ const createFeedback = async (
 					},
 				},
 			});
+			const technicianId = createFeedback.workOrder.technician?.id;
+
+			if (!technicianId) {
+				throw new AppError(httpStatus.BAD_REQUEST, "technician not found");
+			}
 
 			const result = await tx.feedback.aggregate({
 				_avg: {
@@ -89,7 +99,7 @@ const createFeedback = async (
 				},
 				where: {
 					workOrder: {
-						technicianId: createFeedback.workOrder.technician?.id,
+						technicianId,
 					},
 				},
 			});
@@ -98,7 +108,7 @@ const createFeedback = async (
 
 			await tx.technicianProfile.update({
 				where: {
-					id: createFeedback.workOrder.technician?.id,
+					id: technicianId,
 				},
 				data: {
 					rating: avgRating,
@@ -116,7 +126,21 @@ const createFeedback = async (
 };
 
 //& GET FEEDBACK BY ID
-const getById = async (id: string) => {
+const getById = async (id: string, user: IRequestUser) => {
+	const isUser = await prisma.user.findUnique({
+		where: {
+			id: user.userId,
+		},
+		include: {
+			customer: true,
+			manager: true,
+			technician: true,
+		},
+	});
+	if (!isUser) {
+		throw new AppError(httpStatus.NOT_FOUND, "user not found");
+	}
+
 	const result = await prisma.feedback.findUnique({
 		where: {
 			id,
@@ -128,6 +152,24 @@ const getById = async (id: string) => {
 
 	if (!result) {
 		throw new AppError(httpStatus.NOT_FOUND, "feedback not found");
+	}
+
+	if (user.role === "TECHNICIAN") {
+		if (result.workOrder.technicianId !== isUser.technician?.id) {
+			throw new AppError(httpStatus.UNAUTHORIZED, "unauthorized");
+		}
+	}
+
+	if (user.role === "MANAGER") {
+		if (result.workOrder.managerId !== isUser.manager?.id) {
+			throw new AppError(httpStatus.UNAUTHORIZED, "unauthorized");
+		}
+	}
+
+	if (user.role === "CUSTOMER") {
+		if (result.workOrder.customerId !== isUser.customer?.id) {
+			throw new AppError(httpStatus.UNAUTHORIZED, "unauthorized");
+		}
 	}
 
 	return result;
@@ -241,19 +283,54 @@ const updateFeedback = async (
 		throw new AppError(httpStatus.NOT_FOUND, "feedback not found");
 	}
 
-	const result = await prisma.feedback.update({
-		where: {
-			id: feedback.id,
-			workOrder: {
-				customerId: isCustomer.id,
-			},
-		},
-		data: {
-			...payload,
-		},
-	});
+	const transactionRes = await prisma.$transaction(
+		async (tx) => {
+			const result = await tx.feedback.update({
+				where: {
+					id: feedback.id,
+					workOrder: {
+						customerId: isCustomer.id,
+					},
+				},
+				data: {
+					...payload,
+				},
+				include: {
+					workOrder: true,
+				},
+			});
 
-	return result;
+			const res = await tx.feedback.aggregate({
+				_avg: {
+					rating: true,
+				},
+				where: {
+					workOrder: {
+						technicianId: result.workOrder.technicianId,
+					},
+				},
+			});
+
+			const avgRating = res._avg.rating ?? 0;
+
+			await tx.technicianProfile.update({
+				where: {
+					id: result.workOrder.technicianId!,
+				},
+				data: {
+					rating: avgRating,
+				},
+			});
+
+			return result;
+		},
+		{
+			maxWait: 10000,
+			timeout: 15000,
+		},
+	);
+
+	return transactionRes;
 };
 
 //& DELETED FEEDBACK
@@ -284,13 +361,39 @@ const deleteFeedback = async (id: string, user: IRequestUser) => {
 		throw new AppError(httpStatus.NOT_FOUND, "feedback not found");
 	}
 
-	const result = await prisma.feedback.delete({
-		where: {
-			id: feedback.id,
-			workOrder: {
-				customerId: isCustomer.id,
+	const result = await prisma.$transaction(async (tx) => {
+		const deletedFeedback = await tx.feedback.delete({
+			where: {
+				id: feedback.id,
 			},
-		},
+			include: {
+				workOrder: true,
+			},
+		});
+
+		if (deletedFeedback.workOrder.technicianId) {
+			const average = await tx.feedback.aggregate({
+				_avg: {
+					rating: true,
+				},
+				where: {
+					workOrder: {
+						technicianId: deletedFeedback.workOrder.technicianId,
+					},
+				},
+			});
+
+			await tx.technicianProfile.update({
+				where: {
+					id: deletedFeedback.workOrder.technicianId,
+				},
+				data: {
+					rating: average._avg.rating ?? 0,
+				},
+			});
+		}
+
+		return deletedFeedback;
 	});
 
 	return result;

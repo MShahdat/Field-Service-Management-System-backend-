@@ -56,7 +56,6 @@ const completeProfile = async (
 
 	const transactionResult = await prisma.$transaction(
 		async (tx) => {
-			// --- SKILLS: Merge with existing (Option B: merge) ---
 			let mergedSkills: string[] | undefined;
 			if (skills !== undefined) {
 				const existing = await tx.technicianProfile.findUnique({
@@ -161,32 +160,44 @@ const completeProfile = async (
 				where: {
 					id: isTechnician.id,
 				},
+				include: {
+					skills: true,
+					availability: true,
+					regions: true,
+				},
 			});
 
-			return tech;
+			if (!tech) {
+				throw new AppError(
+					httpStatus.INTERNAL_SERVER_ERROR,
+					"Failed to retrieve updated technician profile",
+				);
+			}
+
+			const isProfileCompleted = Boolean(
+				tech.phone &&
+					tech.address &&
+					tech.nid &&
+					tech.skills.length > 0 &&
+					tech.availability.length > 0 &&
+					tech.regions.length > 0,
+			);
+
+			await tx.technicianProfile.update({
+				where: {
+					id: tech.id,
+				},
+				data: {
+					isProfileCompleted,
+				},
+			});
+
+			return { ...tech, isProfileCompleted };
 		},
 		{ maxWait: 10000, timeout: 15000 },
 	);
 
-	const fullProfile = await prisma.technicianProfile.findUnique({
-		where: { id: transactionResult?.id },
-		include: { skills: true, regions: true, availability: true },
-	});
-
-	const isNowComplete =
-		!!fullProfile!.phone &&
-		fullProfile!.skills.length > 0 &&
-		fullProfile!.regions.length > 0 &&
-		fullProfile!.availability.length > 0;
-
-	if (isNowComplete !== fullProfile!.isProfileCompleted) {
-		await prisma.technicianProfile.update({
-			where: { id: fullProfile!.id },
-			data: { isProfileCompleted: isNowComplete },
-		});
-	}
-
-	return fullProfile;
+	return transactionResult;
 	// Before returning fullProfile to the client:
 	// const formattedAvailability = fullProfile?.availability.map((slot) => ({
 	// 	...slot,

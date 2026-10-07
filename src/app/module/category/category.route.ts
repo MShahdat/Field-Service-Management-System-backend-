@@ -24,4 +24,11 @@ route.put(
 	categoryController.udpateCategory,
 );
 
-export const categoryRotuer = route;
+route.patch(
+	"/:categoryId",
+	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+	categoryController.statusUpdate,
+);
+
+
+export const categoryRouter = route;
