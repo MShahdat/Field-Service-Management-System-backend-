@@ -32,7 +32,7 @@ route.patch(
 	reportController.updateReport,
 );
 
-route.patch(
+route.delete(
 	"/delete/:reportId",
 	auth(UserRole.TECHNICIAN, UserRole.SUPER_ADMIN, UserRole.ADMIN),
 	reportController.deleteReport,

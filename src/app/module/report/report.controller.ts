@@ -37,14 +37,7 @@ const getMyReport = catchAsync(async (req: Request, res: Response) => {
 	const user = req.user as IRequestUser;
 	const { reports, meta } = await reportService.getMyReport(query, user);
 
-	if (reports.length === 0) {
-		return sendResponse(res, {
-			statusCode: httpStatus.NOT_FOUND,
-			success: false,
-			message: `You have no report`,
-			data: null,
-		});
-	}
+
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
@@ -60,14 +53,6 @@ const getAllReport = catchAsync(async (req: Request, res: Response) => {
 
 	const { reports, meta } = await reportService.getAllReport(query);
 
-	if (reports.length === 0) {
-		return sendResponse(res, {
-			statusCode: httpStatus.NOT_FOUND,
-			success: false,
-			message: `service report not found`,
-			data: null,
-		});
-	}
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,

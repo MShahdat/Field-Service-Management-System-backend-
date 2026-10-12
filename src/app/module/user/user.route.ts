@@ -4,7 +4,7 @@ import { auth } from "../../middleware/auth";
 import { Cloudinary } from "../../lib/cloudinary";
 import { userController } from "./user.controller";
 import { zodValidation } from "../../middleware/zodValidation";
-import { CustomerUpdateZodSchema } from "./user.validation";
+import { CustomerUpdateZodSchema, StatusUpdateZodSchema } from "./user.validation";
 
 const route = Router();
 
@@ -27,5 +27,21 @@ route.patch(
 	auth(UserRole.CUSTOMER),
 	userController.udpateCustomer,
 );
+
+
+route.get(
+	'/all-users',
+	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+	userController.getAllUsers
+)
+
+
+
+route.patch(
+	'/status-update/:userId',
+	zodValidation(StatusUpdateZodSchema),
+	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+	userController.statusUpdate
+)
 
 export const userRouter = route;

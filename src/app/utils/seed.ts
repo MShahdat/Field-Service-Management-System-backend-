@@ -9,6 +9,7 @@ export const seedSuperAdmin = async () => {
 	try {
 		const existSuperAdmin = await prisma.user.findFirst({
 			where: { role: "SUPER_ADMIN" },
+			omit: { password: true },
 		});
 
 		if (existSuperAdmin) {
@@ -41,6 +42,7 @@ export const seedSuperAdmin = async () => {
 				needPasswordChange: false,
 				role: UserRole.SUPER_ADMIN,
 			},
+			omit: { password: true },
 		});
 
 		console.log("super admin created", superAdmi);
@@ -67,6 +69,7 @@ export const seedTesterAdmin = async () => {
 
 		const existTesterAdmin = await prisma.user.findUnique({
 			where: { email },
+			omit: { password: true },
 		});
 
 		if (existTesterAdmin) {
@@ -88,6 +91,7 @@ export const seedTesterAdmin = async () => {
 				needPasswordChange: false,
 				role: UserRole.ADMIN,
 			},
+			omit: { password: true },
 		});
 
 		console.log("tester admin created", testerAdmin);
@@ -114,6 +118,7 @@ export const seedTesterManager = async () => {
 
 		const existTesterManager = await prisma.user.findUnique({
 			where: { email },
+			omit: { password: true },
 		});
 
 		if (existTesterManager) {
@@ -151,6 +156,7 @@ export const seedTesterManager = async () => {
 					},
 				},
 			},
+			omit: { password: true },
 		});
 
 		console.log("tester manager created", testerManager);

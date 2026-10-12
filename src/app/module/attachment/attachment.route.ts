@@ -14,33 +14,16 @@ route.post(
 			maxCount: 10,
 		},
 	]),
-	auth(UserRole.CUSTOMER, UserRole.MANAGER, UserRole.TECHNICIAN),
+	auth(UserRole.CUSTOMER, UserRole.TECHNICIAN),
 	attachmentController.createAttach,
 );
 
 route.get(
-	"/my-attachments",
-	auth(UserRole.CUSTOMER),
-	attachmentController.getMyAttach,
+	"/",
+	auth(),
+	attachmentController.getAttatchments
 );
 
-route.get(
-	"/technician-attachments",
-	auth(UserRole.TECHNICIAN),
-	attachmentController.getAttachTech,
-);
-
-route.get(
-	"/manager-attachments",
-	auth(UserRole.MANAGER),
-	attachmentController.getAttachManager,
-);
-
-route.get(
-	"/all-attachments",
-	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
-	attachmentController.getAllTech,
-);
 
 route.patch(
 	"/update/:attachmentId",
@@ -54,7 +37,7 @@ route.patch(
 	attachmentController.updateAttach,
 );
 
-route.patch(
+route.delete(
 	"/delete/:attachmentId",
 	auth(
 		UserRole.ADMIN,

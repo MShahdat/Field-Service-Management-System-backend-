@@ -59,7 +59,7 @@ const createFeedback = async (
 		throw new AppError(httpStatus.UNAUTHORIZED, "You are not authorized to review");
 	}
 
-	if(workOrder.payment?.status !== 'PAID'){
+	if (workOrder.payment?.status !== 'PAID') {
 		throw new AppError(httpStatus.BAD_REQUEST, 'you can not feedback before payment')
 	}
 
@@ -180,7 +180,7 @@ const getAllFeedbacks = async (query: IQuery) => {
 	const sort = query.sortBy ? query.sortBy : "createdAt";
 	const order = query.sortOrder ? query.sortOrder : "desc";
 	const page = Number(query.page || 1);
-	const limit = Number(query.limit || 9);
+	const limit = Number(query.limit || 20);
 
 	const andConditions: FeedbackWhereInput[] = [];
 
@@ -228,7 +228,15 @@ const getAllFeedbacks = async (query: IQuery) => {
 			[sort]: order,
 		},
 		include: {
-			workOrder: true,
+			workOrder: {
+				include: {
+					service: {
+						include: {
+							category: true
+						}
+					}
+				}
+			},
 		},
 	});
 

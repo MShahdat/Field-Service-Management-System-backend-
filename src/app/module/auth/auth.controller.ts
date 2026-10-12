@@ -8,18 +8,20 @@ import { AppError } from "../../utils/appError";
 import { jwtUtils } from "../../utils/jwt";
 import config from "../../config/env";
 import { SignOptions } from "jsonwebtoken";
-import { UserRole } from "../../../../generated/prisma/enums";
 import { redirectUrl } from "../../utils/redirect";
 
 
 const isProduction = config.node_env === "production";
 
-const getAuthCookieOptions = (maxAge: number) => ({
+const getAuthCookieOptions = (maxAge?: number) => ({
 	httpOnly: true,
 	secure: isProduction,
 	sameSite: isProduction ? ("none" as const) : ("lax" as const),
+	path: "/" as const,
 	maxAge,
 });
+
+
 
 //& REGISTER USER
 const registerOTP = catchAsync(async (req: Request, res: Response) => {
@@ -70,7 +72,7 @@ const verifyEmail = catchAsync(async (req: Request, res: Response) => {
 const loginUser = catchAsync(async (req: Request, res: Response) => {
 	const payload = req.body;
 	const result = await AuthService.loginUser(payload);
-	const { accessToken, refreshToken } = result;
+	const { user, accessToken, refreshToken } = result;
 
 	res.cookie(
 		"accessToken",
@@ -88,6 +90,7 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
 		success: true,
 		message: "User logged in successfully",
 		data: {
+			user,
 			accessToken,
 			refreshToken,
 		},
@@ -162,6 +165,7 @@ const resetPassword = catchAsync(async (req: Request, res: Response) => {
 	const body = req.body;
 
 	await AuthService.resetPassword(body);
+
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
@@ -286,16 +290,8 @@ const facebookLogin = catchAsync(async (req: Request, res: Response) => {
 const logout = catchAsync(async (req: Request, res: Response) => {
 	const user = req.user as IRequestUser;
 
-	res.clearCookie("accessToken", {
-		path: "/",
-		secure: true,
-		sameSite: "strict",
-	});
-	res.clearCookie("refreshToken", {
-		path: "/",
-		secure: true,
-		sameSite: "strict",
-	});
+	res.clearCookie("accessToken", getAuthCookieOptions());
+	res.clearCookie("refreshToken", getAuthCookieOptions());
 
 	sendResponse(res, {
 		statusCode: httpStatus.OK,

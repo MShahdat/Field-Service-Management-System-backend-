@@ -45,13 +45,13 @@ const getMyServices = catchAsync(async (req: Request, res: Response) => {
 	const user = req.user as IRequestUser;
 	const query = req.query;
 
-	const { services, meta } = await serviceService.getMyServices(query, user);
+	const { data, meta } = await serviceService.getMyServices(query, user);
 
 	sendResponse(res, {
 		statusCode: httpStatus.CREATED,
 		success: true,
 		message: "service retrive successfully",
-		data: services,
+		data,
 		meta,
 	});
 });
@@ -61,13 +61,13 @@ const getAllServices = catchAsync(async (req: Request, res: Response) => {
 	const user = req.user as IRequestUser;
 	const query = req.query;
 
-	const { services, meta } = await serviceService.getALLServices(query, user);
+	const { data, meta } = await serviceService.getALLServices(query, user);
 
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
 		message: "service retrive successfully",
-		data: services,
+		data,
 		meta,
 	});
 });
@@ -78,7 +78,7 @@ const getMyRegionServices = catchAsync(async (req: Request, res: Response) => {
 	const user = req.user as IRequestUser;
 	const query = req.query;
 
-	const { services, meta } = await serviceService.getMyRegionServices(
+	const { data, meta } = await serviceService.getMyRegionServices(
 		query,
 		user,
 	);
@@ -87,7 +87,7 @@ const getMyRegionServices = catchAsync(async (req: Request, res: Response) => {
 		statusCode: httpStatus.OK,
 		success: true,
 		message: "service retrive successfully",
-		data: services,
+		data,
 		meta,
 	});
 });
@@ -109,20 +109,20 @@ const getSingleService = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
-//& REVIEW SERVICE (MANAGER)
-const reviewService = catchAsync(async (req: Request, res: Response) => {
-	const user = req.user as IRequestUser;
-	const body = req.body;
+// //& REVIEW SERVICE (MANAGER)
+// const reviewService = catchAsync(async (req: Request, res: Response) => {
+// 	const user = req.user as IRequestUser;
+// 	const body = req.body;
 
-	const result = await serviceService.reviewService(body, user);
+// 	const result = await serviceService.reviewService(body, user);
 
-	sendResponse(res, {
-		statusCode: httpStatus.OK,
-		success: true,
-		message: "service reviewed successfully",
-		data: result,
-	});
-});
+// 	sendResponse(res, {
+// 		statusCode: httpStatus.OK,
+// 		success: true,
+// 		message: "service reviewed successfully",
+// 		data: result,
+// 	});
+// });
 
 //& ELIGIBLE TECHNICIAN (MANAGER)
 const getEligibleTechnicians = catchAsync(
@@ -130,11 +130,7 @@ const getEligibleTechnicians = catchAsync(
 		const user = req.user as IRequestUser;
 		const id = req.params.workOrderId as string;
 
-		const result = await serviceService.getEligibleTechnicians(id);
-
-		if (result.length === 0) {
-			throw new AppError(httpStatus.NOT_FOUND, "technician not found");
-		}
+		const result = await serviceService.getEligibleTechnicians(id, user);
 
 		sendResponse(res, {
 			statusCode: httpStatus.OK,
@@ -155,7 +151,10 @@ const assignTechnician = catchAsync(async (req: Request, res: Response) => {
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
-		message: "technician assign successfully",
+		message:
+			body.status === "REJECTED"
+				? "Service rejected successfully"
+				: "Technician assigned successfully",
 		data: result,
 	});
 });
@@ -183,7 +182,6 @@ export const serviceController = {
 	getMyServices,
 	getAllServices,
 	getSingleService,
-	reviewService,
 	getEligibleTechnicians,
 	assignTechnician,
 	updateService,

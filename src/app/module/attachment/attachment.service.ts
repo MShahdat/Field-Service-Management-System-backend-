@@ -9,6 +9,7 @@ import {
 import httpStatus from "http-status";
 import { Cloudinary } from "../../lib/cloudinary";
 import { AttachmentWhereInput } from "../../../../generated/prisma/models";
+import { UserRole } from "../../../../generated/prisma/enums";
 
 //& CREATE ATTACHMENT
 const createAttachment = async (
@@ -47,8 +48,7 @@ const createAttachment = async (
 	}
 
 	if (
-		isWrokOrder.status === "CANCELLED" ||
-		isWrokOrder.status === "SCHEDULED"
+		isWrokOrder.status === "CANCELLED"
 	) {
 		throw new AppError(
 			httpStatus.BAD_REQUEST,
@@ -119,328 +119,9 @@ const createAttachment = async (
 	return createAttach;
 };
 
-//& GEL MY ATTACHMENTS (CUSTOMER)
-const getMyAttach = async (query: IQuery, user: IRequestUser) => {
-	const sort = query.sortBy ? query.sortBy : "createdAt";
-	const order = query.sortOrder ? query.sortOrder : "desc";
-	const page = Number(query.page || 1);
-	const limit = Number(query.limit || 20);
 
-	const isCustomer = await prisma.customerProfile.findUnique({
-		where: {
-			userId: user.userId,
-		},
-	});
-
-	if (!isCustomer) {
-		throw new AppError(httpStatus.NOT_FOUND, "customer not found");
-	}
-
-	const andConditions: AttachmentWhereInput[] = [
-		{
-			workOrder: {
-				customerId: isCustomer.id,
-			},
-		},
-	];
-
-	//~ searching
-	if (query.search) {
-		andConditions.push({
-			OR: [
-				{
-					workOrder: {
-						manager: {
-							user: {
-								name: {
-									contains: query.search,
-									mode: "insensitive",
-								},
-							},
-						},
-					},
-				},
-				{
-					workOrder: {
-						technician: {
-							user: {
-								name: {
-									contains: query.search,
-									mode: "insensitive",
-								},
-							},
-						},
-					},
-				},
-			],
-		});
-	}
-
-	//~ filtering
-
-	if (query.region) {
-		const region = query.region as string;
-		const arr = region.split(",").map((item) => item.trim());
-
-		andConditions.push({
-			workOrder: {
-				region: {
-					area: { in: arr },
-				},
-			},
-		});
-	}
-
-	if (query.isDelete) {
-		andConditions.push({
-			isDelete: query.isDelete,
-		});
-	}
-
-	const attachments = await prisma.attachment.findMany({
-		where: {
-			AND: andConditions,
-		},
-		take: limit,
-		skip: (page - 1) * limit,
-		orderBy: {
-			[sort]: order,
-		},
-		include: {
-			workOrder: true,
-		},
-	});
-
-	const total = await prisma.attachment.count({
-		where: {
-			AND: andConditions,
-		},
-	});
-
-	const meta = {
-		total,
-		page,
-		limit,
-		totalPages: Math.ceil(total / limit),
-	};
-
-	return {
-		attachments,
-		meta,
-	};
-};
-
-//& GEL MY ATTACHMENTS (MANAGER)
-const getManager = async (query: IQuery, user: IRequestUser) => {
-	const sort = query.sortBy ? query.sortBy : "createdAt";
-	const order = query.sortOrder ? query.sortOrder : "desc";
-	const page = Number(query.page || 1);
-	const limit = Number(query.limit || 20);
-
-	const isManger = await prisma.managerProfile.findUnique({
-		where: {
-			userId: user.userId,
-		},
-	});
-
-	if (!isManger) {
-		throw new AppError(httpStatus.NOT_FOUND, "manager not found");
-	}
-
-	const andConditions: AttachmentWhereInput[] = [
-		{
-			workOrder: {
-				managerId: isManger.id,
-			},
-		},
-	];
-
-	//~ searching
-	if (query.search) {
-		andConditions.push({
-			OR: [
-				{
-					workOrder: {
-						customer: {
-							user: {
-								name: {
-									contains: query.search,
-									mode: "insensitive",
-								},
-							},
-						},
-					},
-				},
-				{
-					workOrder: {
-						technician: {
-							user: {
-								name: {
-									contains: query.search,
-									mode: "insensitive",
-								},
-							},
-						},
-					},
-				},
-			],
-		});
-	}
-
-	//~ filtering
-
-	if (query.isDelete) {
-		andConditions.push({
-			isDelete: query.isDelete,
-		});
-	}
-
-	const attachments = await prisma.attachment.findMany({
-		where: {
-			AND: andConditions,
-		},
-		take: limit,
-		skip: (page - 1) * limit,
-		orderBy: {
-			[sort]: order,
-		},
-		include: {
-			workOrder: true,
-		},
-	});
-
-	const total = await prisma.attachment.count({
-		where: {
-			AND: andConditions,
-		},
-	});
-
-	const meta = {
-		total,
-		page,
-		limit,
-		totalPages: Math.ceil(total / limit),
-	};
-
-	return {
-		attachments,
-		meta,
-	};
-};
-
-//& GEL MY ATTACHMENTS (TECHNICIAN)
-const getTechnicianAttach = async (query: IQuery, user: IRequestUser) => {
-	const sort = query.sortBy ? query.sortBy : "createdAt";
-	const order = query.sortOrder ? query.sortOrder : "desc";
-	const page = Number(query.page || 1);
-	const limit = Number(query.limit || 20);
-
-	const isTech = await prisma.technicianProfile.findUnique({
-		where: {
-			userId: user.userId,
-		},
-	});
-
-	if (!isTech) {
-		throw new AppError(httpStatus.NOT_FOUND, "technician not found");
-	}
-
-	const andConditions: AttachmentWhereInput[] = [
-		{
-			workOrder: {
-				technicianId: isTech.id,
-			},
-		},
-	];
-
-	//~ searching
-	if (query.search) {
-		andConditions.push({
-			OR: [
-				{
-					workOrder: {
-						manager: {
-							user: {
-								name: {
-									contains: query.search,
-									mode: "insensitive",
-								},
-							},
-						},
-					},
-				},
-				{
-					workOrder: {
-						customer: {
-							user: {
-								name: {
-									contains: query.search,
-									mode: "insensitive",
-								},
-							},
-						},
-					},
-				},
-			],
-		});
-	}
-
-	//~ filtering
-
-	if (query.region) {
-		const region = query.region as string;
-		const arr = region.split(",").map((item) => item.trim());
-
-		andConditions.push({
-			workOrder: {
-				region: {
-					area: { in: arr },
-				},
-			},
-		});
-	}
-
-	if (query.isDelete) {
-		andConditions.push({
-			isDelete: query.isDelete,
-		});
-	}
-
-	const attachments = await prisma.attachment.findMany({
-		where: {
-			AND: andConditions,
-		},
-		take: limit,
-		skip: (page - 1) * limit,
-		orderBy: {
-			[sort]: order,
-		},
-		include: {
-			workOrder: true,
-		},
-	});
-
-	const total = await prisma.attachment.count({
-		where: {
-			AND: andConditions,
-		},
-	});
-
-	const meta = {
-		total,
-		page,
-		limit,
-		totalPages: Math.ceil(total / limit),
-	};
-
-	return {
-		attachments,
-		meta,
-	};
-};
-
-//& GEL ALL ATTACHMENT (ADMIN)
-const getAllAttach = async (query: IQuery) => {
+//& GET ATTACHMENTS (ALL ROLES)
+const getAttachments = async (query: IQuery, user: IRequestUser) => {
 	const sort = query.sortBy ? query.sortBy : "createdAt";
 	const order = query.sortOrder ? query.sortOrder : "desc";
 	const page = Number(query.page || 1);
@@ -448,103 +129,104 @@ const getAllAttach = async (query: IQuery) => {
 
 	const andConditions: AttachmentWhereInput[] = [];
 
-	//~ searching
+	const PARTIES = ["customer", "manager", "technician"] as const;
+
+
+	switch (user.role as UserRole) {
+		case "CUSTOMER": {
+			const profile = await prisma.customerProfile.findUnique({
+				where: {
+					userId: user.userId
+				},
+				select: {
+					id: true
+				},
+			});
+			if (!profile) {
+				throw new AppError(httpStatus.NOT_FOUND, "customer not found");
+			}
+			andConditions.push({ workOrder: { customerId: profile.id } });
+			break;
+		}
+		case "MANAGER": {
+			const profile = await prisma.managerProfile.findUnique({
+				where: { userId: user.userId },
+				select: { id: true },
+			});
+			if (!profile) throw new AppError(httpStatus.NOT_FOUND, "manager not found");
+			andConditions.push({ workOrder: { managerId: profile.id } });
+			break;
+		}
+		case "TECHNICIAN": {
+			const profile = await prisma.technicianProfile.findUnique({
+				where: { userId: user.userId },
+				select: { id: true },
+			});
+			if (!profile) throw new AppError(httpStatus.NOT_FOUND, "technician not found");
+			andConditions.push({ workOrder: { technicianId: profile.id } });
+			break;
+		}
+		case "ADMIN":
+		case "SUPER_ADMIN":
+			break;
+		default:
+			throw new AppError(httpStatus.FORBIDDEN, "you are not allowed to view attachments");
+	}
+
+
 	if (query.search) {
+		const partiesToSearch = PARTIES.filter((p) => p.toUpperCase() !== user.role);
+
 		andConditions.push({
-			OR: [
-				{
-					workOrder: {
-						manager: {
-							user: {
-								name: {
-									contains: query.search,
-									mode: "insensitive",
+			OR: partiesToSearch.map(
+				(party) =>
+					({
+						workOrder: {
+							[party]: {
+								user: {
+									name: { contains: query.search, mode: "insensitive" },
 								},
 							},
 						},
-					},
-				},
-				{
-					workOrder: {
-						technician: {
-							user: {
-								name: {
-									contains: query.search,
-									mode: "insensitive",
-								},
-							},
-						},
-					},
-				},
-				{
-					workOrder: {
-						customer: {
-							user: {
-								name: {
-									contains: query.search,
-									mode: "insensitive",
-								},
-							},
-						},
-					},
-				},
-			],
+					}) as AttachmentWhereInput,
+			),
 		});
 	}
 
-	//~ filtering
-
+	//~ 3. filtering
 	if (query.region) {
-		const region = query.region as string;
-		const arr = region.split(",").map((item) => item.trim());
-
-		andConditions.push({
-			workOrder: {
-				region: {
-					area: { in: arr },
-				},
-			},
-		});
+		const areas = (query.region as string).split(",").map((item) => item.trim());
+		andConditions.push({ workOrder: { region: { area: { in: areas } } } });
 	}
 
-	if (query.isDelete) {
-		andConditions.push({
-			isDelete: query.isDelete,
-		});
+	if (query.isDelete !== undefined) {
+		andConditions.push({ isDelete: String(query.isDelete) === "true" });
 	}
 
-	const attachments = await prisma.attachment.findMany({
-		where: {
-			AND: andConditions,
-		},
-		take: limit,
-		skip: (page - 1) * limit,
-		orderBy: {
-			[sort]: order,
-		},
-		include: {
-			workOrder: true,
-		},
-	});
+	const where: AttachmentWhereInput = { AND: andConditions };
 
-	const total = await prisma.attachment.count({
-		where: {
-			AND: andConditions,
-		},
-	});
-
-	const meta = {
-		total,
-		page,
-		limit,
-		totalPages: Math.ceil(total / limit),
-	};
+	const [attachments, total] = await Promise.all([
+		prisma.attachment.findMany({
+			where,
+			take: limit,
+			skip: (page - 1) * limit,
+			orderBy: { [sort]: order },
+			include: { workOrder: true },
+		}),
+		prisma.attachment.count({ where }),
+	]);
 
 	return {
 		attachments,
-		meta,
+		meta: {
+			total,
+			page,
+			limit,
+			totalPages: Math.ceil(total / limit),
+		},
 	};
 };
+
 
 //& UPDATE ATTACHMENT
 const udpateAttach = async (
@@ -622,6 +304,7 @@ const udpateAttach = async (
 	return updated;
 };
 
+
 //& DELETE ATTACHMENT
 const deleteAttach = async (id: string, user: IRequestUser) => {
 	const isUser = await prisma.user.findUnique({
@@ -655,9 +338,6 @@ const deleteAttach = async (id: string, user: IRequestUser) => {
 		throw new AppError(httpStatus.NOT_FOUND, "Attachment not found");
 	}
 
-	if (attachment.isDelete) {
-		throw new AppError(httpStatus.BAD_REQUEST, "attachment already deleted");
-	}
 
 	if (user.role === "CUSTOMER") {
 		if (attachment.workOrder.customerId !== isUser.customer?.id) {
@@ -677,25 +357,16 @@ const deleteAttach = async (id: string, user: IRequestUser) => {
 		}
 	}
 
-	const deleted = await prisma.attachment.update({
+	await prisma.attachment.delete({
 		where: {
 			id: attachment.id,
-		},
-		data: {
-			isDelete: true,
-			deletedAt: new Date(),
-		},
+		}
 	});
-
-	return deleted;
 };
 
 export const attachmentService = {
 	createAttachment,
-	getMyAttach,
-	getTechnicianAttach,
-	getManager,
-	getAllAttach,
 	udpateAttach,
 	deleteAttach,
+	getAttachments
 };

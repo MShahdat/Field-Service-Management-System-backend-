@@ -82,7 +82,7 @@ var config2 = {
   "clientVersion": "7.9.1",
   "engineVersion": "e922089b7d7502aff4249d5da3420f6fa55fc6ad",
   "activeProvider": "postgresql",
-  "inlineSchema": 'model Attachment {\n  id String @id @default(uuid())\n\n  files       Json\n  description String?\n\n  type AttachmentType\n\n  isDelete  Boolean   @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  workOrderId String\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@map("attachments")\n}\n\nmodel Availability {\n  id String @id @default(uuid())\n\n  type      AvailabilityType\n  dayOfWeek Int? // 0 = Sunday, 1 = Monday, ..., 6 = Saturday\n  date      DateTime?        @db.Date\n\n  startTime DateTime? @db.Time()\n  endTime   DateTime? @db.Time()\n  isActive  Boolean   @default(true)\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  technicianId String\n  technician   TechnicianProfile @relation(fields: [technicianId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@unique([technicianId, type, dayOfWeek])\n  @@unique([technicianId, type, date])\n  @@map("availability")\n}\n\nmodel Category {\n  id String @id @default(uuid())\n\n  name        String  @unique\n  icon        String?\n  description String?\n  isActive    Boolean @default(true)\n  duration    Int\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  services Service[]\n  skill    Skill[]\n\n  @@map("categories")\n}\n\nmodel CustomerProfile {\n  id String @id @default(uuid())\n\n  phone     String?\n  address   Json?\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  userId String @unique\n  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  service  Service[]\n  workOder WorkOrder[]\n\n  @@map("customers")\n}\n\nenum UserRole {\n  SUPER_ADMIN\n  ADMIN\n  CUSTOMER\n  TECHNICIAN\n  MANAGER\n}\n\nenum AuthProvider {\n  CREDENTIAL\n  GOOGLE\n  FACEBOOK\n}\n\nenum UserStatus {\n  ACTIVE\n  BLOCKED\n  DELETED\n}\n\nenum Gender {\n  MALE\n  FEMALE\n}\n\nenum AvailabilityType {\n  RECURRING\n  ONE_OFF\n  BLOCKED\n}\n\nenum TechStatus {\n  AVAILABLE\n  BUSY\n  OFF_DUTY\n}\n\nenum Priority {\n  LOW\n  MEDIUM\n  HIGH\n  URGENT\n}\n\nenum ServiceStatus {\n  PENDING\n  APPROVED\n  REJECTED\n  ASSIGNED\n  IN_PROGRESS\n  COMPLETED\n  CANCELLED\n}\n\nenum WorkOrderStatus {\n  SCHEDULED\n  EN_ROUTE\n  STARTED\n  COMPLETED\n  CANCELLED\n}\n\nenum ScheduleStatus {\n  SCHEDULED\n  CONFIRMED\n  COMPLETED\n  CANCELLED\n}\n\nenum AttachmentType {\n  BEFORE_PHOTO\n  AFTER_PHOTO\n  SIGNATURE\n  DOCUMENT\n}\n\nenum PaymentStatus {\n  UNPAID\n  PAID\n  FAILED\n  CANCELLED\n  REFUNDED\n}\n\nenum ManagerVerificationStatus {\n  PENDING\n  APPROVED\n  REJECTED\n}\n\nmodel Feedback {\n  id String @id @default(uuid())\n\n  rating    Float\n  comment   String?\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  workOrderId String    @unique\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@map("feedbacks")\n}\n\nmodel ManagerProfile {\n  id String @id @default(uuid())\n\n  phone   String\n  address Json?\n  nid     String\n\n  verificationStatus ManagerVerificationStatus @default(PENDING)\n  rejectionReason    String?\n  reviewdBy          String?\n  reviewdAt          DateTime?\n\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  userId String @unique\n  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  region    Region[]\n  workOrder WorkOrder[]\n\n  @@map("managerProfiles")\n}\n\nmodel Payment {\n  id String @id @default(uuid())\n\n  paymentId             String        @unique\n  amount                Decimal       @db.Decimal(10, 2)\n  method                String        @default("bKash")\n  transectionId         String?       @unique\n  status                PaymentStatus @default(UNPAID)\n  paidAt                DateTime?\n  payerReference        String?\n  currency              String        @default("BDT")\n  merchantInvoiceNumber String        @unique\n\n  getwayResponse Json?\n\n  refundTrxId  String?\n  refundAmount Decimal? @db.Decimal(10, 2)\n  refundedAt   String?\n  reason       String?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  workOrderId String    @unique\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@map("payments")\n}\n\nmodel Region {\n  id String @id @default(uuid())\n\n  area        String  @unique\n  description String?\n  isActive    Boolean @default(true)\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  manager     ManagerProfile[]\n  services    Service[]\n  technicians TechnicianProfile[] @relation("TechnicianRegions")\n  workOrders  WorkOrder[]\n\n  @@map("regions")\n}\n\nmodel Schedule {\n  id String @id @default(uuid())\n\n  servicingDate DateTime\n  startTime     DateTime\n  endTime       DateTime\n  actualStart   DateTime?\n  actualEnd     DateTime?\n\n  status    ScheduleStatus @default(SCHEDULED)\n  isdeleted Boolean        @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  technicianId String\n  technician   TechnicianProfile @relation(fields: [technicianId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  workOrderId String    @unique\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@map("schedules")\n}\n\n// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Get a free hosted Postgres database in seconds: `npx create-db`\n\ngenerator client {\n  provider = "prisma-client"\n  output   = "../../generated/prisma"\n}\n\ndatasource db {\n  provider = "postgresql"\n}\n\nmodel Service {\n  id String @id @default(uuid())\n\n  description String?\n  priority    Priority      @default(MEDIUM)\n  status      ServiceStatus @default(PENDING)\n  address     Json\n\n  servicingDate      DateTime  @db.Date\n  preferredStartTime DateTime? @db.Time()\n  preferredEndTime   DateTime? @db.Time()\n  duration           Int?\n\n  isDeleted   Boolean   @default(false)\n  isDeletedAt DateTime?\n\n  assignedAt      DateTime?\n  reviewedBy      String?\n  reviewedAt      DateTime?\n  rejectionReason String?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  customerId String\n  customer   CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  categoryId String\n  category   Category @relation(fields: [categoryId], references: [id])\n\n  regionId String\n  region   Region @relation(fields: [regionId], references: [id])\n\n  workOrders WorkOrder?\n\n  @@map("services")\n}\n\nmodel ServiceReport {\n  id String @id @default(uuid())\n\n  reportUrl      String\n  reportPublicId String\n  description    String?\n  isDelete       Boolean   @default(false)\n  deletedAt      DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  workOrderId String    @unique\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@map("serviceReports")\n}\n\nmodel Skill {\n  id String @id @default(uuid())\n\n  name        String    @unique\n  icon        String?\n  description String?\n  isActive    Boolean   @default(true)\n  isDelete    Boolean   @default(false)\n  deletedAt   DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  categoryId String\n  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  technician TechnicianProfile[]\n\n  @@map("skills")\n}\n\nmodel TechnicianProfile {\n  id String @id @default(uuid())\n\n  phone              String?\n  address            Json?\n  bio                String?\n  nid                String?\n  isProfileCompleted Boolean   @default(false)\n  isDeleted          Boolean   @default(false)\n  deletedAt          DateTime?\n\n  skills       Skill[]\n  availability Availability[]\n  regions      Region[]       @relation("TechnicianRegions")\n\n  status        TechStatus @default(AVAILABLE)\n  rating        Float?     @default(0)\n  jobsCompleted Int        @default(0)\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  userId String @unique\n  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  workOrder WorkOrder[]\n  schedule  Schedule[]\n\n  @@map("technicians")\n}\n\nmodel User {\n  id String @id @default(uuid())\n\n  name               String\n  email              String  @unique\n  password           String?\n  profileImg         String?\n  profileImgPublicId String?\n\n  googleId           String?      @unique\n  facebookId         String?      @unique\n  authProvider       AuthProvider @default(CREDENTIAL)\n  emailVerified      Boolean      @default(false)\n  role               UserRole     @default(CUSTOMER)\n  status             UserStatus   @default(ACTIVE)\n  needPasswordChange Boolean      @default(false)\n  isDeleted          Boolean      @default(false)\n  deletedAt          DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  customer   CustomerProfile?\n  technician TechnicianProfile?\n  manager    ManagerProfile?\n\n  @@map("users")\n}\n\nmodel WorkOrder {\n  id String @id @default(uuid())\n\n  servicingDate DateTime\n\n  status WorkOrderStatus @default(SCHEDULED)\n  note   String?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  regionId String\n  region   Region @relation(fields: [regionId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  customerId String\n  customer   CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  technicianId String?\n  technician   TechnicianProfile? @relation(fields: [technicianId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  serviceId String  @unique\n  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  managerId String\n  manager   ManagerProfile @relation(fields: [managerId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  attachment    Attachment[]\n  serviceReport ServiceReport?\n  feedback      Feedback?\n  payment       Payment?\n  schedule      Schedule?\n\n  @@map("workOrders")\n}\n',
+  "inlineSchema": 'model Attachment {\n  id String @id @default(uuid())\n\n  files       Json\n  description String?\n\n  type AttachmentType\n\n  isDelete  Boolean   @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  workOrderId String\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@map("attachments")\n}\n\nmodel Availability {\n  id String @id @default(uuid())\n\n  type      AvailabilityType\n  dayOfWeek Int? // 0 = Sunday, 1 = Monday, ..., 6 = Saturday\n  date      DateTime?        @db.Date\n\n  startTime DateTime? @db.Time()\n  endTime   DateTime? @db.Time()\n  isActive  Boolean   @default(true)\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  technicianId String\n  technician   TechnicianProfile @relation(fields: [technicianId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@unique([technicianId, type, dayOfWeek])\n  @@unique([technicianId, type, date])\n  @@map("availability")\n}\n\nmodel Category {\n  id String @id @default(uuid())\n\n  name        String  @unique\n  icon        String?\n  description String?\n  isActive    Boolean @default(true)\n  duration    Int\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  services Service[]\n  skill    Skill[]\n\n  @@map("categories")\n}\n\nmodel CustomerProfile {\n  id String @id @default(uuid())\n\n  phone     String?\n  address   Json?\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  userId String @unique\n  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  service  Service[]\n  workOder WorkOrder[]\n\n  @@map("customers")\n}\n\nenum UserRole {\n  SUPER_ADMIN\n  ADMIN\n  CUSTOMER\n  TECHNICIAN\n  MANAGER\n}\n\nenum AuthProvider {\n  CREDENTIAL\n  GOOGLE\n  FACEBOOK\n}\n\nenum UserStatus {\n  ACTIVE\n  BLOCKED\n  DELETED\n}\n\nenum Gender {\n  MALE\n  FEMALE\n}\n\nenum AvailabilityType {\n  RECURRING\n  ONE_OFF\n  BLOCKED\n}\n\nenum TechStatus {\n  AVAILABLE\n  BUSY\n  OFF_DUTY\n}\n\nenum Priority {\n  LOW\n  MEDIUM\n  HIGH\n  URGENT\n}\n\nenum ServiceStatus {\n  PENDING\n  APPROVED\n  REJECTED\n  ASSIGNED\n  IN_PROGRESS\n  COMPLETED\n  CANCELLED\n}\n\nenum WorkOrderStatus {\n  SCHEDULED\n  EN_ROUTE\n  STARTED\n  COMPLETED\n  CANCELLED\n}\n\nenum ScheduleStatus {\n  SCHEDULED\n  CONFIRMED\n  COMPLETED\n  CANCELLED\n}\n\nenum AttachmentType {\n  BEFORE_PHOTO\n  AFTER_PHOTO\n  SIGNATURE\n  DOCUMENT\n}\n\nenum PaymentStatus {\n  UNPAID\n  PAID\n  FAILED\n  CANCELLED\n  REFUNDED\n}\n\nenum ManagerVerificationStatus {\n  PENDING\n  APPROVED\n  REJECTED\n}\n\nmodel Feedback {\n  id String @id @default(uuid())\n\n  rating    Float\n  comment   String?\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  workOrderId String    @unique\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@map("feedbacks")\n}\n\nmodel ManagerProfile {\n  id String @id @default(uuid())\n\n  phone   String\n  address Json?\n  nid     String\n\n  verificationStatus ManagerVerificationStatus @default(PENDING)\n  rejectionReason    String?\n  reviewdBy          String?\n  reviewdAt          DateTime?\n\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  userId String @unique\n  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  region    Region[]\n  workOrder WorkOrder[]\n\n  @@map("managerProfiles")\n}\n\nmodel Payment {\n  id String @id @default(uuid())\n\n  paymentId             String        @unique\n  amount                Decimal       @db.Decimal(10, 2)\n  method                String        @default("bKash")\n  transectionId         String?       @unique\n  status                PaymentStatus @default(UNPAID)\n  paidAt                DateTime?\n  payerReference        String?\n  currency              String        @default("BDT")\n  merchantInvoiceNumber String        @unique\n\n  getwayResponse Json?\n\n  refundTrxId  String?\n  refundAmount Decimal? @db.Decimal(10, 2)\n  refundedAt   String?\n  reason       String?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  workOrderId String    @unique\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@map("payments")\n}\n\nmodel Region {\n  id String @id @default(uuid())\n\n  area        String  @unique\n  description String?\n  isActive    Boolean @default(true)\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  manager     ManagerProfile[]\n  services    Service[]\n  technicians TechnicianProfile[] @relation("TechnicianRegions")\n  workOrders  WorkOrder[]\n\n  @@map("regions")\n}\n\nmodel Schedule {\n  id String @id @default(uuid())\n\n  servicingDate DateTime\n  startTime     DateTime\n  endTime       DateTime\n  actualStart   DateTime?\n  actualEnd     DateTime?\n\n  status    ScheduleStatus @default(SCHEDULED)\n  isdeleted Boolean        @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  technicianId String\n  technician   TechnicianProfile @relation(fields: [technicianId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  workOrderId String    @unique\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@map("schedules")\n}\n\n// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Get a free hosted Postgres database in seconds: `npx create-db`\n\ngenerator client {\n  provider = "prisma-client"\n  output   = "../../generated/prisma"\n}\n\ndatasource db {\n  provider = "postgresql"\n}\n\nmodel Service {\n  id String @id @default(uuid())\n\n  title       String        @default("")\n  description String?\n  priority    Priority      @default(MEDIUM)\n  status      ServiceStatus @default(PENDING)\n  address     Json\n\n  servicingDate      DateTime  @db.Date\n  preferredStartTime DateTime? @db.Time()\n  preferredEndTime   DateTime? @db.Time()\n  duration           Int?\n\n  isDeleted   Boolean   @default(false)\n  isDeletedAt DateTime?\n\n  assignedAt      DateTime?\n  reviewedBy      String?\n  reviewedAt      DateTime?\n  rejectionReason String?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  customerId String\n  customer   CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  categoryId String\n  category   Category @relation(fields: [categoryId], references: [id])\n\n  regionId String\n  region   Region @relation(fields: [regionId], references: [id])\n\n  workOrders WorkOrder?\n\n  @@map("services")\n}\n\nmodel ServiceReport {\n  id String @id @default(uuid())\n\n  reportUrl      String\n  reportPublicId String\n  description    String?\n  isDelete       Boolean   @default(false)\n  deletedAt      DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  workOrderId String    @unique\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@map("serviceReports")\n}\n\nmodel Skill {\n  id String @id @default(uuid())\n\n  name        String    @unique\n  icon        String?\n  description String?\n  isActive    Boolean   @default(true)\n  isDelete    Boolean   @default(false)\n  deletedAt   DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  categoryId String\n  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  technician TechnicianProfile[]\n\n  @@map("skills")\n}\n\nmodel TechnicianProfile {\n  id String @id @default(uuid())\n\n  phone              String?\n  address            Json?\n  bio                String?\n  nid                String?\n  isProfileCompleted Boolean   @default(false)\n  isDeleted          Boolean   @default(false)\n  deletedAt          DateTime?\n\n  skills       Skill[]\n  availability Availability[]\n  regions      Region[]       @relation("TechnicianRegions")\n\n  status        TechStatus @default(AVAILABLE)\n  rating        Float?     @default(0)\n  jobsCompleted Int        @default(0)\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  userId String @unique\n  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  workOrder WorkOrder[]\n  schedule  Schedule[]\n\n  @@map("technicians")\n}\n\nmodel User {\n  id String @id @default(uuid())\n\n  name               String\n  email              String  @unique\n  password           String?\n  profileImg         String?\n  profileImgPublicId String?\n\n  googleId           String?      @unique\n  facebookId         String?      @unique\n  authProvider       AuthProvider @default(CREDENTIAL)\n  emailVerified      Boolean      @default(false)\n  role               UserRole     @default(CUSTOMER)\n  status             UserStatus   @default(ACTIVE)\n  needPasswordChange Boolean      @default(false)\n  isDeleted          Boolean      @default(false)\n  deletedAt          DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  customer   CustomerProfile?\n  technician TechnicianProfile?\n  manager    ManagerProfile?\n\n  @@map("users")\n}\n\nmodel WorkOrder {\n  id String @id @default(uuid())\n\n  servicingDate DateTime\n\n  status WorkOrderStatus @default(SCHEDULED)\n  note   String?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  regionId String\n  region   Region @relation(fields: [regionId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  customerId String\n  customer   CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  technicianId String?\n  technician   TechnicianProfile? @relation(fields: [technicianId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  serviceId String  @unique\n  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  managerId String?\n  manager   ManagerProfile? @relation(fields: [managerId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  attachment    Attachment[]\n  serviceReport ServiceReport?\n  feedback      Feedback?\n  payment       Payment?\n  schedule      Schedule?\n\n  @@map("workOrders")\n}\n',
   "runtimeDataModel": {
     "models": {},
     "enums": {},
@@ -93,10 +93,10 @@ var config2 = {
     "graph": ""
   }
 };
-config2.runtimeDataModel = JSON.parse('{"models":{"Attachment":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"files","kind":"scalar","type":"Json"},{"name":"description","kind":"scalar","type":"String"},{"name":"type","kind":"enum","type":"AttachmentType"},{"name":"isDelete","kind":"scalar","type":"Boolean"},{"name":"deletedAt","kind":"scalar","type":"DateTime"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"workOrderId","kind":"scalar","type":"String"},{"name":"workOrder","kind":"object","type":"WorkOrder","relationName":"AttachmentToWorkOrder"}],"dbName":"attachments"},"Availability":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"type","kind":"enum","type":"AvailabilityType"},{"name":"dayOfWeek","kind":"scalar","type":"Int"},{"name":"date","kind":"scalar","type":"DateTime"},{"name":"startTime","kind":"scalar","type":"DateTime"},{"name":"endTime","kind":"scalar","type":"DateTime"},{"name":"isActive","kind":"scalar","type":"Boolean"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"technicianId","kind":"scalar","type":"String"},{"name":"technician","kind":"object","type":"TechnicianProfile","relationName":"AvailabilityToTechnicianProfile"}],"dbName":"availability"},"Category":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"name","kind":"scalar","type":"String"},{"name":"icon","kind":"scalar","type":"String"},{"name":"description","kind":"scalar","type":"String"},{"name":"isActive","kind":"scalar","type":"Boolean"},{"name":"duration","kind":"scalar","type":"Int"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"services","kind":"object","type":"Service","relationName":"CategoryToService"},{"name":"skill","kind":"object","type":"Skill","relationName":"CategoryToSkill"}],"dbName":"categories"},"CustomerProfile":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"phone","kind":"scalar","type":"String"},{"name":"address","kind":"scalar","type":"Json"},{"name":"isDeleted","kind":"scalar","type":"Boolean"},{"name":"deletedAt","kind":"scalar","type":"DateTime"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"userId","kind":"scalar","type":"String"},{"name":"user","kind":"object","type":"User","relationName":"CustomerProfileToUser"},{"name":"service","kind":"object","type":"Service","relationName":"CustomerProfileToService"},{"name":"workOder","kind":"object","type":"WorkOrder","relationName":"CustomerProfileToWorkOrder"}],"dbName":"customers"},"Feedback":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"rating","kind":"scalar","type":"Float"},{"name":"comment","kind":"scalar","type":"String"},{"name":"isDeleted","kind":"scalar","type":"Boolean"},{"name":"deletedAt","kind":"scalar","type":"DateTime"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"workOrderId","kind":"scalar","type":"String"},{"name":"workOrder","kind":"object","type":"WorkOrder","relationName":"FeedbackToWorkOrder"}],"dbName":"feedbacks"},"ManagerProfile":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"phone","kind":"scalar","type":"String"},{"name":"address","kind":"scalar","type":"Json"},{"name":"nid","kind":"scalar","type":"String"},{"name":"verificationStatus","kind":"enum","type":"ManagerVerificationStatus"},{"name":"rejectionReason","kind":"scalar","type":"String"},{"name":"reviewdBy","kind":"scalar","type":"String"},{"name":"reviewdAt","kind":"scalar","type":"DateTime"},{"name":"isDeleted","kind":"scalar","type":"Boolean"},{"name":"deletedAt","kind":"scalar","type":"DateTime"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"userId","kind":"scalar","type":"String"},{"name":"user","kind":"object","type":"User","relationName":"ManagerProfileToUser"},{"name":"region","kind":"object","type":"Region","relationName":"ManagerProfileToRegion"},{"name":"workOrder","kind":"object","type":"WorkOrder","relationName":"ManagerProfileToWorkOrder"}],"dbName":"managerProfiles"},"Payment":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"paymentId","kind":"scalar","type":"String"},{"name":"amount","kind":"scalar","type":"Decimal"},{"name":"method","kind":"scalar","type":"String"},{"name":"transectionId","kind":"scalar","type":"String"},{"name":"status","kind":"enum","type":"PaymentStatus"},{"name":"paidAt","kind":"scalar","type":"DateTime"},{"name":"payerReference","kind":"scalar","type":"String"},{"name":"currency","kind":"scalar","type":"String"},{"name":"merchantInvoiceNumber","kind":"scalar","type":"String"},{"name":"getwayResponse","kind":"scalar","type":"Json"},{"name":"refundTrxId","kind":"scalar","type":"String"},{"name":"refundAmount","kind":"scalar","type":"Decimal"},{"name":"refundedAt","kind":"scalar","type":"String"},{"name":"reason","kind":"scalar","type":"String"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"workOrderId","kind":"scalar","type":"String"},{"name":"workOrder","kind":"object","type":"WorkOrder","relationName":"PaymentToWorkOrder"}],"dbName":"payments"},"Region":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"area","kind":"scalar","type":"String"},{"name":"description","kind":"scalar","type":"String"},{"name":"isActive","kind":"scalar","type":"Boolean"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"manager","kind":"object","type":"ManagerProfile","relationName":"ManagerProfileToRegion"},{"name":"services","kind":"object","type":"Service","relationName":"RegionToService"},{"name":"technicians","kind":"object","type":"TechnicianProfile","relationName":"TechnicianRegions"},{"name":"workOrders","kind":"object","type":"WorkOrder","relationName":"RegionToWorkOrder"}],"dbName":"regions"},"Schedule":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"servicingDate","kind":"scalar","type":"DateTime"},{"name":"startTime","kind":"scalar","type":"DateTime"},{"name":"endTime","kind":"scalar","type":"DateTime"},{"name":"actualStart","kind":"scalar","type":"DateTime"},{"name":"actualEnd","kind":"scalar","type":"DateTime"},{"name":"status","kind":"enum","type":"ScheduleStatus"},{"name":"isdeleted","kind":"scalar","type":"Boolean"},{"name":"deletedAt","kind":"scalar","type":"DateTime"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"technicianId","kind":"scalar","type":"String"},{"name":"technician","kind":"object","type":"TechnicianProfile","relationName":"ScheduleToTechnicianProfile"},{"name":"workOrderId","kind":"scalar","type":"String"},{"name":"workOrder","kind":"object","type":"WorkOrder","relationName":"ScheduleToWorkOrder"}],"dbName":"schedules"},"Service":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"description","kind":"scalar","type":"String"},{"name":"priority","kind":"enum","type":"Priority"},{"name":"status","kind":"enum","type":"ServiceStatus"},{"name":"address","kind":"scalar","type":"Json"},{"name":"servicingDate","kind":"scalar","type":"DateTime"},{"name":"preferredStartTime","kind":"scalar","type":"DateTime"},{"name":"preferredEndTime","kind":"scalar","type":"DateTime"},{"name":"duration","kind":"scalar","type":"Int"},{"name":"isDeleted","kind":"scalar","type":"Boolean"},{"name":"isDeletedAt","kind":"scalar","type":"DateTime"},{"name":"assignedAt","kind":"scalar","type":"DateTime"},{"name":"reviewedBy","kind":"scalar","type":"String"},{"name":"reviewedAt","kind":"scalar","type":"DateTime"},{"name":"rejectionReason","kind":"scalar","type":"String"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"customerId","kind":"scalar","type":"String"},{"name":"customer","kind":"object","type":"CustomerProfile","relationName":"CustomerProfileToService"},{"name":"categoryId","kind":"scalar","type":"String"},{"name":"category","kind":"object","type":"Category","relationName":"CategoryToService"},{"name":"regionId","kind":"scalar","type":"String"},{"name":"region","kind":"object","type":"Region","relationName":"RegionToService"},{"name":"workOrders","kind":"object","type":"WorkOrder","relationName":"ServiceToWorkOrder"}],"dbName":"services"},"ServiceReport":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"reportUrl","kind":"scalar","type":"String"},{"name":"reportPublicId","kind":"scalar","type":"String"},{"name":"description","kind":"scalar","type":"String"},{"name":"isDelete","kind":"scalar","type":"Boolean"},{"name":"deletedAt","kind":"scalar","type":"DateTime"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"workOrderId","kind":"scalar","type":"String"},{"name":"workOrder","kind":"object","type":"WorkOrder","relationName":"ServiceReportToWorkOrder"}],"dbName":"serviceReports"},"Skill":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"name","kind":"scalar","type":"String"},{"name":"icon","kind":"scalar","type":"String"},{"name":"description","kind":"scalar","type":"String"},{"name":"isActive","kind":"scalar","type":"Boolean"},{"name":"isDelete","kind":"scalar","type":"Boolean"},{"name":"deletedAt","kind":"scalar","type":"DateTime"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"categoryId","kind":"scalar","type":"String"},{"name":"category","kind":"object","type":"Category","relationName":"CategoryToSkill"},{"name":"technician","kind":"object","type":"TechnicianProfile","relationName":"SkillToTechnicianProfile"}],"dbName":"skills"},"TechnicianProfile":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"phone","kind":"scalar","type":"String"},{"name":"address","kind":"scalar","type":"Json"},{"name":"bio","kind":"scalar","type":"String"},{"name":"nid","kind":"scalar","type":"String"},{"name":"isProfileCompleted","kind":"scalar","type":"Boolean"},{"name":"isDeleted","kind":"scalar","type":"Boolean"},{"name":"deletedAt","kind":"scalar","type":"DateTime"},{"name":"skills","kind":"object","type":"Skill","relationName":"SkillToTechnicianProfile"},{"name":"availability","kind":"object","type":"Availability","relationName":"AvailabilityToTechnicianProfile"},{"name":"regions","kind":"object","type":"Region","relationName":"TechnicianRegions"},{"name":"status","kind":"enum","type":"TechStatus"},{"name":"rating","kind":"scalar","type":"Float"},{"name":"jobsCompleted","kind":"scalar","type":"Int"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"userId","kind":"scalar","type":"String"},{"name":"user","kind":"object","type":"User","relationName":"TechnicianProfileToUser"},{"name":"workOrder","kind":"object","type":"WorkOrder","relationName":"TechnicianProfileToWorkOrder"},{"name":"schedule","kind":"object","type":"Schedule","relationName":"ScheduleToTechnicianProfile"}],"dbName":"technicians"},"User":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"name","kind":"scalar","type":"String"},{"name":"email","kind":"scalar","type":"String"},{"name":"password","kind":"scalar","type":"String"},{"name":"profileImg","kind":"scalar","type":"String"},{"name":"profileImgPublicId","kind":"scalar","type":"String"},{"name":"googleId","kind":"scalar","type":"String"},{"name":"facebookId","kind":"scalar","type":"String"},{"name":"authProvider","kind":"enum","type":"AuthProvider"},{"name":"emailVerified","kind":"scalar","type":"Boolean"},{"name":"role","kind":"enum","type":"UserRole"},{"name":"status","kind":"enum","type":"UserStatus"},{"name":"needPasswordChange","kind":"scalar","type":"Boolean"},{"name":"isDeleted","kind":"scalar","type":"Boolean"},{"name":"deletedAt","kind":"scalar","type":"DateTime"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"customer","kind":"object","type":"CustomerProfile","relationName":"CustomerProfileToUser"},{"name":"technician","kind":"object","type":"TechnicianProfile","relationName":"TechnicianProfileToUser"},{"name":"manager","kind":"object","type":"ManagerProfile","relationName":"ManagerProfileToUser"}],"dbName":"users"},"WorkOrder":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"servicingDate","kind":"scalar","type":"DateTime"},{"name":"status","kind":"enum","type":"WorkOrderStatus"},{"name":"note","kind":"scalar","type":"String"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"regionId","kind":"scalar","type":"String"},{"name":"region","kind":"object","type":"Region","relationName":"RegionToWorkOrder"},{"name":"customerId","kind":"scalar","type":"String"},{"name":"customer","kind":"object","type":"CustomerProfile","relationName":"CustomerProfileToWorkOrder"},{"name":"technicianId","kind":"scalar","type":"String"},{"name":"technician","kind":"object","type":"TechnicianProfile","relationName":"TechnicianProfileToWorkOrder"},{"name":"serviceId","kind":"scalar","type":"String"},{"name":"service","kind":"object","type":"Service","relationName":"ServiceToWorkOrder"},{"name":"managerId","kind":"scalar","type":"String"},{"name":"manager","kind":"object","type":"ManagerProfile","relationName":"ManagerProfileToWorkOrder"},{"name":"attachment","kind":"object","type":"Attachment","relationName":"AttachmentToWorkOrder"},{"name":"serviceReport","kind":"object","type":"ServiceReport","relationName":"ServiceReportToWorkOrder"},{"name":"feedback","kind":"object","type":"Feedback","relationName":"FeedbackToWorkOrder"},{"name":"payment","kind":"object","type":"Payment","relationName":"PaymentToWorkOrder"},{"name":"schedule","kind":"object","type":"Schedule","relationName":"ScheduleToWorkOrder"}],"dbName":"workOrders"}},"enums":{},"types":{}}');
+config2.runtimeDataModel = JSON.parse('{"models":{"Attachment":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"files","kind":"scalar","type":"Json"},{"name":"description","kind":"scalar","type":"String"},{"name":"type","kind":"enum","type":"AttachmentType"},{"name":"isDelete","kind":"scalar","type":"Boolean"},{"name":"deletedAt","kind":"scalar","type":"DateTime"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"workOrderId","kind":"scalar","type":"String"},{"name":"workOrder","kind":"object","type":"WorkOrder","relationName":"AttachmentToWorkOrder"}],"dbName":"attachments"},"Availability":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"type","kind":"enum","type":"AvailabilityType"},{"name":"dayOfWeek","kind":"scalar","type":"Int"},{"name":"date","kind":"scalar","type":"DateTime"},{"name":"startTime","kind":"scalar","type":"DateTime"},{"name":"endTime","kind":"scalar","type":"DateTime"},{"name":"isActive","kind":"scalar","type":"Boolean"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"technicianId","kind":"scalar","type":"String"},{"name":"technician","kind":"object","type":"TechnicianProfile","relationName":"AvailabilityToTechnicianProfile"}],"dbName":"availability"},"Category":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"name","kind":"scalar","type":"String"},{"name":"icon","kind":"scalar","type":"String"},{"name":"description","kind":"scalar","type":"String"},{"name":"isActive","kind":"scalar","type":"Boolean"},{"name":"duration","kind":"scalar","type":"Int"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"services","kind":"object","type":"Service","relationName":"CategoryToService"},{"name":"skill","kind":"object","type":"Skill","relationName":"CategoryToSkill"}],"dbName":"categories"},"CustomerProfile":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"phone","kind":"scalar","type":"String"},{"name":"address","kind":"scalar","type":"Json"},{"name":"isDeleted","kind":"scalar","type":"Boolean"},{"name":"deletedAt","kind":"scalar","type":"DateTime"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"userId","kind":"scalar","type":"String"},{"name":"user","kind":"object","type":"User","relationName":"CustomerProfileToUser"},{"name":"service","kind":"object","type":"Service","relationName":"CustomerProfileToService"},{"name":"workOder","kind":"object","type":"WorkOrder","relationName":"CustomerProfileToWorkOrder"}],"dbName":"customers"},"Feedback":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"rating","kind":"scalar","type":"Float"},{"name":"comment","kind":"scalar","type":"String"},{"name":"isDeleted","kind":"scalar","type":"Boolean"},{"name":"deletedAt","kind":"scalar","type":"DateTime"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"workOrderId","kind":"scalar","type":"String"},{"name":"workOrder","kind":"object","type":"WorkOrder","relationName":"FeedbackToWorkOrder"}],"dbName":"feedbacks"},"ManagerProfile":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"phone","kind":"scalar","type":"String"},{"name":"address","kind":"scalar","type":"Json"},{"name":"nid","kind":"scalar","type":"String"},{"name":"verificationStatus","kind":"enum","type":"ManagerVerificationStatus"},{"name":"rejectionReason","kind":"scalar","type":"String"},{"name":"reviewdBy","kind":"scalar","type":"String"},{"name":"reviewdAt","kind":"scalar","type":"DateTime"},{"name":"isDeleted","kind":"scalar","type":"Boolean"},{"name":"deletedAt","kind":"scalar","type":"DateTime"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"userId","kind":"scalar","type":"String"},{"name":"user","kind":"object","type":"User","relationName":"ManagerProfileToUser"},{"name":"region","kind":"object","type":"Region","relationName":"ManagerProfileToRegion"},{"name":"workOrder","kind":"object","type":"WorkOrder","relationName":"ManagerProfileToWorkOrder"}],"dbName":"managerProfiles"},"Payment":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"paymentId","kind":"scalar","type":"String"},{"name":"amount","kind":"scalar","type":"Decimal"},{"name":"method","kind":"scalar","type":"String"},{"name":"transectionId","kind":"scalar","type":"String"},{"name":"status","kind":"enum","type":"PaymentStatus"},{"name":"paidAt","kind":"scalar","type":"DateTime"},{"name":"payerReference","kind":"scalar","type":"String"},{"name":"currency","kind":"scalar","type":"String"},{"name":"merchantInvoiceNumber","kind":"scalar","type":"String"},{"name":"getwayResponse","kind":"scalar","type":"Json"},{"name":"refundTrxId","kind":"scalar","type":"String"},{"name":"refundAmount","kind":"scalar","type":"Decimal"},{"name":"refundedAt","kind":"scalar","type":"String"},{"name":"reason","kind":"scalar","type":"String"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"workOrderId","kind":"scalar","type":"String"},{"name":"workOrder","kind":"object","type":"WorkOrder","relationName":"PaymentToWorkOrder"}],"dbName":"payments"},"Region":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"area","kind":"scalar","type":"String"},{"name":"description","kind":"scalar","type":"String"},{"name":"isActive","kind":"scalar","type":"Boolean"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"manager","kind":"object","type":"ManagerProfile","relationName":"ManagerProfileToRegion"},{"name":"services","kind":"object","type":"Service","relationName":"RegionToService"},{"name":"technicians","kind":"object","type":"TechnicianProfile","relationName":"TechnicianRegions"},{"name":"workOrders","kind":"object","type":"WorkOrder","relationName":"RegionToWorkOrder"}],"dbName":"regions"},"Schedule":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"servicingDate","kind":"scalar","type":"DateTime"},{"name":"startTime","kind":"scalar","type":"DateTime"},{"name":"endTime","kind":"scalar","type":"DateTime"},{"name":"actualStart","kind":"scalar","type":"DateTime"},{"name":"actualEnd","kind":"scalar","type":"DateTime"},{"name":"status","kind":"enum","type":"ScheduleStatus"},{"name":"isdeleted","kind":"scalar","type":"Boolean"},{"name":"deletedAt","kind":"scalar","type":"DateTime"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"technicianId","kind":"scalar","type":"String"},{"name":"technician","kind":"object","type":"TechnicianProfile","relationName":"ScheduleToTechnicianProfile"},{"name":"workOrderId","kind":"scalar","type":"String"},{"name":"workOrder","kind":"object","type":"WorkOrder","relationName":"ScheduleToWorkOrder"}],"dbName":"schedules"},"Service":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"title","kind":"scalar","type":"String"},{"name":"description","kind":"scalar","type":"String"},{"name":"priority","kind":"enum","type":"Priority"},{"name":"status","kind":"enum","type":"ServiceStatus"},{"name":"address","kind":"scalar","type":"Json"},{"name":"servicingDate","kind":"scalar","type":"DateTime"},{"name":"preferredStartTime","kind":"scalar","type":"DateTime"},{"name":"preferredEndTime","kind":"scalar","type":"DateTime"},{"name":"duration","kind":"scalar","type":"Int"},{"name":"isDeleted","kind":"scalar","type":"Boolean"},{"name":"isDeletedAt","kind":"scalar","type":"DateTime"},{"name":"assignedAt","kind":"scalar","type":"DateTime"},{"name":"reviewedBy","kind":"scalar","type":"String"},{"name":"reviewedAt","kind":"scalar","type":"DateTime"},{"name":"rejectionReason","kind":"scalar","type":"String"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"customerId","kind":"scalar","type":"String"},{"name":"customer","kind":"object","type":"CustomerProfile","relationName":"CustomerProfileToService"},{"name":"categoryId","kind":"scalar","type":"String"},{"name":"category","kind":"object","type":"Category","relationName":"CategoryToService"},{"name":"regionId","kind":"scalar","type":"String"},{"name":"region","kind":"object","type":"Region","relationName":"RegionToService"},{"name":"workOrders","kind":"object","type":"WorkOrder","relationName":"ServiceToWorkOrder"}],"dbName":"services"},"ServiceReport":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"reportUrl","kind":"scalar","type":"String"},{"name":"reportPublicId","kind":"scalar","type":"String"},{"name":"description","kind":"scalar","type":"String"},{"name":"isDelete","kind":"scalar","type":"Boolean"},{"name":"deletedAt","kind":"scalar","type":"DateTime"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"workOrderId","kind":"scalar","type":"String"},{"name":"workOrder","kind":"object","type":"WorkOrder","relationName":"ServiceReportToWorkOrder"}],"dbName":"serviceReports"},"Skill":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"name","kind":"scalar","type":"String"},{"name":"icon","kind":"scalar","type":"String"},{"name":"description","kind":"scalar","type":"String"},{"name":"isActive","kind":"scalar","type":"Boolean"},{"name":"isDelete","kind":"scalar","type":"Boolean"},{"name":"deletedAt","kind":"scalar","type":"DateTime"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"categoryId","kind":"scalar","type":"String"},{"name":"category","kind":"object","type":"Category","relationName":"CategoryToSkill"},{"name":"technician","kind":"object","type":"TechnicianProfile","relationName":"SkillToTechnicianProfile"}],"dbName":"skills"},"TechnicianProfile":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"phone","kind":"scalar","type":"String"},{"name":"address","kind":"scalar","type":"Json"},{"name":"bio","kind":"scalar","type":"String"},{"name":"nid","kind":"scalar","type":"String"},{"name":"isProfileCompleted","kind":"scalar","type":"Boolean"},{"name":"isDeleted","kind":"scalar","type":"Boolean"},{"name":"deletedAt","kind":"scalar","type":"DateTime"},{"name":"skills","kind":"object","type":"Skill","relationName":"SkillToTechnicianProfile"},{"name":"availability","kind":"object","type":"Availability","relationName":"AvailabilityToTechnicianProfile"},{"name":"regions","kind":"object","type":"Region","relationName":"TechnicianRegions"},{"name":"status","kind":"enum","type":"TechStatus"},{"name":"rating","kind":"scalar","type":"Float"},{"name":"jobsCompleted","kind":"scalar","type":"Int"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"userId","kind":"scalar","type":"String"},{"name":"user","kind":"object","type":"User","relationName":"TechnicianProfileToUser"},{"name":"workOrder","kind":"object","type":"WorkOrder","relationName":"TechnicianProfileToWorkOrder"},{"name":"schedule","kind":"object","type":"Schedule","relationName":"ScheduleToTechnicianProfile"}],"dbName":"technicians"},"User":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"name","kind":"scalar","type":"String"},{"name":"email","kind":"scalar","type":"String"},{"name":"password","kind":"scalar","type":"String"},{"name":"profileImg","kind":"scalar","type":"String"},{"name":"profileImgPublicId","kind":"scalar","type":"String"},{"name":"googleId","kind":"scalar","type":"String"},{"name":"facebookId","kind":"scalar","type":"String"},{"name":"authProvider","kind":"enum","type":"AuthProvider"},{"name":"emailVerified","kind":"scalar","type":"Boolean"},{"name":"role","kind":"enum","type":"UserRole"},{"name":"status","kind":"enum","type":"UserStatus"},{"name":"needPasswordChange","kind":"scalar","type":"Boolean"},{"name":"isDeleted","kind":"scalar","type":"Boolean"},{"name":"deletedAt","kind":"scalar","type":"DateTime"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"customer","kind":"object","type":"CustomerProfile","relationName":"CustomerProfileToUser"},{"name":"technician","kind":"object","type":"TechnicianProfile","relationName":"TechnicianProfileToUser"},{"name":"manager","kind":"object","type":"ManagerProfile","relationName":"ManagerProfileToUser"}],"dbName":"users"},"WorkOrder":{"fields":[{"name":"id","kind":"scalar","type":"String"},{"name":"servicingDate","kind":"scalar","type":"DateTime"},{"name":"status","kind":"enum","type":"WorkOrderStatus"},{"name":"note","kind":"scalar","type":"String"},{"name":"createdAt","kind":"scalar","type":"DateTime"},{"name":"updatedAt","kind":"scalar","type":"DateTime"},{"name":"regionId","kind":"scalar","type":"String"},{"name":"region","kind":"object","type":"Region","relationName":"RegionToWorkOrder"},{"name":"customerId","kind":"scalar","type":"String"},{"name":"customer","kind":"object","type":"CustomerProfile","relationName":"CustomerProfileToWorkOrder"},{"name":"technicianId","kind":"scalar","type":"String"},{"name":"technician","kind":"object","type":"TechnicianProfile","relationName":"TechnicianProfileToWorkOrder"},{"name":"serviceId","kind":"scalar","type":"String"},{"name":"service","kind":"object","type":"Service","relationName":"ServiceToWorkOrder"},{"name":"managerId","kind":"scalar","type":"String"},{"name":"manager","kind":"object","type":"ManagerProfile","relationName":"ManagerProfileToWorkOrder"},{"name":"attachment","kind":"object","type":"Attachment","relationName":"AttachmentToWorkOrder"},{"name":"serviceReport","kind":"object","type":"ServiceReport","relationName":"ServiceReportToWorkOrder"},{"name":"feedback","kind":"object","type":"Feedback","relationName":"FeedbackToWorkOrder"},{"name":"payment","kind":"object","type":"Payment","relationName":"PaymentToWorkOrder"},{"name":"schedule","kind":"object","type":"Schedule","relationName":"ScheduleToWorkOrder"}],"dbName":"workOrders"}},"enums":{},"types":{}}');
 config2.parameterizationSchema = {
-  strings: JSON.parse('["where","orderBy","cursor","user","customer","services","category","skills","technician","availability","regions","workOrder","schedule","_count","skill","region","workOrders","service","workOder","manager","technicians","attachment","serviceReport","feedback","payment","Attachment.findUnique","Attachment.findUniqueOrThrow","Attachment.findFirst","Attachment.findFirstOrThrow","Attachment.findMany","data","Attachment.createOne","Attachment.createMany","Attachment.createManyAndReturn","Attachment.updateOne","Attachment.updateMany","Attachment.updateManyAndReturn","create","update","Attachment.upsertOne","Attachment.deleteOne","Attachment.deleteMany","having","_min","_max","Attachment.groupBy","Attachment.aggregate","Availability.findUnique","Availability.findUniqueOrThrow","Availability.findFirst","Availability.findFirstOrThrow","Availability.findMany","Availability.createOne","Availability.createMany","Availability.createManyAndReturn","Availability.updateOne","Availability.updateMany","Availability.updateManyAndReturn","Availability.upsertOne","Availability.deleteOne","Availability.deleteMany","_avg","_sum","Availability.groupBy","Availability.aggregate","Category.findUnique","Category.findUniqueOrThrow","Category.findFirst","Category.findFirstOrThrow","Category.findMany","Category.createOne","Category.createMany","Category.createManyAndReturn","Category.updateOne","Category.updateMany","Category.updateManyAndReturn","Category.upsertOne","Category.deleteOne","Category.deleteMany","Category.groupBy","Category.aggregate","CustomerProfile.findUnique","CustomerProfile.findUniqueOrThrow","CustomerProfile.findFirst","CustomerProfile.findFirstOrThrow","CustomerProfile.findMany","CustomerProfile.createOne","CustomerProfile.createMany","CustomerProfile.createManyAndReturn","CustomerProfile.updateOne","CustomerProfile.updateMany","CustomerProfile.updateManyAndReturn","CustomerProfile.upsertOne","CustomerProfile.deleteOne","CustomerProfile.deleteMany","CustomerProfile.groupBy","CustomerProfile.aggregate","Feedback.findUnique","Feedback.findUniqueOrThrow","Feedback.findFirst","Feedback.findFirstOrThrow","Feedback.findMany","Feedback.createOne","Feedback.createMany","Feedback.createManyAndReturn","Feedback.updateOne","Feedback.updateMany","Feedback.updateManyAndReturn","Feedback.upsertOne","Feedback.deleteOne","Feedback.deleteMany","Feedback.groupBy","Feedback.aggregate","ManagerProfile.findUnique","ManagerProfile.findUniqueOrThrow","ManagerProfile.findFirst","ManagerProfile.findFirstOrThrow","ManagerProfile.findMany","ManagerProfile.createOne","ManagerProfile.createMany","ManagerProfile.createManyAndReturn","ManagerProfile.updateOne","ManagerProfile.updateMany","ManagerProfile.updateManyAndReturn","ManagerProfile.upsertOne","ManagerProfile.deleteOne","ManagerProfile.deleteMany","ManagerProfile.groupBy","ManagerProfile.aggregate","Payment.findUnique","Payment.findUniqueOrThrow","Payment.findFirst","Payment.findFirstOrThrow","Payment.findMany","Payment.createOne","Payment.createMany","Payment.createManyAndReturn","Payment.updateOne","Payment.updateMany","Payment.updateManyAndReturn","Payment.upsertOne","Payment.deleteOne","Payment.deleteMany","Payment.groupBy","Payment.aggregate","Region.findUnique","Region.findUniqueOrThrow","Region.findFirst","Region.findFirstOrThrow","Region.findMany","Region.createOne","Region.createMany","Region.createManyAndReturn","Region.updateOne","Region.updateMany","Region.updateManyAndReturn","Region.upsertOne","Region.deleteOne","Region.deleteMany","Region.groupBy","Region.aggregate","Schedule.findUnique","Schedule.findUniqueOrThrow","Schedule.findFirst","Schedule.findFirstOrThrow","Schedule.findMany","Schedule.createOne","Schedule.createMany","Schedule.createManyAndReturn","Schedule.updateOne","Schedule.updateMany","Schedule.updateManyAndReturn","Schedule.upsertOne","Schedule.deleteOne","Schedule.deleteMany","Schedule.groupBy","Schedule.aggregate","Service.findUnique","Service.findUniqueOrThrow","Service.findFirst","Service.findFirstOrThrow","Service.findMany","Service.createOne","Service.createMany","Service.createManyAndReturn","Service.updateOne","Service.updateMany","Service.updateManyAndReturn","Service.upsertOne","Service.deleteOne","Service.deleteMany","Service.groupBy","Service.aggregate","ServiceReport.findUnique","ServiceReport.findUniqueOrThrow","ServiceReport.findFirst","ServiceReport.findFirstOrThrow","ServiceReport.findMany","ServiceReport.createOne","ServiceReport.createMany","ServiceReport.createManyAndReturn","ServiceReport.updateOne","ServiceReport.updateMany","ServiceReport.updateManyAndReturn","ServiceReport.upsertOne","ServiceReport.deleteOne","ServiceReport.deleteMany","ServiceReport.groupBy","ServiceReport.aggregate","Skill.findUnique","Skill.findUniqueOrThrow","Skill.findFirst","Skill.findFirstOrThrow","Skill.findMany","Skill.createOne","Skill.createMany","Skill.createManyAndReturn","Skill.updateOne","Skill.updateMany","Skill.updateManyAndReturn","Skill.upsertOne","Skill.deleteOne","Skill.deleteMany","Skill.groupBy","Skill.aggregate","TechnicianProfile.findUnique","TechnicianProfile.findUniqueOrThrow","TechnicianProfile.findFirst","TechnicianProfile.findFirstOrThrow","TechnicianProfile.findMany","TechnicianProfile.createOne","TechnicianProfile.createMany","TechnicianProfile.createManyAndReturn","TechnicianProfile.updateOne","TechnicianProfile.updateMany","TechnicianProfile.updateManyAndReturn","TechnicianProfile.upsertOne","TechnicianProfile.deleteOne","TechnicianProfile.deleteMany","TechnicianProfile.groupBy","TechnicianProfile.aggregate","User.findUnique","User.findUniqueOrThrow","User.findFirst","User.findFirstOrThrow","User.findMany","User.createOne","User.createMany","User.createManyAndReturn","User.updateOne","User.updateMany","User.updateManyAndReturn","User.upsertOne","User.deleteOne","User.deleteMany","User.groupBy","User.aggregate","WorkOrder.findUnique","WorkOrder.findUniqueOrThrow","WorkOrder.findFirst","WorkOrder.findFirstOrThrow","WorkOrder.findMany","WorkOrder.createOne","WorkOrder.createMany","WorkOrder.createManyAndReturn","WorkOrder.updateOne","WorkOrder.updateMany","WorkOrder.updateManyAndReturn","WorkOrder.upsertOne","WorkOrder.deleteOne","WorkOrder.deleteMany","WorkOrder.groupBy","WorkOrder.aggregate","AND","OR","NOT","id","servicingDate","WorkOrderStatus","status","note","createdAt","updatedAt","regionId","customerId","technicianId","serviceId","managerId","equals","in","notIn","lt","lte","gt","gte","contains","startsWith","endsWith","not","name","email","password","profileImg","profileImgPublicId","googleId","facebookId","AuthProvider","authProvider","emailVerified","UserRole","role","UserStatus","needPasswordChange","isDeleted","deletedAt","phone","address","bio","nid","isProfileCompleted","TechStatus","rating","jobsCompleted","userId","string_contains","string_starts_with","string_ends_with","array_starts_with","array_ends_with","array_contains","icon","description","isActive","isDelete","categoryId","reportUrl","reportPublicId","workOrderId","Priority","priority","ServiceStatus","preferredStartTime","preferredEndTime","duration","isDeletedAt","assignedAt","reviewedBy","reviewedAt","rejectionReason","startTime","endTime","actualStart","actualEnd","ScheduleStatus","isdeleted","area","paymentId","amount","method","transectionId","PaymentStatus","paidAt","payerReference","currency","merchantInvoiceNumber","getwayResponse","refundTrxId","refundAmount","refundedAt","reason","ManagerVerificationStatus","verificationStatus","reviewdBy","reviewdAt","comment","every","some","none","AvailabilityType","type","dayOfWeek","date","files","AttachmentType","technicianId_type_dayOfWeek","technicianId_type_date","is","isNot","connectOrCreate","upsert","disconnect","delete","connect","createMany","set","updateMany","deleteMany","increment","decrement","multiply","divide"]'),
-  graph: "vQiMAfABDQsAAN8DACCRAgAAmQQAMJICAABBABCTAgAAmQQAMJQCAQAAAAGZAkAAzAMAIZoCQADMAwAhugJAAMsDACHLAgEAxgMAIc0CIADIAwAh0QIBAMUDACH7AgAAmwSAAyL-AgAAmgQAIAEAAAABACATAwAAigQAIAsAAIwEACAPAAC2BAAgkQIAAL4EADCSAgAAAwAQkwIAAL4EADCUAgEAxQMAIZkCQADMAwAhmgJAAMwDACG5AiAAyAMAIboCQADLAwAhuwIBAMUDACG8AgAA_QMAIL4CAQDFAwAhwwIBAMUDACHcAgEAxgMAIfMCAAC_BPMCIvQCAQDGAwAh9QJAAMsDACEIAwAAnAcAIAsAAJ4HACAPAADRBwAgugIAAMAEACC8AgAAwAQAINwCAADABAAg9AIAAMAEACD1AgAAwAQAIBMDAACKBAAgCwAAjAQAIA8AALYEACCRAgAAvgQAMJICAAADABCTAgAAvgQAMJQCAQAAAAGZAkAAzAMAIZoCQADMAwAhuQIgAMgDACG6AkAAywMAIbsCAQDFAwAhvAIAAP0DACC-AgEAxQMAIcMCAQAAAAHcAgEAxgMAIfMCAAC_BPMCIvQCAQDGAwAh9QJAAMsDACEDAAAAAwAgAQAABAAwAgAABQAgDgMAAIoEACARAACLBAAgEgAAjAQAIJECAACJBAAwkgIAAAcAEJMCAACJBAAwlAIBAMUDACGZAkAAzAMAIZoCQADMAwAhuQIgAMgDACG6AkAAywMAIbsCAQDGAwAhvAIAAP0DACDDAgEAxQMAIQEAAAAHACAbBAAAogQAIAYAALkEACAPAAChBAAgEAAAvQQAIJECAAC6BAAwkgIAAAkAEJMCAAC6BAAwlAIBAMUDACGVAkAAzAMAIZcCAAC8BNUCIpkCQADMAwAhmgJAAMwDACGbAgEAxQMAIZwCAQDFAwAhuQIgAMgDACG8AgAAmgQAIMsCAQDGAwAhzgIBAMUDACHTAgAAuwTTAiLVAkAAywMAIdYCQADLAwAh1wICALEEACHYAkAAywMAIdkCQADLAwAh2gIBAMYDACHbAkAAywMAIdwCAQDGAwAhDQQAAOAGACAGAADTBwAgDwAAxwcAIBAAAPoGACDLAgAAwAQAINUCAADABAAg1gIAAMAEACDXAgAAwAQAINgCAADABAAg2QIAAMAEACDaAgAAwAQAINsCAADABAAg3AIAAMAEACAbBAAAogQAIAYAALkEACAPAAChBAAgEAAAvQQAIJECAAC6BAAwkgIAAAkAEJMCAAC6BAAwlAIBAAAAAZUCQADMAwAhlwIAALwE1QIimQJAAMwDACGaAkAAzAMAIZsCAQDFAwAhnAIBAMUDACG5AiAAyAMAIbwCAACaBAAgywIBAMYDACHOAgEAxQMAIdMCAAC7BNMCItUCQADLAwAh1gJAAMsDACHXAgIAsQQAIdgCQADLAwAh2QJAAMsDACHaAgEAxgMAIdsCQADLAwAh3AIBAMYDACEDAAAACQAgAQAACgAwAgAACwAgAwAAAAkAIAEAAAoAMAIAAAsAIA8GAAC5BAAgCAAArAQAIJECAAC4BAAwkgIAAA4AEJMCAAC4BAAwlAIBAMUDACGZAkAAzAMAIZoCQADMAwAhqwIBAMUDACG6AkAAywMAIcoCAQDGAwAhywIBAMYDACHMAiAAyAMAIc0CIADIAwAhzgIBAMUDACEFBgAA0wcAIAgAAM8HACC6AgAAwAQAIMoCAADABAAgywIAAMAEACAPBgAAuQQAIAgAAKwEACCRAgAAuAQAMJICAAAOABCTAgAAuAQAMJQCAQAAAAGZAkAAzAMAIZoCQADMAwAhqwIBAAAAAboCQADLAwAhygIBAMYDACHLAgEAxgMAIcwCIADIAwAhzQIgAMgDACHOAgEAxQMAIQMAAAAOACABAAAPADACAAAQACAXAwAAigQAIAcAAJAEACAJAAC1BAAgCgAAtgQAIAsAAIwEACAMAAC3BAAgkQIAALIEADCSAgAAEgAQkwIAALIEADCUAgEAxQMAIZcCAACzBMECIpkCQADMAwAhmgJAAMwDACG5AiAAyAMAIboCQADLAwAhuwIBAMYDACG8AgAA_QMAIL0CAQDGAwAhvgIBAMYDACG_AiAAyAMAIcECCAC0BAAhwgICAI8EACHDAgEAxQMAIQwDAACcBwAgBwAAugcAIAkAANAHACAKAADRBwAgCwAAngcAIAwAANIHACC6AgAAwAQAILsCAADABAAgvAIAAMAEACC9AgAAwAQAIL4CAADABAAgwQIAAMAEACAXAwAAigQAIAcAAJAEACAJAAC1BAAgCgAAtgQAIAsAAIwEACAMAAC3BAAgkQIAALIEADCSAgAAEgAQkwIAALIEADCUAgEAAAABlwIAALMEwQIimQJAAMwDACGaAkAAzAMAIbkCIADIAwAhugJAAMsDACG7AgEAxgMAIbwCAAD9AwAgvQIBAMYDACG-AgEAxgMAIb8CIADIAwAhwQIIALQEACHCAgIAjwQAIcMCAQAAAAEDAAAAEgAgAQAAEwAwAgAAFAAgAwAAAA4AIAEAAA8AMAIAABAAIA4IAACeBAAgkQIAAK8EADCSAgAAFwAQkwIAAK8EADCUAgEAxQMAIZkCQADMAwAhmgJAAMwDACGdAgEAxQMAIcwCIADIAwAh3QJAAMsDACHeAkAAywMAIfsCAACwBPsCIvwCAgCxBAAh_QJAAMsDACEFCAAA4QYAIN0CAADABAAg3gIAAMAEACD8AgAAwAQAIP0CAADABAAgEAgAAJ4EACCRAgAArwQAMJICAAAXABCTAgAArwQAMJQCAQAAAAGZAkAAzAMAIZoCQADMAwAhnQIBAMUDACHMAiAAyAMAId0CQADLAwAh3gJAAMsDACH7AgAAsAT7AiL8AgIAsQQAIf0CQADLAwAhgAMAAK0EACCBAwAArgQAIAMAAAAXACABAAAYADACAAAZACANBQAAiwQAIBAAAIwEACATAACrBAAgFAAArAQAIJECAACqBAAwkgIAABsAEJMCAACqBAAwlAIBAMUDACGZAkAAzAMAIZoCQADMAwAhywIBAMYDACHMAiAAyAMAIeMCAQDFAwAhBQUAAJ0HACAQAACeBwAgEwAAzgcAIBQAAM8HACDLAgAAwAQAIA0FAACLBAAgEAAAjAQAIBMAAKsEACAUAACsBAAgkQIAAKoEADCSAgAAGwAQkwIAAKoEADCUAgEAAAABmQJAAMwDACGaAkAAzAMAIcsCAQDGAwAhzAIgAMgDACHjAgEAAAABAwAAABsAIAEAABwAMAIAAB0AIBgEAACiBAAgCAAAzgMAIAwAAKkEACAPAAChBAAgEQAAowQAIBMAAKQEACAVAAClBAAgFgAApgQAIBcAAKcEACAYAACoBAAgkQIAAJ8EADCSAgAAHwAQkwIAAJ8EADCUAgEAxQMAIZUCQADMAwAhlwIAAKAElwIimAIBAMYDACGZAkAAzAMAIZoCQADMAwAhmwIBAMUDACGcAgEAxQMAIZ0CAQDGAwAhngIBAMUDACGfAgEAxQMAIQwEAADgBgAgCAAA4QYAIAwAAM0HACAPAADHBwAgEQAAyAcAIBMAAOIGACAVAADJBwAgFgAAygcAIBcAAMsHACAYAADMBwAgmAIAAMAEACCdAgAAwAQAIBgEAACiBAAgCAAAzgMAIAwAAKkEACAPAAChBAAgEQAAowQAIBMAAKQEACAVAAClBAAgFgAApgQAIBcAAKcEACAYAACoBAAgkQIAAJ8EADCSAgAAHwAQkwIAAJ8EADCUAgEAAAABlQJAAMwDACGXAgAAoASXAiKYAgEAxgMAIZkCQADMAwAhmgJAAMwDACGbAgEAxQMAIZwCAQDFAwAhnQIBAMYDACGeAgEAAAABnwIBAMUDACEDAAAAHwAgAQAAIAAwAgAAIQAgEggAAJ4EACALAADfAwAgkQIAAJwEADCSAgAAIwAQkwIAAJwEADCUAgEAxQMAIZUCQADMAwAhlwIAAJ0E4gIimQJAAMwDACGaAkAAzAMAIZ0CAQDFAwAhugJAAMsDACHRAgEAxQMAId0CQADMAwAh3gJAAMwDACHfAkAAywMAIeACQADLAwAh4gIgAMgDACEFCAAA4QYAIAsAAPoGACC6AgAAwAQAIN8CAADABAAg4AIAAMAEACASCAAAngQAIAsAAN8DACCRAgAAnAQAMJICAAAjABCTAgAAnAQAMJQCAQAAAAGVAkAAzAMAIZcCAACdBOICIpkCQADMAwAhmgJAAMwDACGdAgEAxQMAIboCQADLAwAh0QIBAAAAAd0CQADMAwAh3gJAAMwDACHfAkAAywMAIeACQADLAwAh4gIgAMgDACEDAAAAIwAgAQAAJAAwAgAAJQAgAQAAAA4AIAEAAAAXACABAAAAGwAgAQAAAB8AIAEAAAAjACABAAAAEgAgAQAAAAkAIAEAAAAOACABAAAAHwAgAwAAAB8AIAEAACAAMAIAACEAIAEAAAAJACABAAAAHwAgAQAAABIAIAEAAAADACADAAAAGwAgAQAAHAAwAgAAHQAgAwAAAB8AIAEAACAAMAIAACEAIAEAAAAbACABAAAAHwAgAwAAAAkAIAEAAAoAMAIAAAsAIAMAAAASACABAAATADACAAAUACADAAAAHwAgAQAAIAAwAgAAIQAgAQAAAAMAIAEAAAAJACABAAAAEgAgAQAAAB8AIAEAAAASACANCwAA3wMAIJECAACZBAAwkgIAAEEAEJMCAACZBAAwlAIBAMUDACGZAkAAzAMAIZoCQADMAwAhugJAAMsDACHLAgEAxgMAIc0CIADIAwAh0QIBAMUDACH7AgAAmwSAAyL-AgAAmgQAIAMLAAD6BgAgugIAAMAEACDLAgAAwAQAIAMAAABBACABAABCADACAAABACANCwAA3wMAIJECAADeAwAwkgIAAEQAEJMCAADeAwAwlAIBAMUDACGZAkAAzAMAIZoCQADMAwAhugJAAMsDACHLAgEAxgMAIc0CIADIAwAhzwIBAMUDACHQAgEAxQMAIdECAQDFAwAhAQAAAEQAIAwLAADfAwAgkQIAAIYEADCSAgAARgAQkwIAAIYEADCUAgEAxQMAIZkCQADMAwAhmgJAAMwDACG5AiAAyAMAIboCQADLAwAhwQIIAIcEACHRAgEAxQMAIfYCAQDGAwAhAQAAAEYAIBYLAADfAwAgkQIAAPoDADCSAgAASAAQkwIAAPoDADCUAgEAxQMAIZcCAAD8A-kCIpkCQADMAwAhmgJAAMwDACHRAgEAxQMAIeQCAQDFAwAh5QIQAPsDACHmAgEAxQMAIecCAQDGAwAh6QJAAMsDACHqAgEAxgMAIesCAQDFAwAh7AIBAMUDACHtAgAA_QMAIO4CAQDGAwAh7wIQAP4DACHwAgEAxgMAIfECAQDGAwAhAQAAAEgAIAEAAAAjACABAAAAQQAgAQAAAAEAIAMAAABBACABAABCADACAAABACADAAAAQQAgAQAAQgAwAgAAAQAgAwAAAEEAIAEAAEIAMAIAAAEAIAoLAADGBwAglAIBAAAAAZkCQAAAAAGaAkAAAAABugJAAAAAAcsCAQAAAAHNAiAAAAAB0QIBAAAAAfsCAAAAgAMC_gKAAAAAAQEeAABQACAJlAIBAAAAAZkCQAAAAAGaAkAAAAABugJAAAAAAcsCAQAAAAHNAiAAAAAB0QIBAAAAAfsCAAAAgAMC_gKAAAAAAQEeAABSADABHgAAUgAwCgsAAMUHACCUAgEAxAQAIZkCQADFBAAhmgJAAMUEACG6AkAA1wQAIcsCAQDHBAAhzQIgANkEACHRAgEAxAQAIfsCAAD5BIADIv4CgAAAAAECAAAAAQAgHgAAVQAgCZQCAQDEBAAhmQJAAMUEACGaAkAAxQQAIboCQADXBAAhywIBAMcEACHNAiAA2QQAIdECAQDEBAAh-wIAAPkEgAMi_gKAAAAAAQIAAABBACAeAABXACACAAAAQQAgHgAAVwAgAwAAAAEAICUAAFAAICYAAFUAIAEAAAABACABAAAAQQAgBQ0AAMIHACArAADEBwAgLAAAwwcAILoCAADABAAgywIAAMAEACAMkQIAAJUEADCSAgAAXgAQkwIAAJUEADCUAgEApgMAIZkCQACnAwAhmgJAAKcDACG6AkAAuQMAIcsCAQCpAwAhzQIgALYDACHRAgEApgMAIfsCAACWBIADIv4CAADjAwAgAwAAAEEAIAEAAF0AMCoAAF4AIAMAAABBACABAABCADACAAABACABAAAAGQAgAQAAABkAIAMAAAAXACABAAAYADACAAAZACADAAAAFwAgAQAAGAAwAgAAGQAgAwAAABcAIAEAABgAMAIAABkAIAsIAADBBwAglAIBAAAAAZkCQAAAAAGaAkAAAAABnQIBAAAAAcwCIAAAAAHdAkAAAAAB3gJAAAAAAfsCAAAA-wIC_AICAAAAAf0CQAAAAAEBHgAAZgAgCpQCAQAAAAGZAkAAAAABmgJAAAAAAZ0CAQAAAAHMAiAAAAAB3QJAAAAAAd4CQAAAAAH7AgAAAPsCAvwCAgAAAAH9AkAAAAABAR4AAGgAMAEeAABoADALCAAAwAcAIJQCAQDEBAAhmQJAAMUEACGaAkAAxQQAIZ0CAQDEBAAhzAIgANkEACHdAkAA1wQAId4CQADXBAAh-wIAAOwF-wIi_AICAO0FACH9AkAA1wQAIQIAAAAZACAeAABrACAKlAIBAMQEACGZAkAAxQQAIZoCQADFBAAhnQIBAMQEACHMAiAA2QQAId0CQADXBAAh3gJAANcEACH7AgAA7AX7AiL8AgIA7QUAIf0CQADXBAAhAgAAABcAIB4AAG0AIAIAAAAXACAeAABtACADAAAAGQAgJQAAZgAgJgAAawAgAQAAABkAIAEAAAAXACAJDQAAuwcAICsAAL4HACAsAAC9BwAgPQAAvAcAID4AAL8HACDdAgAAwAQAIN4CAADABAAg_AIAAMAEACD9AgAAwAQAIA2RAgAAkQQAMJICAAB0ABCTAgAAkQQAMJQCAQCmAwAhmQJAAKcDACGaAkAApwMAIZ0CAQCmAwAhzAIgALYDACHdAkAAuQMAId4CQAC5AwAh-wIAAJIE-wIi_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_AwAwkgIAANMBABCTAgAA_wMAMJQCAQCmAwAhmQJAAKcDACGaAkAApwMAIbkCIAC2AwAhugJAALkDACG7AgEApgMAIbwCAADRAwAgvgIBAKYDACHDAgEApgMAIdwCAQCpAwAh8wIAAIAE8wIi9AIBAKkDACH1AkAAuQMAIQMAAAADACABAADSAQAwKgAA0wEAIAMAAAADACABAAAEADACAAAFACAWCwAA3wMAIJECAAD6AwAwkgIAAEgAEJMCAAD6AwAwlAIBAAAAAZcCAAD8A-kCIpkCQADMAwAhmgJAAMwDACHRAgEAAAAB5AIBAAAAAeUCEAD7AwAh5gIBAMUDACHnAgEAAAAB6QJAAMsDACHqAgEAxgMAIesCAQDFAwAh7AIBAAAAAe0CAAD9AwAg7gIBAMYDACHvAhAA_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-BgAgLAAA_QYAID0AAPwGACA-AAD_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_BQAgCgAAvwYAIAsAAIEGACAMAACCBgAglAIBAAAAAZcCAAAAwQICmQJAAAAAAZoCQAAAAAG5AiAAAAABugJAAAAAAbsCAQAAAAG8AoAAAAABvQIBAAAAAb4CAQAAAAG_AiAAAAABwQIIAAAAAcICAgAAAAHDAgEAAAABAR4AAOMCACAOlAIBAAAAAZcCAAAAwQICmQJAAAAAAZoCQAAAAAG5AiAAAAABugJAAAAAAbsCAQAAAAG8AoAAAAABvQIBAAAAAb4CAQAAAAG_AiAAAAABwQIIAAAAAcICAgAAAAHDAgEAAAABAR4AAOUCADABHgAA5QIAMBQDAADIBQAgBwAAxgUAIAkAAMcFACAKAACnBgAgCwAAyQUAIAwAAMoFACCUAgEAxAQAIZcCAADCBcECIpkCQADFBAAhmgJAAMUEACG5AiAA2QQAIboCQADXBAAhuwIBAMcEACG8AoAAAAABvQIBAMcEACG-AgEAxwQAIb8CIADZBAAhwQIIAMMFACHCAgIAxAUAIcMCAQDEBAAhAgAAABQAIB4AAOgCACAOlAIBAMQEACGXAgAAwgXBAiKZAkAAxQQAIZoCQADFBAAhuQIgANkEACG6AkAA1wQAIbsCAQDHBAAhvAKAAAAAAb0CAQDHBAAhvgIBAMcEACG_AiAA2QQAIcECCADDBQAhwgICAMQFACHDAgEAxAQAIQIAAAASACAeAADqAgAgAgAAABIAIB4AAOoCACADAAAAFAAgJQAA4wIAICYAAOgCACABAAAAFAAgAQAAABIAIAsNAADjBgAgKwAA5gYAICwAAOUGACA9AADkBgAgPgAA5wYAILoCAADABAAguwIAAMAEACC8AgAAwAQAIL0CAADABAAgvgIAAMAEACDBAgAAwAQAIBGRAgAA0AMAMJICAADxAgAQkwIAANADADCUAgEApgMAIZcCAADSA8ECIpkCQACnAwAhmgJAAKcDACG5AiAAtgMAIboCQAC5AwAhuwIBAKkDACG8AgAA0QMAIL0CAQCpAwAhvgIBAKkDACG_AiAAtgMAIcECCADTAwAhwgICANQDACHDAgEApgMAIQMAAAASACABAADwAgAwKgAA8QIAIAMAAAASACABAAATADACAAAUACAXBAAAzQMAIAgAAM4DACATAADPAwAgkQIAAMQDADCSAgAA9wIAEJMCAADEAwAwlAIBAAAAAZcCAADKA7gCIpkCQADMAwAhmgJAAMwDACGrAgEAxQMAIawCAQAAAAGtAgEAxgMAIa4CAQDGAwAhrwIBAMYDACGwAgEAAAABsQIBAAAAAbMCAADHA7MCIrQCIADIAwAhtgIAAMkDtgIiuAIgAMgDACG5AiAAyAMAIboCQADLAwAhAQAAAPQCACABAAAA9AIAIBcEAADNAwAgCAAAzgMAIBMAAM8DACCRAgAAxAMAMJICAAD3AgAQkwIAAMQDADCUAgEAxQMAIZcCAADKA7gCIpkCQADMAwAhmgJAAMwDACGrAgEAxQMAIawCAQDFAwAhrQIBAMYDACGuAgEAxgMAIa8CAQDGAwAhsAIBAMYDACGxAgEAxgMAIbMCAADHA7MCIrQCIADIAwAhtgIAAMkDtgIiuAIgAMgDACG5AiAAyAMAIboCQADLAwAhCQQAAOAGACAIAADhBgAgEwAA4gYAIK0CAADABAAgrgIAAMAEACCvAgAAwAQAILACAADABAAgsQIAAMAEACC6AgAAwAQAIAMAAAD3AgAgAQAA-AIAMAIAAPQCACADAAAA9wIAIAEAAPgCADACAAD0AgAgAwAAAPcCACABAAD4AgAwAgAA9AIAIBQEAADdBgAgCAAA3gYAIBMAAN8GACCUAgEAAAABlwIAAAC4AgKZAkAAAAABmgJAAAAAAasCAQAAAAGsAgEAAAABrQIBAAAAAa4CAQAAAAGvAgEAAAABsAIBAAAAAbECAQAAAAGzAgAAALMCArQCIAAAAAG2AgAAALYCArgCIAAAAAG5AiAAAAABugJAAAAAAQEeAAD8AgAgEZQCAQAAAAGXAgAAALgCApkCQAAAAAGaAkAAAAABqwIBAAAAAawCAQAAAAGtAgEAAAABrgIBAAAAAa8CAQAAAAGwAgEAAAABsQIBAAAAAbMCAAAAswICtAIgAAAAAbYCAAAAtgICuAIgAAAAAbkCIAAAAAG6AkAAAAABAR4AAP4CADABHgAA_gIAMBQEAACMBQAgCAAAjQUAIBMAAI4FACCUAgEAxAQAIZcCAACLBbgCIpkCQADFBAAhmgJAAMUEACGrAgEAxAQAIawCAQDEBAAhrQIBAMcEACGuAgEAxwQAIa8CAQDHBAAhsAIBAMcEACGxAgEAxwQAIbMCAACJBbMCIrQCIADZBAAhtgIAAIoFtgIiuAIgANkEACG5AiAA2QQAIboCQADXBAAhAgAAAPQCACAeAACBAwAgEZQCAQDEBAAhlwIAAIsFuAIimQJAAMUEACGaAkAAxQQAIasCAQDEBAAhrAIBAMQEACGtAgEAxwQAIa4CAQDHBAAhrwIBAMcEACGwAgEAxwQAIbECAQDHBAAhswIAAIkFswIitAIgANkEACG2AgAAigW2AiK4AiAA2QQAIbkCIADZBAAhugJAANcEACECAAAA9wIAIB4AAIMDACACAAAA9wIAIB4AAIMDACADAAAA9AIAICUAAPwCACAmAACBAwAgAQAAAPQCACABAAAA9wIAIAkNAACGBQAgKwAAiAUAICwAAIcFACCtAgAAwAQAIK4CAADABAAgrwIAAMAEACCwAgAAwAQAILECAADABAAgugIAAMAEACAUkQIAALQDADCSAgAAigMAEJMCAAC0AwAwlAIBAKYDACGXAgAAuAO4AiKZAkAApwMAIZoCQACnAwAhqwIBAKYDACGsAgEApgMAIa0CAQCpAwAhrgIBAKkDACGvAgEAqQMAIbACAQCpAwAhsQIBAKkDACGzAgAAtQOzAiK0AiAAtgMAIbYCAAC3A7YCIrgCIAC2AwAhuQIgALYDACG6AkAAuQMAIQMAAAD3AgAgAQAAiQMAMCoAAIoDACADAAAA9wIAIAEAAPgCADACAAD0AgAgAQAAACEAIAEAAAAhACADAAAAHwAgAQAAIAAwAgAAIQAgAwAAAB8AIAEAACAAMAIAACEAIAMAAAAfACABAAAgADACAAAhACAVBAAA_QQAIAgAAP4EACAMAACFBQAgDwAA_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_AwAgoAIAAAC2AgKhAgAAALYCCKICAAAAtgIIqgIAAL4DtgIiBKACAAAAtgICoQIAAAC2AgiiAgAAALYCCKoCAAC_A7YCIgUNAACuAwAgKwAAwQMAICwAAMEDACCgAiAAAAABqgIgAMADACECoAIgAAAAAaoCIADBAwAhBw0AAK4DACArAADDAwAgLAAAwwMAIKACAAAAswICoQIAAACzAgiiAgAAALMCCKoCAADCA7MCIgSgAgAAALMCAqECAAAAswIIogIAAACzAgiqAgAAwwOzAiIXBAAAzQMAIAgAAM4DACATAADPAwAgkQIAAMQDADCSAgAA9wIAEJMCAADEAwAwlAIBAMUDACGXAgAAygO4AiKZAkAAzAMAIZoCQADMAwAhqwIBAMUDACGsAgEAxQMAIa0CAQDGAwAhrgIBAMYDACGvAgEAxgMAIbACAQDGAwAhsQIBAMYDACGzAgAAxwOzAiK0AiAAyAMAIbYCAADJA7YCIrgCIADIAwAhuQIgAMgDACG6AkAAywMAIQugAgEAAAABoQIBAAAABKICAQAAAASjAgEAAAABpAIBAAAAAaUCAQAAAAGmAgEAAAABpwIBAAAAAagCAQAAAAGpAgEAAAABqgIBALMDACELoAIBAAAAAaECAQAAAAWiAgEAAAAFowIBAAAAAaQCAQAAAAGlAgEAAAABpgIBAAAAAacCAQAAAAGoAgEAAAABqQIBAAAAAaoCAQCsAwAhBKACAAAAswICoQIAAACzAgiiAgAAALMCCKoCAADDA7MCIgKgAiAAAAABqgIgAMEDACEEoAIAAAC2AgKhAgAAALYCCKICAAAAtgIIqgIAAL8DtgIiBKACAAAAuAICoQIAAAC4AgiiAgAAALgCCKoCAAC9A7gCIgigAkAAAAABoQJAAAAABaICQAAAAAWjAkAAAAABpAJAAAAAAaUCQAAAAAGmAkAAAAABqgJAALsDACEIoAJAAAAAAaECQAAAAASiAkAAAAAEowJAAAAAAaQCQAAAAAGlAkAAAAABpgJAAAAAAaoCQACxAwAhEAMAAIoEACARAACLBAAgEgAAjAQAIJECAACJBAAwkgIAAAcAEJMCAACJBAAwlAIBAMUDACGZAkAAzAMAIZoCQADMAwAhuQIgAMgDACG6AkAAywMAIbsCAQDGAwAhvAIAAP0DACDDAgEAxQMAIYIDAAAHACCDAwAABwAgGQMAAIoEACAHAACQBAAgCQAAtQQAIAoAALYEACALAACMBAAgDAAAtwQAIJECAACyBAAwkgIAABIAEJMCAACyBAAwlAIBAMUDACGXAgAAswTBAiKZAkAAzAMAIZoCQADMAwAhuQIgAMgDACG6AkAAywMAIbsCAQDGAwAhvAIAAP0DACC9AgEAxgMAIb4CAQDGAwAhvwIgAMgDACHBAggAtAQAIcICAgCPBAAhwwIBAMUDACGCAwAAEgAggwMAABIAIBUDAACKBAAgCwAAjAQAIA8AALYEACCRAgAAvgQAMJICAAADABCTAgAAvgQAMJQCAQDFAwAhmQJAAMwDACGaAkAAzAMAIbkCIADIAwAhugJAAMsDACG7AgEAxQMAIbwCAAD9AwAgvgIBAMUDACHDAgEAxQMAIdwCAQDGAwAh8wIAAL8E8wIi9AIBAMYDACH1AkAAywMAIYIDAAADACCDAwAAAwAgEZECAADQAwAwkgIAAPECABCTAgAA0AMAMJQCAQCmAwAhlwIAANIDwQIimQJAAKcDACGaAkAApwMAIbkCIAC2AwAhugJAALkDACG7AgEAqQMAIbwCAADRAwAgvQIBAKkDACG-AgEAqQMAIb8CIAC2AwAhwQIIANMDACHCAgIA1AMAIcMCAQCmAwAhDw0AAKsDACArAADbAwAgLAAA2wMAIKACgAAAAAGjAoAAAAABpAKAAAAAAaUCgAAAAAGmAoAAAAABqgKAAAAAAcQCAQAAAAHFAgEAAAABxgIBAAAAAccCgAAAAAHIAoAAAAAByQKAAAAAAQcNAACuAwAgKwAA2gMAICwAANoDACCgAgAAAMECAqECAAAAwQIIogIAAADBAgiqAgAA2QPBAiINDQAAqwMAICsAANgDACAsAADYAwAgPQAA2AMAID4AANgDACCgAggAAAABoQIIAAAABaICCAAAAAWjAggAAAABpAIIAAAAAaUCCAAAAAGmAggAAAABqgIIANcDACENDQAArgMAICsAAK4DACAsAACuAwAgPQAA1gMAID4AAK4DACCgAgIAAAABoQICAAAABKICAgAAAASjAgIAAAABpAICAAAAAaUCAgAAAAGmAgIAAAABqgICANUDACENDQAArgMAICsAAK4DACAsAACuAwAgPQAA1gMAID4AAK4DACCgAgIAAAABoQICAAAABKICAgAAAASjAgIAAAABpAICAAAAAaUCAgAAAAGmAgIAAAABqgICANUDACEIoAIIAAAAAaECCAAAAASiAggAAAAEowIIAAAAAaQCCAAAAAGlAggAAAABpgIIAAAAAaoCCADWAwAhDQ0AAKsDACArAADYAwAgLAAA2AMAID0AANgDACA-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-QMAID0AAPkDACA-AAD5AwAgoAIQAAAAAaECEAAAAASiAhAAAAAEowIQAAAAAaQCEAAAAAGlAhAAAAABpgIQAAAAAaoCEAD4AwAhBw0AAK4DACArAAD3AwAgLAAA9wMAIKACAAAA6QICoQIAAADpAgiiAgAAAOkCCKoCAAD2A-kCIg0NAACrAwAgKwAA9QMAICwAAPUDACA9AAD1AwAgPgAA9QMAIKACEAAAAAGhAhAAAAAFogIQAAAABaMCEAAAAAGkAhAAAAABpQIQAAAAAaYCEAAAAAGqAhAA9AMAIQ0NAACrAwAgKwAA9QMAICwAAPUDACA9AAD1AwAgPgAA9QMAIKACEAAAAAGhAhAAAAAFogIQAAAABaMCEAAAAAGkAhAAAAABpQIQAAAAAaYCEAAAAAGqAhAA9AMAIQigAhAAAAABoQIQAAAABaICEAAAAAWjAhAAAAABpAIQAAAAAaUCEAAAAAGmAhAAAAABqgIQAPUDACEHDQAArgMAICsAAPcDACAsAAD3AwAgoAIAAADpAgKhAgAAAOkCCKICAAAA6QIIqgIAAPYD6QIiBKACAAAA6QICoQIAAADpAgiiAgAAAOkCCKoCAAD3A-kCIg0NAACuAwAgKwAA-QMAICwAAPkDACA9AAD5AwAgPgAA-QMAIKACEAAAAAGhAhAAAAAEogIQAAAABKMCEAAAAAGkAhAAAAABpQIQAAAAAaYCEAAAAAGqAhAA-AMAIQigAhAAAAABoQIQAAAABKICEAAAAASjAhAAAAABpAIQAAAAAaUCEAAAAAGmAhAAAAABqgIQAPkDACEWCwAA3wMAIJECAAD6AwAwkgIAAEgAEJMCAAD6AwAwlAIBAMUDACGXAgAA_APpAiKZAkAAzAMAIZoCQADMAwAh0QIBAMUDACHkAgEAxQMAIeUCEAD7AwAh5gIBAMUDACHnAgEAxgMAIekCQADLAwAh6gIBAMYDACHrAgEAxQMAIewCAQDFAwAh7QIAAP0DACDuAgEAxgMAIe8CEAD-AwAh8AIBAMYDACHxAgEAxgMAIQigAhAAAAABoQIQAAAABKICEAAAAASjAhAAAAABpAIQAAAAAaUCEAAAAAGmAhAAAAABqgIQAPkDACEEoAIAAADpAgKhAgAAAOkCCKICAAAA6QIIqgIAAPcD6QIiDKACgAAAAAGjAoAAAAABpAKAAAAAAaUCgAAAAAGmAoAAAAABqgKAAAAAAcQCAQAAAAHFAgEAAAABxgIBAAAAAccCgAAAAAHIAoAAAAAByQKAAAAAAQigAhAAAAABoQIQAAAABaICEAAAAAWjAhAAAAABpAIQAAAAAaUCEAAAAAGmAhAAAAABqgIQAPUDACEQkQIAAP8DADCSAgAA0wEAEJMCAAD_AwAwlAIBAKYDACGZAkAApwMAIZoCQACnAwAhuQIgALYDACG6AkAAuQMAIbsCAQCmAwAhvAIAANEDACC-AgEApgMAIcMCAQCmAwAh3AIBAKkDACHzAgAAgATzAiL0AgEAqQMAIfUCQAC5AwAhBw0AAK4DACArAACCBAAgLAAAggQAIKACAAAA8wICoQIAAADzAgiiAgAAAPMCCKoCAACBBPMCIgcNAACuAwAgKwAAggQAICwAAIIEACCgAgAAAPMCAqECAAAA8wIIogIAAADzAgiqAgAAgQTzAiIEoAIAAADzAgKhAgAAAPMCCKICAAAA8wIIqgIAAIIE8wIiC5ECAACDBAAwkgIAAL0BABCTAgAAgwQAMJQCAQCmAwAhmQJAAKcDACGaAkAApwMAIbkCIAC2AwAhugJAALkDACHBAggAhAQAIdECAQCmAwAh9gIBAKkDACENDQAArgMAICsAANYDACAsAADWAwAgPQAA1gMAID4AANYDACCgAggAAAABoQIIAAAABKICCAAAAASjAggAAAABpAIIAAAAAaUCCAAAAAGmAggAAAABqgIIAIUEACENDQAArgMAICsAANYDACAsAADWAwAgPQAA1gMAID4AANYDACCgAggAAAABoQIIAAAABKICCAAAAASjAggAAAABpAIIAAAAAaUCCAAAAAGmAggAAAABqgIIAIUEACEMCwAA3wMAIJECAACGBAAwkgIAAEYAEJMCAACGBAAwlAIBAMUDACGZAkAAzAMAIZoCQADMAwAhuQIgAMgDACG6AkAAywMAIcECCACHBAAh0QIBAMUDACH2AgEAxgMAIQigAggAAAABoQIIAAAABKICCAAAAASjAggAAAABpAIIAAAAAaUCCAAAAAGmAggAAAABqgIIANYDACELkQIAAIgEADCSAgAApQEAEJMCAACIBAAwlAIBAKYDACGZAkAApwMAIZoCQACnAwAhuQIgALYDACG6AkAAuQMAIbsCAQCpAwAhvAIAANEDACDDAgEApgMAIQ4DAACKBAAgEQAAiwQAIBIAAIwEACCRAgAAiQQAMJICAAAHABCTAgAAiQQAMJQCAQDFAwAhmQJAAMwDACGaAkAAzAMAIbkCIADIAwAhugJAAMsDACG7AgEAxgMAIbwCAAD9AwAgwwIBAMUDACEZBAAAzQMAIAgAAM4DACATAADPAwAgkQIAAMQDADCSAgAA9wIAEJMCAADEAwAwlAIBAMUDACGXAgAAygO4AiKZAkAAzAMAIZoCQADMAwAhqwIBAMUDACGsAgEAxQMAIa0CAQDGAwAhrgIBAMYDACGvAgEAxgMAIbACAQDGAwAhsQIBAMYDACGzAgAAxwOzAiK0AiAAyAMAIbYCAADJA7YCIrgCIADIAwAhuQIgAMgDACG6AkAAywMAIYIDAAD3AgAggwMAAPcCACAD9wIAAAkAIPgCAAAJACD5AgAACQAgA_cCAAAfACD4AgAAHwAg-QIAAB8AIAuRAgAAjQQAMJICAACNAQAQkwIAAI0EADCUAgEApgMAIZkCQACnAwAhmgJAAKcDACGrAgEApgMAIcoCAQCpAwAhywIBAKkDACHMAiAAtgMAIdcCAgDUAwAhDQUAAIsEACAOAACQBAAgkQIAAI4EADCSAgAAegAQkwIAAI4EADCUAgEAxQMAIZkCQADMAwAhmgJAAMwDACGrAgEAxQMAIcoCAQDGAwAhywIBAMYDACHMAiAAyAMAIdcCAgCPBAAhCKACAgAAAAGhAgIAAAAEogICAAAABKMCAgAAAAGkAgIAAAABpQICAAAAAaYCAgAAAAGqAgIArgMAIQP3AgAADgAg-AIAAA4AIPkCAAAOACANkQIAAJEEADCSAgAAdAAQkwIAAJEEADCUAgEApgMAIZkCQACnAwAhmgJAAKcDACGdAgEApgMAIcwCIAC2AwAh3QJAALkDACHeAkAAuQMAIfsCAACSBPsCIvwCAgDkAwAh_QJAALkDACEHDQAArgMAICsAAJQEACAsAACUBAAgoAIAAAD7AgKhAgAAAPsCCKICAAAA-wIIqgIAAJME-wIiBw0AAK4DACArAACUBAAgLAAAlAQAIKACAAAA-wICoQIAAAD7AgiiAgAAAPsCCKoCAACTBPsCIgSgAgAAAPsCAqECAAAA-wIIogIAAAD7AgiqAgAAlAT7AiIMkQIAAJUEADCSAgAAXgAQkwIAAJUEADCUAgEApgMAIZkCQACnAwAhmgJAAKcDACG6AkAAuQMAIcsCAQCpAwAhzQIgALYDACHRAgEApgMAIfsCAACWBIADIv4CAADjAwAgBw0AAK4DACArAACYBAAgLAAAmAQAIKACAAAAgAMCoQIAAACAAwiiAgAAAIADCKoCAACXBIADIgcNAACuAwAgKwAAmAQAICwAAJgEACCgAgAAAIADAqECAAAAgAMIogIAAACAAwiqAgAAlwSAAyIEoAIAAACAAwKhAgAAAIADCKICAAAAgAMIqgIAAJgEgAMiDQsAAN8DACCRAgAAmQQAMJICAABBABCTAgAAmQQAMJQCAQDFAwAhmQJAAMwDACGaAkAAzAMAIboCQADLAwAhywIBAMYDACHNAiAAyAMAIdECAQDFAwAh-wIAAJsEgAMi_gIAAJoEACAMoAKAAAAAAaMCgAAAAAGkAoAAAAABpQKAAAAAAaYCgAAAAAGqAoAAAAABxAIBAAAAAcUCAQAAAAHGAgEAAAABxwKAAAAAAcgCgAAAAAHJAoAAAAABBKACAAAAgAMCoQIAAACAAwiiAgAAAIADCKoCAACYBIADIhIIAACeBAAgCwAA3wMAIJECAACcBAAwkgIAACMAEJMCAACcBAAwlAIBAMUDACGVAkAAzAMAIZcCAACdBOICIpkCQADMAwAhmgJAAMwDACGdAgEAxQMAIboCQADLAwAh0QIBAMUDACHdAkAAzAMAId4CQADMAwAh3wJAAMsDACHgAkAAywMAIeICIADIAwAhBKACAAAA4gICoQIAAADiAgiiAgAAAOICCKoCAADuA-ICIhkDAACKBAAgBwAAkAQAIAkAALUEACAKAAC2BAAgCwAAjAQAIAwAALcEACCRAgAAsgQAMJICAAASABCTAgAAsgQAMJQCAQDFAwAhlwIAALMEwQIimQJAAMwDACGaAkAAzAMAIbkCIADIAwAhugJAAMsDACG7AgEAxgMAIbwCAAD9AwAgvQIBAMYDACG-AgEAxgMAIb8CIADIAwAhwQIIALQEACHCAgIAjwQAIcMCAQDFAwAhggMAABIAIIMDAAASACAYBAAAogQAIAgAAM4DACAMAACpBAAgDwAAoQQAIBEAAKMEACATAACkBAAgFQAApQQAIBYAAKYEACAXAACnBAAgGAAAqAQAIJECAACfBAAwkgIAAB8AEJMCAACfBAAwlAIBAMUDACGVAkAAzAMAIZcCAACgBJcCIpgCAQDGAwAhmQJAAMwDACGaAkAAzAMAIZsCAQDFAwAhnAIBAMUDACGdAgEAxgMAIZ4CAQDFAwAhnwIBAMUDACEEoAIAAACXAgKhAgAAAJcCCKICAAAAlwIIqgIAAK8DlwIiDwUAAIsEACAQAACMBAAgEwAAqwQAIBQAAKwEACCRAgAAqgQAMJICAAAbABCTAgAAqgQAMJQCAQDFAwAhmQJAAMwDACGaAkAAzAMAIcsCAQDGAwAhzAIgAMgDACHjAgEAxQMAIYIDAAAbACCDAwAAGwAgEAMAAIoEACARAACLBAAgEgAAjAQAIJECAACJBAAwkgIAAAcAEJMCAACJBAAwlAIBAMUDACGZAkAAzAMAIZoCQADMAwAhuQIgAMgDACG6AkAAywMAIbsCAQDGAwAhvAIAAP0DACDDAgEAxQMAIYIDAAAHACCDAwAABwAgHQQAAKIEACAGAAC5BAAgDwAAoQQAIBAAAL0EACCRAgAAugQAMJICAAAJABCTAgAAugQAMJQCAQDFAwAhlQJAAMwDACGXAgAAvATVAiKZAkAAzAMAIZoCQADMAwAhmwIBAMUDACGcAgEAxQMAIbkCIADIAwAhvAIAAJoEACDLAgEAxgMAIc4CAQDFAwAh0wIAALsE0wIi1QJAAMsDACHWAkAAywMAIdcCAgCxBAAh2AJAAMsDACHZAkAAywMAIdoCAQDGAwAh2wJAAMsDACHcAgEAxgMAIYIDAAAJACCDAwAACQAgFQMAAIoEACALAACMBAAgDwAAtgQAIJECAAC-BAAwkgIAAAMAEJMCAAC-BAAwlAIBAMUDACGZAkAAzAMAIZoCQADMAwAhuQIgAMgDACG6AkAAywMAIbsCAQDFAwAhvAIAAP0DACC-AgEAxQMAIcMCAQDFAwAh3AIBAMYDACHzAgAAvwTzAiL0AgEAxgMAIfUCQADLAwAhggMAAAMAIIMDAAADACAD9wIAAEEAIPgCAABBACD5AgAAQQAgDwsAAN8DACCRAgAA3gMAMJICAABEABCTAgAA3gMAMJQCAQDFAwAhmQJAAMwDACGaAkAAzAMAIboCQADLAwAhywIBAMYDACHNAiAAyAMAIc8CAQDFAwAh0AIBAMUDACHRAgEAxQMAIYIDAABEACCDAwAARAAgDgsAAN8DACCRAgAAhgQAMJICAABGABCTAgAAhgQAMJQCAQDFAwAhmQJAAMwDACGaAkAAzAMAIbkCIADIAwAhugJAAMsDACHBAggAhwQAIdECAQDFAwAh9gIBAMYDACGCAwAARgAggwMAAEYAIBgLAADfAwAgkQIAAPoDADCSAgAASAAQkwIAAPoDADCUAgEAxQMAIZcCAAD8A-kCIpkCQADMAwAhmgJAAMwDACHRAgEAxQMAIeQCAQDFAwAh5QIQAPsDACHmAgEAxQMAIecCAQDGAwAh6QJAAMsDACHqAgEAxgMAIesCAQDFAwAh7AIBAMUDACHtAgAA_QMAIO4CAQDGAwAh7wIQAP4DACHwAgEAxgMAIfECAQDGAwAhggMAAEgAIIMDAABIACAUCAAAngQAIAsAAN8DACCRAgAAnAQAMJICAAAjABCTAgAAnAQAMJQCAQDFAwAhlQJAAMwDACGXAgAAnQTiAiKZAkAAzAMAIZoCQADMAwAhnQIBAMUDACG6AkAAywMAIdECAQDFAwAh3QJAAMwDACHeAkAAzAMAId8CQADLAwAh4AJAAMsDACHiAiAAyAMAIYIDAAAjACCDAwAAIwAgDQUAAIsEACAQAACMBAAgEwAAqwQAIBQAAKwEACCRAgAAqgQAMJICAAAbABCTAgAAqgQAMJQCAQDFAwAhmQJAAMwDACGaAkAAzAMAIcsCAQDGAwAhzAIgAMgDACHjAgEAxQMAIQP3AgAAAwAg-AIAAAMAIPkCAAADACAD9wIAABIAIPgCAAASACD5AgAAEgAgA50CAQAAAAH7AgAAAPsCAvwCAgAAAAEDnQIBAAAAAfsCAAAA-wIC_QJAAAAAAQ4IAACeBAAgkQIAAK8EADCSAgAAFwAQkwIAAK8EADCUAgEAxQMAIZkCQADMAwAhmgJAAMwDACGdAgEAxQMAIcwCIADIAwAh3QJAAMsDACHeAkAAywMAIfsCAACwBPsCIvwCAgCxBAAh_QJAAMsDACEEoAIAAAD7AgKhAgAAAPsCCKICAAAA-wIIqgIAAJQE-wIiCKACAgAAAAGhAgIAAAAFogICAAAABaMCAgAAAAGkAgIAAAABpQICAAAAAaYCAgAAAAGqAgIAqwMAIRcDAACKBAAgBwAAkAQAIAkAALUEACAKAAC2BAAgCwAAjAQAIAwAALcEACCRAgAAsgQAMJICAAASABCTAgAAsgQAMJQCAQDFAwAhlwIAALMEwQIimQJAAMwDACGaAkAAzAMAIbkCIADIAwAhugJAAMsDACG7AgEAxgMAIbwCAAD9AwAgvQIBAMYDACG-AgEAxgMAIb8CIADIAwAhwQIIALQEACHCAgIAjwQAIcMCAQDFAwAhBKACAAAAwQICoQIAAADBAgiiAgAAAMECCKoCAADaA8ECIgigAggAAAABoQIIAAAABaICCAAAAAWjAggAAAABpAIIAAAAAaUCCAAAAAGmAggAAAABqgIIANgDACED9wIAABcAIPgCAAAXACD5AgAAFwAgA_cCAAAbACD4AgAAGwAg-QIAABsAIAP3AgAAIwAg-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_gKAAAAAAQIAAAABACAlAAD7BAAgAwAAAAEAICUAAPsEACAmAAD6BAAgAR4AAKkIADANCwAA3wMAIJECAACZBAAwkgIAAEEAEJMCAACZBAAwlAIBAAAAAZkCQADMAwAhmgJAAMwDACG6AkAAywMAIcsCAQDGAwAhzQIgAMgDACHRAgEAxQMAIfsCAACbBIADIv4CAACaBAAgAgAAAAEAIB4AAPoEACACAAAA9wQAIB4AAPgEACAMkQIAAPYEADCSAgAA9wQAEJMCAAD2BAAwlAIBAMUDACGZAkAAzAMAIZoCQADMAwAhugJAAMsDACHLAgEAxgMAIc0CIADIAwAh0QIBAMUDACH7AgAAmwSAAyL-AgAAmgQAIAyRAgAA9gQAMJICAAD3BAAQkwIAAPYEADCUAgEAxQMAIZkCQADMAwAhmgJAAMwDACG6AkAAywMAIcsCAQDGAwAhzQIgAMgDACHRAgEAxQMAIfsCAACbBIADIv4CAACaBAAgCJQCAQDEBAAhmQJAAMUEACGaAkAAxQQAIboCQADXBAAhywIBAMcEACHNAiAA2QQAIfsCAAD5BIADIv4CgAAAAAEBigMAAACAAwIIlAIBAMQEACGZAkAAxQQAIZoCQADFBAAhugJAANcEACHLAgEAxwQAIc0CIADZBAAh-wIAAPkEgAMi_gKAAAAAAQiUAgEAAAABmQJAAAAAAZoCQAAAAAG6AkAAAAABywIBAAAAAc0CIAAAAAH7AgAAAIADAv4CgAAAAAEDJQAApwgAIIQDAACoCAAgiAMAAB0AIAMlAAClCAAghAMAAKYIACCIAwAAkAEAIAMlAACjCAAghAMAAKQIACCIAwAAFAAgAyUAAKEIACCEAwAAoggAIIgDAAALACADJQAAnwgAIIQDAACgCAAgiAMAAAUAIAQlAADvBAAwhAMAAPAEADCIAwAA8wQAMIkDAADyBAAgAyUAAOoEACCEAwAA6wQAIIgDAACwAgAgAyUAAOQEACCEAwAA5QQAIIgDAACoAQAgAyUAANwEACCEAwAA3QQAIIgDAADWAQAgAyUAANIEACCEAwAA0wQAIIgDAAAlACAAAAABigMAAACzAgIBigMAAAC2AgIBigMAAAC4AgIHJQAAwAYAICYAAMMGACCEAwAAwQYAIIUDAADCBgAghgMAAAcAIIcDAAAHACCIAwAAkAEAIAclAACiBgAgJgAApQYAIIQDAACjBgAghQMAAKQGACCGAwAAEgAghwMAABIAIIgDAAAUACAHJQAAjwUAICYAAJIFACCEAwAAkAUAIIUDAACRBQAghgMAAAMAIIcDAAADACCIAwAABQAgDgsAAKEGACAPAACgBgAglAIBAAAAAZkCQAAAAAGaAkAAAAABuQIgAAAAAboCQAAAAAG7AgEAAAABvAKAAAAAAb4CAQAAAAHcAgEAAAAB8wIAAADzAgL0AgEAAAAB9QJAAAAAAQIAAAAFACAlAACPBQAgAwAAAAMAICUAAI8FACAmAACTBQAgEAAAAAMAIAsAAJYFACAPAACVBQAgHgAAkwUAIJQCAQDEBAAhmQJAAMUEACGaAkAAxQQAIbkCIADZBAAhugJAANcEACG7AgEAxAQAIbwCgAAAAAG-AgEAxAQAIdwCAQDHBAAh8wIAAJQF8wIi9AIBAMcEACH1AkAA1wQAIQ4LAACWBQAgDwAAlQUAIJQCAQDEBAAhmQJAAMUEACGaAkAAxQQAIbkCIADZBAAhugJAANcEACG7AgEAxAQAIbwCgAAAAAG-AgEAxAQAIdwCAQDHBAAh8wIAAJQF8wIi9AIBAMcEACH1AkAA1wQAIQGKAwAAAPMCAgolAACjBQAwJgAApwUAMIQDAACkBQAwhQMAAKUFADCGAwAApgUAMIcDAACmBQAwiAMAAKYFADCKAwAApgUAMIsDAACoBQAwjAMAAKkFADALJQAAlwUAMCYAAJwFADCEAwAAmAUAMIUDAACZBQAwhgMAAJsFADCHAwAAmwUAMIgDAACbBQAwiQMAAJoFACCKAwAAmwUAMIsDAACdBQAwjAMAAJ4FADATBAAA_QQAIAgAAP4EACAMAACFBQAgDwAA_AQAIBEAAP8EACAVAACBBQAgFgAAggUAIBcAAIMFACAYAACEBQAglAIBAAAAAZUCQAAAAAGXAgAAAJcCApgCAQAAAAGZAkAAAAABmgJAAAAAAZsCAQAAAAGcAgEAAAABnQIBAAAAAZ4CAQAAAAECAAAAIQAgJQAAogUAIAMAAAAhACAlAACiBQAgJgAAoQUAIAEeAACeCAAwGAQAAKIEACAIAADOAwAgDAAAqQQAIA8AAKEEACARAACjBAAgEwAApAQAIBUAAKUEACAWAACmBAAgFwAApwQAIBgAAKgEACCRAgAAnwQAMJICAAAfABCTAgAAnwQAMJQCAQAAAAGVAkAAzAMAIZcCAACgBJcCIpgCAQDGAwAhmQJAAMwDACGaAkAAzAMAIZsCAQDFAwAhnAIBAMUDACGdAgEAxgMAIZ4CAQAAAAGfAgEAxQMAIQIAAAAhACAeAAChBQAgAgAAAJ8FACAeAACgBQAgDpECAACeBQAwkgIAAJ8FABCTAgAAngUAMJQCAQDFAwAhlQJAAMwDACGXAgAAoASXAiKYAgEAxgMAIZkCQADMAwAhmgJAAMwDACGbAgEAxQMAIZwCAQDFAwAhnQIBAMYDACGeAgEAxQMAIZ8CAQDFAwAhDpECAACeBQAwkgIAAJ8FABCTAgAAngUAMJQCAQDFAwAhlQJAAMwDACGXAgAAoASXAiKYAgEAxgMAIZkCQADMAwAhmgJAAMwDACGbAgEAxQMAIZwCAQDFAwAhnQIBAMYDACGeAgEAxQMAIZ8CAQDFAwAhCpQCAQDEBAAhlQJAAMUEACGXAgAAxgSXAiKYAgEAxwQAIZkCQADFBAAhmgJAAMUEACGbAgEAxAQAIZwCAQDEBAAhnQIBAMcEACGeAgEAxAQAIRMEAADJBAAgCAAAygQAIAwAANEEACAPAADIBAAgEQAAywQAIBUAAM0EACAWAADOBAAgFwAAzwQAIBgAANAEACCUAgEAxAQAIZUCQADFBAAhlwIAAMYElwIimAIBAMcEACGZAkAAxQQAIZoCQADFBAAhmwIBAMQEACGcAgEAxAQAIZ0CAQDHBAAhngIBAMQEACETBAAA_QQAIAgAAP4EACAMAACFBQAgDwAA_AQAIBEAAP8EACAVAACBBQAgFgAAggUAIBcAAIMFACAYAACEBQAglAIBAAAAAZUCQAAAAAGXAgAAAJcCApgCAQAAAAGZAkAAAAABmgJAAAAAAZsCAQAAAAGcAgEAAAABnQIBAAAAAZ4CAQAAAAEJBQAAnQYAIBAAAJ8GACAUAACeBgAglAIBAAAAAZkCQAAAAAGaAkAAAAABywIBAAAAAcwCIAAAAAHjAgEAAAABAgAAAB0AICUAAJwGACADAAAAHQAgJQAAnAYAICYAAKwFACANBQAAiwQAIBAAAIwEACATAACrBAAgFAAArAQAIJECAACqBAAwkgIAABsAEJMCAACqBAAwlAIBAAAAAZkCQADMAwAhmgJAAMwDACHLAgEAxgMAIcwCIADIAwAh4wIBAAAAAQIAAAAdACAeAACsBQAgAgAAAKoFACAeAACrBQAgCZECAACpBQAwkgIAAKoFABCTAgAAqQUAMJQCAQDFAwAhmQJAAMwDACGaAkAAzAMAIcsCAQDGAwAhzAIgAMgDACHjAgEAxQMAIQmRAgAAqQUAMJICAACqBQAQkwIAAKkFADCUAgEAxQMAIZkCQADMAwAhmgJAAMwDACHLAgEAxgMAIcwCIADIAwAh4wIBAMUDACEGlAIBAMQEACGZAkAAxQQAIZoCQADFBAAhywIBAMcEACHMAiAA2QQAIeMCAQDEBAAhCQUAAK0FACAQAACvBQAgFAAArgUAIJQCAQDEBAAhmQJAAMUEACGaAkAAxQQAIcsCAQDHBAAhzAIgANkEACHjAgEAxAQAIQslAACDBgAwJgAAiAYAMIQDAACEBgAwhQMAAIUGADCGAwAAhwYAMIcDAACHBgAwiAMAAIcGADCJAwAAhgYAIIoDAACHBgAwiwMAAIkGADCMAwAAigYAMAolAAC5BQAwJgAAvQUAMIQDAAC6BQAwhQMAALsFADCGAwAAvAUAMIcDAAC8BQAwiAMAALwFADCKAwAAvAUAMIsDAAC-BQAwjAMAAL8FADALJQAAsAUAMCYAALQFADCEAwAAsQUAMIUDAACyBQAwhgMAAJsFADCHAwAAmwUAMIgDAACbBQAwiQMAALMFACCKAwAAmwUAMIsDAAC1BQAwjAMAAJ4FADATBAAA_QQAIAgAAP4EACAMAACFBQAgEQAA_wQAIBMAAIAFACAVAACBBQAgFgAAggUAIBcAAIMFACAYAACEBQAglAIBAAAAAZUCQAAAAAGXAgAAAJcCApgCAQAAAAGZAkAAAAABmgJAAAAAAZwCAQAAAAGdAgEAAAABngIBAAAAAZ8CAQAAAAECAAAAIQAgJQAAuAUAIAMAAAAhACAlAAC4BQAgJgAAtwUAIAEeAACdCAAwAgAAACEAIB4AALcFACACAAAAnwUAIB4AALYFACAKlAIBAMQEACGVAkAAxQQAIZcCAADGBJcCIpgCAQDHBAAhmQJAAMUEACGaAkAAxQQAIZwCAQDEBAAhnQIBAMcEACGeAgEAxAQAIZ8CAQDEBAAhEwQAAMkEACAIAADKBAAgDAAA0QQAIBEAAMsEACATAADMBAAgFQAAzQQAIBYAAM4EACAXAADPBAAgGAAA0AQAIJQCAQDEBAAhlQJAAMUEACGXAgAAxgSXAiKYAgEAxwQAIZkCQADFBAAhmgJAAMUEACGcAgEAxAQAIZ0CAQDHBAAhngIBAMQEACGfAgEAxAQAIRMEAAD9BAAgCAAA_gQAIAwAAIUFACARAAD_BAAgEwAAgAUAIBUAAIEFACAWAACCBQAgFwAAgwUAIBgAAIQFACCUAgEAAAABlQJAAAAAAZcCAAAAlwICmAIBAAAAAZkCQAAAAAGaAkAAAAABnAIBAAAAAZ0CAQAAAAGeAgEAAAABnwIBAAAAARMDAACABgAgBwAA_gUAIAkAAP8FACALAACBBgAgDAAAggYAIJQCAQAAAAGXAgAAAMECApkCQAAAAAGaAkAAAAABuQIgAAAAAboCQAAAAAG7AgEAAAABvAKAAAAAAb0CAQAAAAG-AgEAAAABvwIgAAAAAcECCAAAAAHCAgIAAAABwwIBAAAAAQIAAAAUACAlAAD9BQAgAwAAABQAICUAAP0FACAmAADFBQAgFwMAAIoEACAHAACQBAAgCQAAtQQAIAoAALYEACALAACMBAAgDAAAtwQAIJECAACyBAAwkgIAABIAEJMCAACyBAAwlAIBAAAAAZcCAACzBMECIpkCQADMAwAhmgJAAMwDACG5AiAAyAMAIboCQADLAwAhuwIBAMYDACG8AgAA_QMAIL0CAQDGAwAhvgIBAMYDACG_AiAAyAMAIcECCAC0BAAhwgICAI8EACHDAgEAAAABAgAAABQAIB4AAMUFACACAAAAwAUAIB4AAMEFACARkQIAAL8FADCSAgAAwAUAEJMCAAC_BQAwlAIBAMUDACGXAgAAswTBAiKZAkAAzAMAIZoCQADMAwAhuQIgAMgDACG6AkAAywMAIbsCAQDGAwAhvAIAAP0DACC9AgEAxgMAIb4CAQDGAwAhvwIgAMgDACHBAggAtAQAIcICAgCPBAAhwwIBAMUDACERkQIAAL8FADCSAgAAwAUAEJMCAAC_BQAwlAIBAMUDACGXAgAAswTBAiKZAkAAzAMAIZoCQADMAwAhuQIgAMgDACG6AkAAywMAIbsCAQDGAwAhvAIAAP0DACC9AgEAxgMAIb4CAQDGAwAhvwIgAMgDACHBAggAtAQAIcICAgCPBAAhwwIBAMUDACEOlAIBAMQEACGXAgAAwgXBAiKZAkAAxQQAIZoCQADFBAAhuQIgANkEACG6AkAA1wQAIbsCAQDHBAAhvAKAAAAAAb0CAQDHBAAhvgIBAMcEACG_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_QQAIAwAAIUFACAPAAD8BAAgEQAA_wQAIBMAAIAFACAVAACBBQAgFgAAggUAIBcAAIMFACAYAACEBQAglAIBAAAAAZUCQAAAAAGXAgAAAJcCApgCAQAAAAGZAkAAAAABmgJAAAAAAZsCAQAAAAGcAgEAAAABngIBAAAAAZ8CAQAAAAECAAAAIQAgJQAA4QUAIAMAAAAhACAlAADhBQAgJgAA4AUAIAEeAACTCAAwAgAAACEAIB4AAOAFACACAAAAnwUAIB4AAN8FACAKlAIBAMQEACGVAkAAxQQAIZcCAADGBJcCIpgCAQDHBAAhmQJAAMUEACGaAkAAxQQAIZsCAQDEBAAhnAIBAMQEACGeAgEAxAQAIZ8CAQDEBAAhEwQAAMkEACAMAADRBAAgDwAAyAQAIBEAAMsEACATAADMBAAgFQAAzQQAIBYAAM4EACAXAADPBAAgGAAA0AQAIJQCAQDEBAAhlQJAAMUEACGXAgAAxgSXAiKYAgEAxwQAIZkCQADFBAAhmgJAAMUEACGbAgEAxAQAIZwCAQDEBAAhngIBAMQEACGfAgEAxAQAIRMEAAD9BAAgDAAAhQUAIA8AAPwEACARAAD_BAAgEwAAgAUAIBUAAIEFACAWAACCBQAgFwAAgwUAIBgAAIQFACCUAgEAAAABlQJAAAAAAZcCAAAAlwICmAIBAAAAAZkCQAAAAAGaAkAAAAABmwIBAAAAAZwCAQAAAAGeAgEAAAABnwIBAAAAAQmUAgEAAAABmQJAAAAAAZoCQAAAAAHMAiAAAAAB3QJAAAAAAd4CQAAAAAH7AgAAAPsCAvwCAgAAAAH9AkAAAAABAgAAABkAICUAAO8FACADAAAAGQAgJQAA7wUAICYAAO4FACABHgAAkggAMBAIAACeBAAgkQIAAK8EADCSAgAAFwAQkwIAAK8EADCUAgEAAAABmQJAAMwDACGaAkAAzAMAIZ0CAQDFAwAhzAIgAMgDACHdAkAAywMAId4CQADLAwAh-wIAALAE-wIi_AICALEEACH9AkAAywMAIYADAACtBAAggQMAAK4EACACAAAAGQAgHgAA7gUAIAIAAADqBQAgHgAA6wUAIA2RAgAA6QUAMJICAADqBQAQkwIAAOkFADCUAgEAxQMAIZkCQADMAwAhmgJAAMwDACGdAgEAxQMAIcwCIADIAwAh3QJAAMsDACHeAkAAywMAIfsCAACwBPsCIvwCAgCxBAAh_QJAAMsDACENkQIAAOkFADCSAgAA6gUAEJMCAADpBQAwlAIBAMUDACGZAkAAzAMAIZoCQADMAwAhnQIBAMUDACHMAiAAyAMAId0CQADLAwAh3gJAAMsDACH7AgAAsAT7AiL8AgIAsQQAIf0CQADLAwAhCZQCAQDEBAAhmQJAAMUEACGaAkAAxQQAIcwCIADZBAAh3QJAANcEACHeAkAA1wQAIfsCAADsBfsCIvwCAgDtBQAh_QJAANcEACEBigMAAAD7AgIFigMCAAAAAY0DAgAAAAGOAwIAAAABjwMCAAAAAZADAgAAAAEJlAIBAMQEACGZAkAAxQQAIZoCQADFBAAhzAIgANkEACHdAkAA1wQAId4CQADXBAAh-wIAAOwF-wIi_AICAO0FACH9AkAA1wQAIQmUAgEAAAABmQJAAAAAAZoCQAAAAAHMAiAAAAAB3QJAAAAAAd4CQAAAAAH7AgAAAPsCAvwCAgAAAAH9AkAAAAABCwYAAPwFACCUAgEAAAABmQJAAAAAAZoCQAAAAAGrAgEAAAABugJAAAAAAcoCAQAAAAHLAgEAAAABzAIgAAAAAc0CIAAAAAHOAgEAAAABAgAAABAAICUAAPsFACADAAAAEAAgJQAA-wUAICYAAPkFACAPBgAAuQQAIAgAAKwEACCRAgAAuAQAMJICAAAOABCTAgAAuAQAMJQCAQAAAAGZAkAAzAMAIZoCQADMAwAhqwIBAAAAAboCQADLAwAhygIBAMYDACHLAgEAxgMAIcwCIADIAwAhzQIgAMgDACHOAgEAxQMAIQIAAAAQACAeAAD5BQAgAgAAAPcFACAeAAD4BQAgDZECAAD2BQAwkgIAAPcFABCTAgAA9gUAMJQCAQDFAwAhmQJAAMwDACGaAkAAzAMAIasCAQDFAwAhugJAAMsDACHKAgEAxgMAIcsCAQDGAwAhzAIgAMgDACHNAiAAyAMAIc4CAQDFAwAhDZECAAD2BQAwkgIAAPcFABCTAgAA9gUAMJQCAQDFAwAhmQJAAMwDACGaAkAAzAMAIasCAQDFAwAhugJAAMsDACHKAgEAxgMAIcsCAQDGAwAhzAIgAMgDACHNAiAAyAMAIc4CAQDFAwAhCpQCAQDEBAAhmQJAAMUEACGaAkAAxQQAIasCAQDEBAAhugJAANcEACHKAgEAxwQAIcsCAQDHBAAhzAIgANkEACHNAiAA2QQAIc4CAQDEBAAhCwYAAPoFACCUAgEAxAQAIZkCQADFBAAhmgJAAMUEACGrAgEAxAQAIboCQADXBAAhygIBAMcEACHLAgEAxwQAIcwCIADZBAAhzQIgANkEACHOAgEAxAQAIQUlAACNCAAgJgAAkAgAIIQDAACOCAAghQMAAI8IACCIAwAAdwAgCwYAAPwFACCUAgEAAAABmQJAAAAAAZoCQAAAAAGrAgEAAAABugJAAAAAAcoCAQAAAAHLAgEAAAABzAIgAAAAAc0CIAAAAAHOAgEAAAABAyUAAI0IACCEAwAAjggAIIgDAAB3ACATAwAAgAYAIAcAAP4FACAJAAD_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_gQAIAwAAIUFACAPAAD8BAAgEwAAgAUAIBUAAIEFACAWAACCBQAgFwAAgwUAIBgAAIQFACCUAgEAAAABlQJAAAAAAZcCAAAAlwICmAIBAAAAAZkCQAAAAAGaAkAAAAABmwIBAAAAAZwCAQAAAAGdAgEAAAABnwIBAAAAAQIAAAAhACAlAACTBgAgAwAAAB8AICUAAJMGACAmAACXBgAgFQAAAB8AIAQAAMkEACAIAADKBAAgDAAA0QQAIA8AAMgEACATAADMBAAgFQAAzQQAIBYAAM4EACAXAADPBAAgGAAA0AQAIB4AAJcGACCUAgEAxAQAIZUCQADFBAAhlwIAAMYElwIimAIBAMcEACGZAkAAxQQAIZoCQADFBAAhmwIBAMQEACGcAgEAxAQAIZ0CAQDHBAAhnwIBAMQEACETBAAAyQQAIAgAAMoEACAMAADRBAAgDwAAyAQAIBMAAMwEACAVAADNBAAgFgAAzgQAIBcAAM8EACAYAADQBAAglAIBAMQEACGVAkAAxQQAIZcCAADGBJcCIpgCAQDHBAAhmQJAAMUEACGaAkAAxQQAIZsCAQDEBAAhnAIBAMQEACGdAgEAxwQAIZ8CAQDEBAAhFgQAAJkGACAGAACaBgAgEAAAmwYAIJQCAQAAAAGVAkAAAAABlwIAAADVAgKZAkAAAAABmgJAAAAAAZwCAQAAAAG5AiAAAAABvAKAAAAAAcsCAQAAAAHOAgEAAAAB0wIAAADTAgLVAkAAAAAB1gJAAAAAAdcCAgAAAAHYAkAAAAAB2QJAAAAAAdoCAQAAAAHbAkAAAAAB3AIBAAAAAQMlAACCCAAghAMAAIMIACCIAwAAkAEAIAMlAACACAAghAMAAIEIACCIAwAAdwAgAyUAAJMGACCEAwAAlAYAIIgDAAAhACAJBQAAnQYAIBAAAJ8GACAUAACeBgAglAIBAAAAAZkCQAAAAAGaAkAAAAABywIBAAAAAcwCIAAAAAHjAgEAAAABBCUAAIMGADCEAwAAhAYAMIgDAACHBgAwiQMAAIYGACADJQAAuQUAMIQDAAC6BQAwiAMAALwFADAEJQAAsAUAMIQDAACxBQAwiAMAAJsFADCJAwAAswUAIAMlAACjBQAwhAMAAKQFADCIAwAApgUAMAQlAACXBQAwhAMAAJgFADCIAwAAmwUAMIkDAACaBQAgEgcAAP4FACAJAAD_BQAgCgAAvwYAIAsAAIEGACAMAACCBgAglAIBAAAAAZcCAAAAwQICmQJAAAAAAZoCQAAAAAG5AiAAAAABugJAAAAAAbsCAQAAAAG8AoAAAAABvQIBAAAAAb4CAQAAAAG_AiAAAAABwQIIAAAAAcICAgAAAAECAAAAFAAgJQAAogYAIAMAAAASACAlAACiBgAgJgAApgYAIBQAAAASACAHAADGBQAgCQAAxwUAIAoAAKcGACALAADJBQAgDAAAygUAIB4AAKYGACCUAgEAxAQAIZcCAADCBcECIpkCQADFBAAhmgJAAMUEACG5AiAA2QQAIboCQADXBAAhuwIBAMcEACG8AoAAAAABvQIBAMcEACG-AgEAxwQAIb8CIADZBAAhwQIIAMMFACHCAgIAxAUAIRIHAADGBQAgCQAAxwUAIAoAAKcGACALAADJBQAgDAAAygUAIJQCAQDEBAAhlwIAAMIFwQIimQJAAMUEACGaAkAAxQQAIbkCIADZBAAhugJAANcEACG7AgEAxwQAIbwCgAAAAAG9AgEAxwQAIb4CAQDHBAAhvwIgANkEACHBAggAwwUAIcICAgDEBQAhCiUAAKgGADAmAACrBgAwhAMAAKkGADCFAwAAqgYAMIYDAACmBQAwhwMAAKYFADCIAwAApgUAMIoDAACmBQAwiwMAAKwGADCMAwAAqQUAMAkFAACdBgAgEAAAnwYAIBMAAL4GACCUAgEAAAABmQJAAAAAAZoCQAAAAAHLAgEAAAABzAIgAAAAAeMCAQAAAAECAAAAHQAgJQAAvQYAIAMAAAAdACAlAAC9BgAgJgAArgYAIAIAAAAdACAeAACuBgAgAgAAAKoFACAeAACtBgAgBpQCAQDEBAAhmQJAAMUEACGaAkAAxQQAIcsCAQDHBAAhzAIgANkEACHjAgEAxAQAIQkFAACtBQAgEAAArwUAIBMAAK8GACCUAgEAxAQAIZkCQADFBAAhmgJAAMUEACHLAgEAxwQAIcwCIADZBAAh4wIBAMQEACEKJQAAsAYAMCYAALQGADCEAwAAsQYAMIUDAACyBgAwhgMAALMGADCHAwAAswYAMIgDAACzBgAwigMAALMGADCLAwAAtQYAMIwDAAC2BgAwDwMAALwGACALAAChBgAglAIBAAAAAZkCQAAAAAGaAkAAAAABuQIgAAAAAboCQAAAAAG7AgEAAAABvAKAAAAAAb4CAQAAAAHDAgEAAAAB3AIBAAAAAfMCAAAA8wIC9AIBAAAAAfUCQAAAAAECAAAABQAgJQAAuwYAIAMAAAAFACAlAAC7BgAgJgAAuQYAIBMDAACKBAAgCwAAjAQAIA8AALYEACCRAgAAvgQAMJICAAADABCTAgAAvgQAMJQCAQAAAAGZAkAAzAMAIZoCQADMAwAhuQIgAMgDACG6AkAAywMAIbsCAQDFAwAhvAIAAP0DACC-AgEAxQMAIcMCAQAAAAHcAgEAxgMAIfMCAAC_BPMCIvQCAQDGAwAh9QJAAMsDACECAAAABQAgHgAAuQYAIAIAAAC3BgAgHgAAuAYAIBCRAgAAtgYAMJICAAC3BgAQkwIAALYGADCUAgEAxQMAIZkCQADMAwAhmgJAAMwDACG5AiAAyAMAIboCQADLAwAhuwIBAMUDACG8AgAA_QMAIL4CAQDFAwAhwwIBAMUDACHcAgEAxgMAIfMCAAC_BPMCIvQCAQDGAwAh9QJAAMsDACEQkQIAALYGADCSAgAAtwYAEJMCAAC2BgAwlAIBAMUDACGZAkAAzAMAIZoCQADMAwAhuQIgAMgDACG6AkAAywMAIbsCAQDFAwAhvAIAAP0DACC-AgEAxQMAIcMCAQDFAwAh3AIBAMYDACHzAgAAvwTzAiL0AgEAxgMAIfUCQADLAwAhDZQCAQDEBAAhmQJAAMUEACGaAkAAxQQAIbkCIADZBAAhugJAANcEACG7AgEAxAQAIbwCgAAAAAG-AgEAxAQAIcMCAQDEBAAh3AIBAMcEACHzAgAAlAXzAiL0AgEAxwQAIfUCQADXBAAhDwMAALoGACALAACWBQAglAIBAMQEACGZAkAAxQQAIZoCQADFBAAhuQIgANkEACG6AkAA1wQAIbsCAQDEBAAhvAKAAAAAAb4CAQDEBAAhwwIBAMQEACHcAgEAxwQAIfMCAACUBfMCIvQCAQDHBAAh9QJAANcEACEFJQAA-wcAICYAAP4HACCEAwAA_AcAIIUDAAD9BwAgiAMAAPQCACAPAwAAvAYAIAsAAKEGACCUAgEAAAABmQJAAAAAAZoCQAAAAAG5AiAAAAABugJAAAAAAbsCAQAAAAG8AoAAAAABvgIBAAAAAcMCAQAAAAHcAgEAAAAB8wIAAADzAgL0AgEAAAAB9QJAAAAAAQMlAAD7BwAghAMAAPwHACCIAwAA9AIAIAkFAACdBgAgEAAAnwYAIBMAAL4GACCUAgEAAAABmQJAAAAAAZoCQAAAAAHLAgEAAAABzAIgAAAAAeMCAQAAAAEDJQAAsAYAMIQDAACxBgAwiAMAALMGADADJQAAqAYAMIQDAACpBgAwiAMAAKYFADAJEQAA2wYAIBIAANwGACCUAgEAAAABmQJAAAAAAZoCQAAAAAG5AiAAAAABugJAAAAAAbsCAQAAAAG8AoAAAAABAgAAAJABACAlAADABgAgAwAAAAcAICUAAMAGACAmAADEBgAgCwAAAAcAIBEAAMUGACASAADGBgAgHgAAxAYAIJQCAQDEBAAhmQJAAMUEACGaAkAAxQQAIbkCIADZBAAhugJAANcEACG7AgEAxwQAIbwCgAAAAAEJEQAAxQYAIBIAAMYGACCUAgEAxAQAIZkCQADFBAAhmgJAAMUEACG5AiAA2QQAIboCQADXBAAhuwIBAMcEACG8AoAAAAABCyUAANAGADAmAADUBgAwhAMAANEGADCFAwAA0gYAMIYDAACHBgAwhwMAAIcGADCIAwAAhwYAMIkDAADTBgAgigMAAIcGADCLAwAA1QYAMIwDAACKBgAwCyUAAMcGADAmAADLBgAwhAMAAMgGADCFAwAAyQYAMIYDAACbBQAwhwMAAJsFADCIAwAAmwUAMIkDAADKBgAgigMAAJsFADCLAwAAzAYAMIwDAACeBQAwEwgAAP4EACAMAACFBQAgDwAA_AQAIBEAAP8EACATAACABQAgFQAAgQUAIBYAAIIFACAXAACDBQAgGAAAhAUAIJQCAQAAAAGVAkAAAAABlwIAAACXAgKYAgEAAAABmQJAAAAAAZoCQAAAAAGbAgEAAAABnQIBAAAAAZ4CAQAAAAGfAgEAAAABAgAAACEAICUAAM8GACADAAAAIQAgJQAAzwYAICYAAM4GACABHgAA-gcAMAIAAAAhACAeAADOBgAgAgAAAJ8FACAeAADNBgAgCpQCAQDEBAAhlQJAAMUEACGXAgAAxgSXAiKYAgEAxwQAIZkCQADFBAAhmgJAAMUEACGbAgEAxAQAIZ0CAQDHBAAhngIBAMQEACGfAgEAxAQAIRMIAADKBAAgDAAA0QQAIA8AAMgEACARAADLBAAgEwAAzAQAIBUAAM0EACAWAADOBAAgFwAAzwQAIBgAANAEACCUAgEAxAQAIZUCQADFBAAhlwIAAMYElwIimAIBAMcEACGZAkAAxQQAIZoCQADFBAAhmwIBAMQEACGdAgEAxwQAIZ4CAQDEBAAhnwIBAMQEACETCAAA_gQAIAwAAIUFACAPAAD8BAAgEQAA_wQAIBMAAIAFACAVAACBBQAgFgAAggUAIBcAAIMFACAYAACEBQAglAIBAAAAAZUCQAAAAAGXAgAAAJcCApgCAQAAAAGZAkAAAAABmgJAAAAAAZsCAQAAAAGdAgEAAAABngIBAAAAAZ8CAQAAAAEWBgAAmgYAIA8AANoGACAQAACbBgAglAIBAAAAAZUCQAAAAAGXAgAAANUCApkCQAAAAAGaAkAAAAABmwIBAAAAAbkCIAAAAAG8AoAAAAABywIBAAAAAc4CAQAAAAHTAgAAANMCAtUCQAAAAAHWAkAAAAAB1wICAAAAAdgCQAAAAAHZAkAAAAAB2gIBAAAAAdsCQAAAAAHcAgEAAAABAgAAAAsAICUAANkGACADAAAACwAgJQAA2QYAICYAANcGACABHgAA-QcAMAIAAAALACAeAADXBgAgAgAAAIsGACAeAADWBgAgE5QCAQDEBAAhlQJAAMUEACGXAgAAjgbVAiKZAkAAxQQAIZoCQADFBAAhmwIBAMQEACG5AiAA2QQAIbwCgAAAAAHLAgEAxwQAIc4CAQDEBAAh0wIAAI0G0wIi1QJAANcEACHWAkAA1wQAIdcCAgDtBQAh2AJAANcEACHZAkAA1wQAIdoCAQDHBAAh2wJAANcEACHcAgEAxwQAIRYGAACRBgAgDwAA2AYAIBAAAJIGACCUAgEAxAQAIZUCQADFBAAhlwIAAI4G1QIimQJAAMUEACGaAkAAxQQAIZsCAQDEBAAhuQIgANkEACG8AoAAAAABywIBAMcEACHOAgEAxAQAIdMCAACNBtMCItUCQADXBAAh1gJAANcEACHXAgIA7QUAIdgCQADXBAAh2QJAANcEACHaAgEAxwQAIdsCQADXBAAh3AIBAMcEACEFJQAA9AcAICYAAPcHACCEAwAA9QcAIIUDAAD2BwAgiAMAAB0AIBYGAACaBgAgDwAA2gYAIBAAAJsGACCUAgEAAAABlQJAAAAAAZcCAAAA1QICmQJAAAAAAZoCQAAAAAGbAgEAAAABuQIgAAAAAbwCgAAAAAHLAgEAAAABzgIBAAAAAdMCAAAA0wIC1QJAAAAAAdYCQAAAAAHXAgIAAAAB2AJAAAAAAdkCQAAAAAHaAgEAAAAB2wJAAAAAAdwCAQAAAAEDJQAA9AcAIIQDAAD1BwAgiAMAAB0AIAQlAADQBgAwhAMAANEGADCIAwAAhwYAMIkDAADTBgAgBCUAAMcGADCEAwAAyAYAMIgDAACbBQAwiQMAAMoGACADJQAAwAYAIIQDAADBBgAgiAMAAJABACADJQAAogYAIIQDAACjBgAgiAMAABQAIAMlAACPBQAghAMAAJAFACCIAwAABQAgBgMAAJwHACARAACdBwAgEgAAngcAILoCAADABAAguwIAAMAEACC8AgAAwAQAIAwDAACcBwAgBwAAugcAIAkAANAHACAKAADRBwAgCwAAngcAIAwAANIHACC6AgAAwAQAILsCAADABAAgvAIAAMAEACC9AgAAwAQAIL4CAADABAAgwQIAAMAEACAIAwAAnAcAIAsAAJ4HACAPAADRBwAgugIAAMAEACC8AgAAwAQAINwCAADABAAg9AIAAMAEACD1AgAAwAQAIAAAAAAAAAAACiUAAOwGADAmAADvBgAwhAMAAO0GADCFAwAA7gYAMIYDAAC8BQAwhwMAALwFADCIAwAAvAUAMIoDAAC8BQAwiwMAAPAGADCMAwAAvwUAMBMDAACABgAgCQAA_wUAIAoAAL8GACALAACBBgAgDAAAggYAIJQCAQAAAAGXAgAAAMECApkCQAAAAAGaAkAAAAABuQIgAAAAAboCQAAAAAG7AgEAAAABvAKAAAAAAb0CAQAAAAG-AgEAAAABvwIgAAAAAcECCAAAAAHCAgIAAAABwwIBAAAAAQIAAAAUACAlAADzBgAgAwAAABQAICUAAPMGACAmAADyBgAgAgAAABQAIB4AAPIGACACAAAAwAUAIB4AAPEGACAOlAIBAMQEACGXAgAAwgXBAiKZAkAAxQQAIZoCQADFBAAhuQIgANkEACG6AkAA1wQAIbsCAQDHBAAhvAKAAAAAAb0CAQDHBAAhvgIBAMcEACG_AiAA2QQAIcECCADDBQAhwgICAMQFACHDAgEAxAQAIRMDAADIBQAgCQAAxwUAIAoAAKcGACALAADJBQAgDAAAygUAIJQCAQDEBAAhlwIAAMIFwQIimQJAAMUEACGaAkAAxQQAIbkCIADZBAAhugJAANcEACG7AgEAxwQAIbwCgAAAAAG9AgEAxwQAIb4CAQDHBAAhvwIgANkEACHBAggAwwUAIcICAgDEBQAhwwIBAMQEACETAwAAgAYAIAkAAP8FACAKAAC_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_gQAIAwAAIUFACAPAAD8BAAgEQAA_wQAIBMAAIAFACAWAACCBQAgFwAAgwUAIBgAAIQFACCUAgEAAAABlQJAAAAAAZcCAAAAlwICmAIBAAAAAZkCQAAAAAGaAkAAAAABmwIBAAAAAZwCAQAAAAGdAgEAAAABngIBAAAAAZ8CAQAAAAECAAAAIQAgJQAA1AcAIAMAAAAfACAlAADUBwAgJgAA2AcAIBYAAAAfACAEAADJBAAgCAAAygQAIAwAANEEACAPAADIBAAgEQAAywQAIBMAAMwEACAWAADOBAAgFwAAzwQAIBgAANAEACAeAADYBwAglAIBAMQEACGVAkAAxQQAIZcCAADGBJcCIpgCAQDHBAAhmQJAAMUEACGaAkAAxQQAIZsCAQDEBAAhnAIBAMQEACGdAgEAxwQAIZ4CAQDEBAAhnwIBAMQEACEUBAAAyQQAIAgAAMoEACAMAADRBAAgDwAAyAQAIBEAAMsEACATAADMBAAgFgAAzgQAIBcAAM8EACAYAADQBAAglAIBAMQEACGVAkAAxQQAIZcCAADGBJcCIpgCAQDHBAAhmQJAAMUEACGaAkAAxQQAIZsCAQDEBAAhnAIBAMQEACGdAgEAxwQAIZ4CAQDEBAAhnwIBAMQEACETAwAAgAYAIAcAAP4FACAKAAC_BgAgCwAAgQYAIAwAAIIGACCUAgEAAAABlwIAAADBAgKZAkAAAAABmgJAAAAAAbkCIAAAAAG6AkAAAAABuwIBAAAAAbwCgAAAAAG9AgEAAAABvgIBAAAAAb8CIAAAAAHBAggAAAABwgICAAAAAcMCAQAAAAECAAAAFAAgJQAA2QcAIAMAAAASACAlAADZBwAgJgAA3QcAIBUAAAASACADAADIBQAgBwAAxgUAIAoAAKcGACALAADJBQAgDAAAygUAIB4AAN0HACCUAgEAxAQAIZcCAADCBcECIpkCQADFBAAhmgJAAMUEACG5AiAA2QQAIboCQADXBAAhuwIBAMcEACG8AoAAAAABvQIBAMcEACG-AgEAxwQAIb8CIADZBAAhwQIIAMMFACHCAgIAxAUAIcMCAQDEBAAhEwMAAMgFACAHAADGBQAgCgAApwYAIAsAAMkFACAMAADKBQAglAIBAMQEACGXAgAAwgXBAiKZAkAAxQQAIZoCQADFBAAhuQIgANkEACG6AkAA1wQAIbsCAQDHBAAhvAKAAAAAAb0CAQDHBAAhvgIBAMcEACG_AiAA2QQAIcECCADDBQAhwgICAMQFACHDAgEAxAQAIROUAgEAAAABlQJAAAAAAZcCAAAA1QICmQJAAAAAAZoCQAAAAAGbAgEAAAABnAIBAAAAAbkCIAAAAAG8AoAAAAABywIBAAAAAdMCAAAA0wIC1QJAAAAAAdYCQAAAAAHXAgIAAAAB2AJAAAAAAdkCQAAAAAHaAgEAAAAB2wJAAAAAAdwCAQAAAAEJlAIBAAAAAZkCQAAAAAGaAkAAAAABqwIBAAAAAboCQAAAAAHKAgEAAAABywIBAAAAAcwCIAAAAAHNAiAAAAABEwgAAN4GACATAADfBgAglAIBAAAAAZcCAAAAuAICmQJAAAAAAZoCQAAAAAGrAgEAAAABrAIBAAAAAa0CAQAAAAGuAgEAAAABrwIBAAAAAbACAQAAAAGxAgEAAAABswIAAACzAgK0AiAAAAABtgIAAAC2AgK4AiAAAAABuQIgAAAAAboCQAAAAAECAAAA9AIAICUAAOAHACADAAAA9wIAICUAAOAHACAmAADkBwAgFQAAAPcCACAIAACNBQAgEwAAjgUAIB4AAOQHACCUAgEAxAQAIZcCAACLBbgCIpkCQADFBAAhmgJAAMUEACGrAgEAxAQAIawCAQDEBAAhrQIBAMcEACGuAgEAxwQAIa8CAQDHBAAhsAIBAMcEACGxAgEAxwQAIbMCAACJBbMCIrQCIADZBAAhtgIAAIoFtgIiuAIgANkEACG5AiAA2QQAIboCQADXBAAhEwgAAI0FACATAACOBQAglAIBAMQEACGXAgAAiwW4AiKZAkAAxQQAIZoCQADFBAAhqwIBAMQEACGsAgEAxAQAIa0CAQDHBAAhrgIBAMcEACGvAgEAxwQAIbACAQDHBAAhsQIBAMcEACGzAgAAiQWzAiK0AiAA2QQAIbYCAACKBbYCIrgCIADZBAAhuQIgANkEACG6AkAA1wQAIRQEAAD9BAAgCAAA_gQAIAwAAIUFACAPAAD8BAAgEQAA_wQAIBMAAIAFACAVAACBBQAgFgAAggUAIBgAAIQFACCUAgEAAAABlQJAAAAAAZcCAAAAlwICmAIBAAAAAZkCQAAAAAGaAkAAAAABmwIBAAAAAZwCAQAAAAGdAgEAAAABngIBAAAAAZ8CAQAAAAECAAAAIQAgJQAA5QcAIAMAAAAfACAlAADlBwAgJgAA6QcAIBYAAAAfACAEAADJBAAgCAAAygQAIAwAANEEACAPAADIBAAgEQAAywQAIBMAAMwEACAVAADNBAAgFgAAzgQAIBgAANAEACAeAADpBwAglAIBAMQEACGVAkAAxQQAIZcCAADGBJcCIpgCAQDHBAAhmQJAAMUEACGaAkAAxQQAIZsCAQDEBAAhnAIBAMQEACGdAgEAxwQAIZ4CAQDEBAAhnwIBAMQEACEUBAAAyQQAIAgAAMoEACAMAADRBAAgDwAAyAQAIBEAAMsEACATAADMBAAgFQAAzQQAIBYAAM4EACAYAADQBAAglAIBAMQEACGVAkAAxQQAIZcCAADGBJcCIpgCAQDHBAAhmQJAAMUEACGaAkAAxQQAIZsCAQDEBAAhnAIBAMQEACGdAgEAxwQAIZ4CAQDEBAAhnwIBAMQEACEUBAAA_QQAIAgAAP4EACAMAACFBQAgDwAA_AQAIBEAAP8EACATAACABQAgFQAAgQUAIBYAAIIFACAXAACDBQAglAIBAAAAAZUCQAAAAAGXAgAAAJcCApgCAQAAAAGZAkAAAAABmgJAAAAAAZsCAQAAAAGcAgEAAAABnQIBAAAAAZ4CAQAAAAGfAgEAAAABAgAAACEAICUAAOoHACADAAAAHwAgJQAA6gcAICYAAO4HACAWAAAAHwAgBAAAyQQAIAgAAMoEACAMAADRBAAgDwAAyAQAIBEAAMsEACATAADMBAAgFQAAzQQAIBYAAM4EACAXAADPBAAgHgAA7gcAIJQCAQDEBAAhlQJAAMUEACGXAgAAxgSXAiKYAgEAxwQAIZkCQADFBAAhmgJAAMUEACGbAgEAxAQAIZwCAQDEBAAhnQIBAMcEACGeAgEAxAQAIZ8CAQDEBAAhFAQAAMkEACAIAADKBAAgDAAA0QQAIA8AAMgEACARAADLBAAgEwAAzAQAIBUAAM0EACAWAADOBAAgFwAAzwQAIJQCAQDEBAAhlQJAAMUEACGXAgAAxgSXAiKYAgEAxwQAIZkCQADFBAAhmgJAAMUEACGbAgEAxAQAIZwCAQDEBAAhnQIBAMcEACGeAgEAxAQAIZ8CAQDEBAAhFAQAAP0EACAIAAD-BAAgDAAAhQUAIA8AAPwEACARAAD_BAAgEwAAgAUAIBUAAIEFACAXAACDBQAgGAAAhAUAIJQCAQAAAAGVAkAAAAABlwIAAACXAgKYAgEAAAABmQJAAAAAAZoCQAAAAAGbAgEAAAABnAIBAAAAAZ0CAQAAAAGeAgEAAAABnwIBAAAAAQIAAAAhACAlAADvBwAgAwAAAB8AICUAAO8HACAmAADzBwAgFgAAAB8AIAQAAMkEACAIAADKBAAgDAAA0QQAIA8AAMgEACARAADLBAAgEwAAzAQAIBUAAM0EACAXAADPBAAgGAAA0AQAIB4AAPMHACCUAgEAxAQAIZUCQADFBAAhlwIAAMYElwIimAIBAMcEACGZAkAAxQQAIZoCQADFBAAhmwIBAMQEACGcAgEAxAQAIZ0CAQDHBAAhngIBAMQEACGfAgEAxAQAIRQEAADJBAAgCAAAygQAIAwAANEEACAPAADIBAAgEQAAywQAIBMAAMwEACAVAADNBAAgFwAAzwQAIBgAANAEACCUAgEAxAQAIZUCQADFBAAhlwIAAMYElwIimAIBAMcEACGZAkAAxQQAIZoCQADFBAAhmwIBAMQEACGcAgEAxAQAIZ0CAQDHBAAhngIBAMQEACGfAgEAxAQAIQkQAACfBgAgEwAAvgYAIBQAAJ4GACCUAgEAAAABmQJAAAAAAZoCQAAAAAHLAgEAAAABzAIgAAAAAeMCAQAAAAECAAAAHQAgJQAA9AcAIAMAAAAbACAlAAD0BwAgJgAA-AcAIAsAAAAbACAQAACvBQAgEwAArwYAIBQAAK4FACAeAAD4BwAglAIBAMQEACGZAkAAxQQAIZoCQADFBAAhywIBAMcEACHMAiAA2QQAIeMCAQDEBAAhCRAAAK8FACATAACvBgAgFAAArgUAIJQCAQDEBAAhmQJAAMUEACGaAkAAxQQAIcsCAQDHBAAhzAIgANkEACHjAgEAxAQAIROUAgEAAAABlQJAAAAAAZcCAAAA1QICmQJAAAAAAZoCQAAAAAGbAgEAAAABuQIgAAAAAbwCgAAAAAHLAgEAAAABzgIBAAAAAdMCAAAA0wIC1QJAAAAAAdYCQAAAAAHXAgIAAAAB2AJAAAAAAdkCQAAAAAHaAgEAAAAB2wJAAAAAAdwCAQAAAAEKlAIBAAAAAZUCQAAAAAGXAgAAAJcCApgCAQAAAAGZAkAAAAABmgJAAAAAAZsCAQAAAAGdAgEAAAABngIBAAAAAZ8CAQAAAAETBAAA3QYAIAgAAN4GACCUAgEAAAABlwIAAAC4AgKZAkAAAAABmgJAAAAAAasCAQAAAAGsAgEAAAABrQIBAAAAAa4CAQAAAAGvAgEAAAABsAIBAAAAAbECAQAAAAGzAgAAALMCArQCIAAAAAG2AgAAALYCArgCIAAAAAG5AiAAAAABugJAAAAAAQIAAAD0AgAgJQAA-wcAIAMAAAD3AgAgJQAA-wcAICYAAP8HACAVAAAA9wIAIAQAAIwFACAIAACNBQAgHgAA_wcAIJQCAQDEBAAhlwIAAIsFuAIimQJAAMUEACGaAkAAxQQAIasCAQDEBAAhrAIBAMQEACGtAgEAxwQAIa4CAQDHBAAhrwIBAMcEACGwAgEAxwQAIbECAQDHBAAhswIAAIkFswIitAIgANkEACG2AgAAigW2AiK4AiAA2QQAIbkCIADZBAAhugJAANcEACETBAAAjAUAIAgAAI0FACCUAgEAxAQAIZcCAACLBbgCIpkCQADFBAAhmgJAAMUEACGrAgEAxAQAIawCAQDEBAAhrQIBAMcEACGuAgEAxwQAIa8CAQDHBAAhsAIBAMcEACGxAgEAxwQAIbMCAACJBbMCIrQCIADZBAAhtgIAAIoFtgIiuAIgANkEACG5AiAA2QQAIboCQADXBAAhCQ4AALkHACCUAgEAAAABmQJAAAAAAZoCQAAAAAGrAgEAAAABygIBAAAAAcsCAQAAAAHMAiAAAAAB1wICAAAAAQIAAAB3ACAlAACACAAgCgMAAJsHACASAADcBgAglAIBAAAAAZkCQAAAAAGaAkAAAAABuQIgAAAAAboCQAAAAAG7AgEAAAABvAKAAAAAAcMCAQAAAAECAAAAkAEAICUAAIIIACADAAAAegAgJQAAgAgAICYAAIYIACALAAAAegAgDgAApQcAIB4AAIYIACCUAgEAxAQAIZkCQADFBAAhmgJAAMUEACGrAgEAxAQAIcoCAQDHBAAhywIBAMcEACHMAiAA2QQAIdcCAgDEBQAhCQ4AAKUHACCUAgEAxAQAIZkCQADFBAAhmgJAAMUEACGrAgEAxAQAIcoCAQDHBAAhywIBAMcEACHMAiAA2QQAIdcCAgDEBQAhAwAAAAcAICUAAIIIACAmAACJCAAgDAAAAAcAIAMAAJoHACASAADGBgAgHgAAiQgAIJQCAQDEBAAhmQJAAMUEACGaAkAAxQQAIbkCIADZBAAhugJAANcEACG7AgEAxwQAIbwCgAAAAAHDAgEAxAQAIQoDAACaBwAgEgAAxgYAIJQCAQDEBAAhmQJAAMUEACGaAkAAxQQAIbkCIADZBAAhugJAANcEACG7AgEAxwQAIbwCgAAAAAHDAgEAxAQAIROUAgEAAAABlQJAAAAAAZcCAAAA1QICmQJAAAAAAZoCQAAAAAGcAgEAAAABuQIgAAAAAbwCgAAAAAHLAgEAAAABzgIBAAAAAdMCAAAA0wIC1QJAAAAAAdYCQAAAAAHXAgIAAAAB2AJAAAAAAdkCQAAAAAHaAgEAAAAB2wJAAAAAAdwCAQAAAAETBAAA3QYAIBMAAN8GACCUAgEAAAABlwIAAAC4AgKZAkAAAAABmgJAAAAAAasCAQAAAAGsAgEAAAABrQIBAAAAAa4CAQAAAAGvAgEAAAABsAIBAAAAAbECAQAAAAGzAgAAALMCArQCIAAAAAG2AgAAALYCArgCIAAAAAG5AiAAAAABugJAAAAAAQIAAAD0AgAgJQAAiwgAIAkFAAC4BwAglAIBAAAAAZkCQAAAAAGaAkAAAAABqwIBAAAAAcoCAQAAAAHLAgEAAAABzAIgAAAAAdcCAgAAAAECAAAAdwAgJQAAjQgAIAMAAAB6ACAlAACNCAAgJgAAkQgAIAsAAAB6ACAFAACkBwAgHgAAkQgAIJQCAQDEBAAhmQJAAMUEACGaAkAAxQQAIasCAQDEBAAhygIBAMcEACHLAgEAxwQAIcwCIADZBAAh1wICAMQFACEJBQAApAcAIJQCAQDEBAAhmQJAAMUEACGaAkAAxQQAIasCAQDEBAAhygIBAMcEACHLAgEAxwQAIcwCIADZBAAh1wICAMQFACEJlAIBAAAAAZkCQAAAAAGaAkAAAAABzAIgAAAAAd0CQAAAAAHeAkAAAAAB-wIAAAD7AgL8AgIAAAAB_QJAAAAAAQqUAgEAAAABlQJAAAAAAZcCAAAAlwICmAIBAAAAAZkCQAAAAAGaAkAAAAABmwIBAAAAAZwCAQAAAAGeAgEAAAABnwIBAAAAARQEAAD9BAAgCAAA_gQAIA8AAPwEACARAAD_BAAgEwAAgAUAIBUAAIEFACAWAACCBQAgFwAAgwUAIBgAAIQFACCUAgEAAAABlQJAAAAAAZcCAAAAlwICmAIBAAAAAZkCQAAAAAGaAkAAAAABmwIBAAAAAZwCAQAAAAGdAgEAAAABngIBAAAAAZ8CAQAAAAECAAAAIQAgJQAAlAgAIAMAAAAfACAlAACUCAAgJgAAmAgAIBYAAAAfACAEAADJBAAgCAAAygQAIA8AAMgEACARAADLBAAgEwAAzAQAIBUAAM0EACAWAADOBAAgFwAAzwQAIBgAANAEACAeAACYCAAglAIBAMQEACGVAkAAxQQAIZcCAADGBJcCIpgCAQDHBAAhmQJAAMUEACGaAkAAxQQAIZsCAQDEBAAhnAIBAMQEACGdAgEAxwQAIZ4CAQDEBAAhnwIBAMQEACEUBAAAyQQAIAgAAMoEACAPAADIBAAgEQAAywQAIBMAAMwEACAVAADNBAAgFgAAzgQAIBcAAM8EACAYAADQBAAglAIBAMQEACGVAkAAxQQAIZcCAADGBJcCIpgCAQDHBAAhmQJAAMUEACGaAkAAxQQAIZsCAQDEBAAhnAIBAMQEACGdAgEAxwQAIZ4CAQDEBAAhnwIBAMQEACEMlAIBAAAAAZUCQAAAAAGXAgAAAOICApkCQAAAAAGaAkAAAAABugJAAAAAAdECAQAAAAHdAkAAAAAB3gJAAAAAAd8CQAAAAAHgAkAAAAAB4gIgAAAAAQMAAAD3AgAgJQAAiwgAICYAAJwIACAVAAAA9wIAIAQAAIwFACATAACOBQAgHgAAnAgAIJQCAQDEBAAhlwIAAIsFuAIimQJAAMUEACGaAkAAxQQAIasCAQDEBAAhrAIBAMQEACGtAgEAxwQAIa4CAQDHBAAhrwIBAMcEACGwAgEAxwQAIbECAQDHBAAhswIAAIkFswIitAIgANkEACG2AgAAigW2AiK4AiAA2QQAIbkCIADZBAAhugJAANcEACETBAAAjAUAIBMAAI4FACCUAgEAxAQAIZcCAACLBbgCIpkCQADFBAAhmgJAAMUEACGrAgEAxAQAIawCAQDEBAAhrQIBAMcEACGuAgEAxwQAIa8CAQDHBAAhsAIBAMcEACGxAgEAxwQAIbMCAACJBbMCIrQCIADZBAAhtgIAAIoFtgIiuAIgANkEACG5AiAA2QQAIboCQADXBAAhCpQCAQAAAAGVAkAAAAABlwIAAACXAgKYAgEAAAABmQJAAAAAAZoCQAAAAAGcAgEAAAABnQIBAAAAAZ4CAQAAAAGfAgEAAAABCpQCAQAAAAGVAkAAAAABlwIAAACXAgKYAgEAAAABmQJAAAAAAZoCQAAAAAGbAgEAAAABnAIBAAAAAZ0CAQAAAAGeAgEAAAABDwMAALwGACAPAACgBgAglAIBAAAAAZkCQAAAAAGaAkAAAAABuQIgAAAAAboCQAAAAAG7AgEAAAABvAKAAAAAAb4CAQAAAAHDAgEAAAAB3AIBAAAAAfMCAAAA8wIC9AIBAAAAAfUCQAAAAAECAAAABQAgJQAAnwgAIBcEAACZBgAgBgAAmgYAIA8AANoGACCUAgEAAAABlQJAAAAAAZcCAAAA1QICmQJAAAAAAZoCQAAAAAGbAgEAAAABnAIBAAAAAbkCIAAAAAG8AoAAAAABywIBAAAAAc4CAQAAAAHTAgAAANMCAtUCQAAAAAHWAkAAAAAB1wICAAAAAdgCQAAAAAHZAkAAAAAB2gIBAAAAAdsCQAAAAAHcAgEAAAABAgAAAAsAICUAAKEIACATAwAAgAYAIAcAAP4FACAJAAD_BQAgCgAAvwYAIAwAAIIGACCUAgEAAAABlwIAAADBAgKZAkAAAAABmgJAAAAAAbkCIAAAAAG6AkAAAAABuwIBAAAAAbwCgAAAAAG9AgEAAAABvgIBAAAAAb8CIAAAAAHBAggAAAABwgICAAAAAcMCAQAAAAECAAAAFAAgJQAAowgAIAoDAACbBwAgEQAA2wYAIJQCAQAAAAGZAkAAAAABmgJAAAAAAbkCIAAAAAG6AkAAAAABuwIBAAAAAbwCgAAAAAHDAgEAAAABAgAAAJABACAlAAClCAAgCQUAAJ0GACATAAC-BgAgFAAAngYAIJQCAQAAAAGZAkAAAAABmgJAAAAAAcsCAQAAAAHMAiAAAAAB4wIBAAAAAQIAAAAdACAlAACnCAAgCJQCAQAAAAGZAkAAAAABmgJAAAAAAboCQAAAAAHLAgEAAAABzQIgAAAAAfsCAAAAgAMC_gKAAAAAARMDAACABgAgBwAA_gUAIAkAAP8FACAKAAC_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_ABM8ABQ-AAELAAIBCwACAQsAAgEVSwAAAQsAAgELAAIDDQAbKwAcLAAdAAAAAw0AGysAHCwAHQEIAAoBCAAKBQ0AIisAJSwAJj0AIz4AJAAAAAAABQ0AIisAJSwAJj0AIz4AJAAABQ0AKysALiwALz0ALD4ALQAAAAAABQ0AKysALiwALz0ALD4ALQEDAAUBAwAFAw0ANCsANSwANgAAAAMNADQrADUsADYBCwACAQsAAgUNADsrAD4sAD89ADw-AD0AAAAAAAUNADsrAD4sAD89ADw-AD0BAwAFAQMABQMNAEQrAEUsAEYAAAADDQBEKwBFLABGAQsAAgELAAIFDQBLKwBOLABPPQBMPgBNAAAAAAAFDQBLKwBOLABPPQBMPgBNAAADDQBUKwBVLABWAAAAAw0AVCsAVSwAVgIIAAoLAAICCAAKCwACAw0AWysAXCwAXQAAAAMNAFsrAFwsAF0DBAAGBgAIDwADAwQABgYACA8AAwUNAGIrAGUsAGY9AGM-AGQAAAAAAAUNAGIrAGUsAGY9AGM-AGQBCwACAQsAAgMNAGsrAGwsAG0AAAADDQBrKwBsLABtAQYACAEGAAgDDQByKwBzLAB0AAAAAw0AcisAcywAdAEDAAUBAwAFBQ0AeSsAfCwAfT0Aej4AewAAAAAABQ0AeSsAfCwAfT0Aej4AewAAAw0AggErAIMBLACEAQAAAAMNAIIBKwCDASwAhAEFBAAGCJcDCg8AAxEABxMABAUEAAYInQMKDwADEQAHEwAEAw0AiQErAIoBLACLAQAAAAMNAIkBKwCKASwAiwEZAgEaTAEbTQEcTgEdTwEfUQEgUxchVBgiVgEjWBckWRknWgEoWwEpXBctXxouYB4vYQswYgsxYwsyZAszZQs0Zws1aRc2ah83bAs4bhc5byA6cAs7cQs8chc_dSFAdidBeAhCeQhDfAhEfQhFfghGgAEIR4IBF0iDAShJhQEISocBF0uIASlMiQEITYoBCE6LARdPjgEqUI8BMFGRAQZSkgEGU5QBBlSVAQZVlgEGVpgBBleaARdYmwExWZ0BBlqfARdboAEyXKEBBl2iAQZeowEXX6YBM2CnATdhqQEUYqoBFGOsARRkrQEUZa4BFGawARRnsgEXaLMBOGm1ARRqtwEXa7gBOWy5ARRtugEUbrsBF2--ATpwvwFAccABBHLBAQRzwgEEdMMBBHXEAQR2xgEEd8gBF3jJAUF5ywEEes0BF3vOAUJ8zwEEfdABBH7RARd_1AFDgAHVAUeBAdcBFYIB2AEVgwHaARWEAdsBFYUB3AEVhgHeARWHAeABF4gB4QFIiQHjARWKAeUBF4sB5gFJjAHnARWNAegBFY4B6QEXjwHsAUqQAe0BUJEB7gEDkgHvAQOTAfABA5QB8QEDlQHyAQOWAfQBA5cB9gEXmAH3AVGZAfkBA5oB-wEXmwH8AVKcAf0BA50B_gEDngH_ARefAYICU6ABgwJXoQGEAgyiAYUCDKMBhgIMpAGHAgylAYgCDKYBigIMpwGMAheoAY0CWKkBjwIMqgGRAherAZICWawBkwIMrQGUAgyuAZUCF68BmAJasAGZAl6xAZoCB7IBmwIHswGcAge0AZ0CB7UBngIHtgGgAge3AaICF7gBowJfuQGlAge6AacCF7sBqAJgvAGpAge9AaoCB74BqwIXvwGuAmHAAa8CZ8EBsQITwgGyAhPDAbQCE8QBtQITxQG2AhPGAbgCE8cBugIXyAG7AmjJAb0CE8oBvwIXywHAAmnMAcECE80BwgITzgHDAhfPAcYCatABxwJu0QHIAgnSAckCCdMBygIJ1AHLAgnVAcwCCdYBzgIJ1wHQAhfYAdECb9kB0wIJ2gHVAhfbAdYCcNwB1wIJ3QHYAgneAdkCF98B3AJx4AHdAnXhAd4CCuIB3wIK4wHgAgrkAeECCuUB4gIK5gHkAgrnAeYCF-gB5wJ26QHpAgrqAesCF-sB7AJ37AHtAgrtAe4CCu4B7wIX7wHyAnjwAfMCfvEB9QIF8gH2AgXzAfkCBfQB-gIF9QH7AgX2Af0CBfcB_wIX-AGAA3_5AYIDBfoBhAMX-wGFA4AB_AGGAwX9AYcDBf4BiAMX_wGLA4EBgAKMA4UBgQKNAwKCAo4DAoMCjwMChAKQAwKFApEDAoYCkwMChwKVAxeIApYDhgGJApkDAooCmwMXiwKcA4cBjAKeAwKNAp8DAo4CoAMXjwKjA4gBkAKkA4wB"
+  strings: JSON.parse('["where","orderBy","cursor","user","customer","services","category","skills","technician","availability","regions","workOrder","schedule","_count","skill","region","workOrders","service","workOder","manager","technicians","attachment","serviceReport","feedback","payment","Attachment.findUnique","Attachment.findUniqueOrThrow","Attachment.findFirst","Attachment.findFirstOrThrow","Attachment.findMany","data","Attachment.createOne","Attachment.createMany","Attachment.createManyAndReturn","Attachment.updateOne","Attachment.updateMany","Attachment.updateManyAndReturn","create","update","Attachment.upsertOne","Attachment.deleteOne","Attachment.deleteMany","having","_min","_max","Attachment.groupBy","Attachment.aggregate","Availability.findUnique","Availability.findUniqueOrThrow","Availability.findFirst","Availability.findFirstOrThrow","Availability.findMany","Availability.createOne","Availability.createMany","Availability.createManyAndReturn","Availability.updateOne","Availability.updateMany","Availability.updateManyAndReturn","Availability.upsertOne","Availability.deleteOne","Availability.deleteMany","_avg","_sum","Availability.groupBy","Availability.aggregate","Category.findUnique","Category.findUniqueOrThrow","Category.findFirst","Category.findFirstOrThrow","Category.findMany","Category.createOne","Category.createMany","Category.createManyAndReturn","Category.updateOne","Category.updateMany","Category.updateManyAndReturn","Category.upsertOne","Category.deleteOne","Category.deleteMany","Category.groupBy","Category.aggregate","CustomerProfile.findUnique","CustomerProfile.findUniqueOrThrow","CustomerProfile.findFirst","CustomerProfile.findFirstOrThrow","CustomerProfile.findMany","CustomerProfile.createOne","CustomerProfile.createMany","CustomerProfile.createManyAndReturn","CustomerProfile.updateOne","CustomerProfile.updateMany","CustomerProfile.updateManyAndReturn","CustomerProfile.upsertOne","CustomerProfile.deleteOne","CustomerProfile.deleteMany","CustomerProfile.groupBy","CustomerProfile.aggregate","Feedback.findUnique","Feedback.findUniqueOrThrow","Feedback.findFirst","Feedback.findFirstOrThrow","Feedback.findMany","Feedback.createOne","Feedback.createMany","Feedback.createManyAndReturn","Feedback.updateOne","Feedback.updateMany","Feedback.updateManyAndReturn","Feedback.upsertOne","Feedback.deleteOne","Feedback.deleteMany","Feedback.groupBy","Feedback.aggregate","ManagerProfile.findUnique","ManagerProfile.findUniqueOrThrow","ManagerProfile.findFirst","ManagerProfile.findFirstOrThrow","ManagerProfile.findMany","ManagerProfile.createOne","ManagerProfile.createMany","ManagerProfile.createManyAndReturn","ManagerProfile.updateOne","ManagerProfile.updateMany","ManagerProfile.updateManyAndReturn","ManagerProfile.upsertOne","ManagerProfile.deleteOne","ManagerProfile.deleteMany","ManagerProfile.groupBy","ManagerProfile.aggregate","Payment.findUnique","Payment.findUniqueOrThrow","Payment.findFirst","Payment.findFirstOrThrow","Payment.findMany","Payment.createOne","Payment.createMany","Payment.createManyAndReturn","Payment.updateOne","Payment.updateMany","Payment.updateManyAndReturn","Payment.upsertOne","Payment.deleteOne","Payment.deleteMany","Payment.groupBy","Payment.aggregate","Region.findUnique","Region.findUniqueOrThrow","Region.findFirst","Region.findFirstOrThrow","Region.findMany","Region.createOne","Region.createMany","Region.createManyAndReturn","Region.updateOne","Region.updateMany","Region.updateManyAndReturn","Region.upsertOne","Region.deleteOne","Region.deleteMany","Region.groupBy","Region.aggregate","Schedule.findUnique","Schedule.findUniqueOrThrow","Schedule.findFirst","Schedule.findFirstOrThrow","Schedule.findMany","Schedule.createOne","Schedule.createMany","Schedule.createManyAndReturn","Schedule.updateOne","Schedule.updateMany","Schedule.updateManyAndReturn","Schedule.upsertOne","Schedule.deleteOne","Schedule.deleteMany","Schedule.groupBy","Schedule.aggregate","Service.findUnique","Service.findUniqueOrThrow","Service.findFirst","Service.findFirstOrThrow","Service.findMany","Service.createOne","Service.createMany","Service.createManyAndReturn","Service.updateOne","Service.updateMany","Service.updateManyAndReturn","Service.upsertOne","Service.deleteOne","Service.deleteMany","Service.groupBy","Service.aggregate","ServiceReport.findUnique","ServiceReport.findUniqueOrThrow","ServiceReport.findFirst","ServiceReport.findFirstOrThrow","ServiceReport.findMany","ServiceReport.createOne","ServiceReport.createMany","ServiceReport.createManyAndReturn","ServiceReport.updateOne","ServiceReport.updateMany","ServiceReport.updateManyAndReturn","ServiceReport.upsertOne","ServiceReport.deleteOne","ServiceReport.deleteMany","ServiceReport.groupBy","ServiceReport.aggregate","Skill.findUnique","Skill.findUniqueOrThrow","Skill.findFirst","Skill.findFirstOrThrow","Skill.findMany","Skill.createOne","Skill.createMany","Skill.createManyAndReturn","Skill.updateOne","Skill.updateMany","Skill.updateManyAndReturn","Skill.upsertOne","Skill.deleteOne","Skill.deleteMany","Skill.groupBy","Skill.aggregate","TechnicianProfile.findUnique","TechnicianProfile.findUniqueOrThrow","TechnicianProfile.findFirst","TechnicianProfile.findFirstOrThrow","TechnicianProfile.findMany","TechnicianProfile.createOne","TechnicianProfile.createMany","TechnicianProfile.createManyAndReturn","TechnicianProfile.updateOne","TechnicianProfile.updateMany","TechnicianProfile.updateManyAndReturn","TechnicianProfile.upsertOne","TechnicianProfile.deleteOne","TechnicianProfile.deleteMany","TechnicianProfile.groupBy","TechnicianProfile.aggregate","User.findUnique","User.findUniqueOrThrow","User.findFirst","User.findFirstOrThrow","User.findMany","User.createOne","User.createMany","User.createManyAndReturn","User.updateOne","User.updateMany","User.updateManyAndReturn","User.upsertOne","User.deleteOne","User.deleteMany","User.groupBy","User.aggregate","WorkOrder.findUnique","WorkOrder.findUniqueOrThrow","WorkOrder.findFirst","WorkOrder.findFirstOrThrow","WorkOrder.findMany","WorkOrder.createOne","WorkOrder.createMany","WorkOrder.createManyAndReturn","WorkOrder.updateOne","WorkOrder.updateMany","WorkOrder.updateManyAndReturn","WorkOrder.upsertOne","WorkOrder.deleteOne","WorkOrder.deleteMany","WorkOrder.groupBy","WorkOrder.aggregate","AND","OR","NOT","id","servicingDate","WorkOrderStatus","status","note","createdAt","updatedAt","regionId","customerId","technicianId","serviceId","managerId","equals","in","notIn","lt","lte","gt","gte","contains","startsWith","endsWith","not","name","email","password","profileImg","profileImgPublicId","googleId","facebookId","AuthProvider","authProvider","emailVerified","UserRole","role","UserStatus","needPasswordChange","isDeleted","deletedAt","phone","address","bio","nid","isProfileCompleted","TechStatus","rating","jobsCompleted","userId","string_contains","string_starts_with","string_ends_with","array_starts_with","array_ends_with","array_contains","icon","description","isActive","isDelete","categoryId","reportUrl","reportPublicId","workOrderId","title","Priority","priority","ServiceStatus","preferredStartTime","preferredEndTime","duration","isDeletedAt","assignedAt","reviewedBy","reviewedAt","rejectionReason","startTime","endTime","actualStart","actualEnd","ScheduleStatus","isdeleted","area","paymentId","amount","method","transectionId","PaymentStatus","paidAt","payerReference","currency","merchantInvoiceNumber","getwayResponse","refundTrxId","refundAmount","refundedAt","reason","ManagerVerificationStatus","verificationStatus","reviewdBy","reviewdAt","comment","every","some","none","AvailabilityType","type","dayOfWeek","date","files","AttachmentType","technicianId_type_dayOfWeek","technicianId_type_date","is","isNot","connectOrCreate","upsert","disconnect","delete","connect","createMany","set","updateMany","deleteMany","increment","decrement","multiply","divide"]'),
+  graph: "vwiMAfABDQsAAOIDACCRAgAAnAQAMJICAABCABCTAgAAnAQAMJQCAQAAAAGZAkAAzwMAIZoCQADPAwAhugJAAM4DACHLAgEAyQMAIc0CIADLAwAh0QIBAMgDACH8AgAAngSBAyL_AgAAnQQAIAEAAAABACATAwAAjQQAIAsAAI8EACAPAAC4BAAgkQIAAMAEADCSAgAAAwAQkwIAAMAEADCUAgEAyAMAIZkCQADPAwAhmgJAAM8DACG5AiAAywMAIboCQADOAwAhuwIBAMgDACG8AgAAgAQAIL4CAQDIAwAhwwIBAMgDACHdAgEAyQMAIfQCAADBBPQCIvUCAQDJAwAh9gJAAM4DACEIAwAAngcAIAsAAKAHACAPAADTBwAgugIAAMIEACC8AgAAwgQAIN0CAADCBAAg9QIAAMIEACD2AgAAwgQAIBMDAACNBAAgCwAAjwQAIA8AALgEACCRAgAAwAQAMJICAAADABCTAgAAwAQAMJQCAQAAAAGZAkAAzwMAIZoCQADPAwAhuQIgAMsDACG6AkAAzgMAIbsCAQDIAwAhvAIAAIAEACC-AgEAyAMAIcMCAQAAAAHdAgEAyQMAIfQCAADBBPQCIvUCAQDJAwAh9gJAAM4DACEDAAAAAwAgAQAABAAwAgAABQAgDgMAAI0EACARAACOBAAgEgAAjwQAIJECAACMBAAwkgIAAAcAEJMCAACMBAAwlAIBAMgDACGZAkAAzwMAIZoCQADPAwAhuQIgAMsDACG6AkAAzgMAIbsCAQDJAwAhvAIAAIAEACDDAgEAyAMAIQEAAAAHACAcBAAApQQAIAYAALsEACAPAACkBAAgEAAAvwQAIJECAAC8BAAwkgIAAAkAEJMCAAC8BAAwlAIBAMgDACGVAkAAzwMAIZcCAAC-BNYCIpkCQADPAwAhmgJAAM8DACGbAgEAyAMAIZwCAQDIAwAhuQIgAMsDACG8AgAAnQQAIMsCAQDJAwAhzgIBAMgDACHSAgEAyAMAIdQCAAC9BNQCItYCQADOAwAh1wJAAM4DACHYAgIAswQAIdkCQADOAwAh2gJAAM4DACHbAgEAyQMAIdwCQADOAwAh3QIBAMkDACENBAAA4gYAIAYAANUHACAPAADJBwAgEAAA_AYAIMsCAADCBAAg1gIAAMIEACDXAgAAwgQAINgCAADCBAAg2QIAAMIEACDaAgAAwgQAINsCAADCBAAg3AIAAMIEACDdAgAAwgQAIBwEAAClBAAgBgAAuwQAIA8AAKQEACAQAAC_BAAgkQIAALwEADCSAgAACQAQkwIAALwEADCUAgEAAAABlQJAAM8DACGXAgAAvgTWAiKZAkAAzwMAIZoCQADPAwAhmwIBAMgDACGcAgEAyAMAIbkCIADLAwAhvAIAAJ0EACDLAgEAyQMAIc4CAQDIAwAh0gIBAMgDACHUAgAAvQTUAiLWAkAAzgMAIdcCQADOAwAh2AICALMEACHZAkAAzgMAIdoCQADOAwAh2wIBAMkDACHcAkAAzgMAId0CAQDJAwAhAwAAAAkAIAEAAAoAMAIAAAsAIAMAAAAJACABAAAKADACAAALACAPBgAAuwQAIAgAAK4EACCRAgAAugQAMJICAAAOABCTAgAAugQAMJQCAQDIAwAhmQJAAM8DACGaAkAAzwMAIasCAQDIAwAhugJAAM4DACHKAgEAyQMAIcsCAQDJAwAhzAIgAMsDACHNAiAAywMAIc4CAQDIAwAhBQYAANUHACAIAADRBwAgugIAAMIEACDKAgAAwgQAIMsCAADCBAAgDwYAALsEACAIAACuBAAgkQIAALoEADCSAgAADgAQkwIAALoEADCUAgEAAAABmQJAAM8DACGaAkAAzwMAIasCAQAAAAG6AkAAzgMAIcoCAQDJAwAhywIBAMkDACHMAiAAywMAIc0CIADLAwAhzgIBAMgDACEDAAAADgAgAQAADwAwAgAAEAAgFwMAAI0EACAHAACTBAAgCQAAtwQAIAoAALgEACALAACPBAAgDAAAuQQAIJECAAC0BAAwkgIAABIAEJMCAAC0BAAwlAIBAMgDACGXAgAAtQTBAiKZAkAAzwMAIZoCQADPAwAhuQIgAMsDACG6AkAAzgMAIbsCAQDJAwAhvAIAAIAEACC9AgEAyQMAIb4CAQDJAwAhvwIgAMsDACHBAggAtgQAIcICAgCSBAAhwwIBAMgDACEMAwAAngcAIAcAALwHACAJAADSBwAgCgAA0wcAIAsAAKAHACAMAADUBwAgugIAAMIEACC7AgAAwgQAILwCAADCBAAgvQIAAMIEACC-AgAAwgQAIMECAADCBAAgFwMAAI0EACAHAACTBAAgCQAAtwQAIAoAALgEACALAACPBAAgDAAAuQQAIJECAAC0BAAwkgIAABIAEJMCAAC0BAAwlAIBAAAAAZcCAAC1BMECIpkCQADPAwAhmgJAAM8DACG5AiAAywMAIboCQADOAwAhuwIBAMkDACG8AgAAgAQAIL0CAQDJAwAhvgIBAMkDACG_AiAAywMAIcECCAC2BAAhwgICAJIEACHDAgEAAAABAwAAABIAIAEAABMAMAIAABQAIAMAAAAOACABAAAPADACAAAQACAOCAAAoQQAIJECAACxBAAwkgIAABcAEJMCAACxBAAwlAIBAMgDACGZAkAAzwMAIZoCQADPAwAhnQIBAMgDACHMAiAAywMAId4CQADOAwAh3wJAAM4DACH8AgAAsgT8AiL9AgIAswQAIf4CQADOAwAhBQgAAOMGACDeAgAAwgQAIN8CAADCBAAg_QIAAMIEACD-AgAAwgQAIBAIAAChBAAgkQIAALEEADCSAgAAFwAQkwIAALEEADCUAgEAAAABmQJAAM8DACGaAkAAzwMAIZ0CAQDIAwAhzAIgAMsDACHeAkAAzgMAId8CQADOAwAh_AIAALIE_AIi_QICALMEACH-AkAAzgMAIYEDAACvBAAgggMAALAEACADAAAAFwAgAQAAGAAwAgAAGQAgDQUAAI4EACAQAACPBAAgEwAArQQAIBQAAK4EACCRAgAArAQAMJICAAAbABCTAgAArAQAMJQCAQDIAwAhmQJAAM8DACGaAkAAzwMAIcsCAQDJAwAhzAIgAMsDACHkAgEAyAMAIQUFAACfBwAgEAAAoAcAIBMAANAHACAUAADRBwAgywIAAMIEACANBQAAjgQAIBAAAI8EACATAACtBAAgFAAArgQAIJECAACsBAAwkgIAABsAEJMCAACsBAAwlAIBAAAAAZkCQADPAwAhmgJAAM8DACHLAgEAyQMAIcwCIADLAwAh5AIBAAAAAQMAAAAbACABAAAcADACAAAdACAYBAAApQQAIAgAANEDACAMAACrBAAgDwAApAQAIBEAAKYEACATAADSAwAgFQAApwQAIBYAAKgEACAXAACpBAAgGAAAqgQAIJECAACiBAAwkgIAAB8AEJMCAACiBAAwlAIBAMgDACGVAkAAzwMAIZcCAACjBJcCIpgCAQDJAwAhmQJAAM8DACGaAkAAzwMAIZsCAQDIAwAhnAIBAMgDACGdAgEAyQMAIZ4CAQDIAwAhnwIBAMkDACENBAAA4gYAIAgAAOMGACAMAADPBwAgDwAAyQcAIBEAAMoHACATAADkBgAgFQAAywcAIBYAAMwHACAXAADNBwAgGAAAzgcAIJgCAADCBAAgnQIAAMIEACCfAgAAwgQAIBgEAAClBAAgCAAA0QMAIAwAAKsEACAPAACkBAAgEQAApgQAIBMAANIDACAVAACnBAAgFgAAqAQAIBcAAKkEACAYAACqBAAgkQIAAKIEADCSAgAAHwAQkwIAAKIEADCUAgEAAAABlQJAAM8DACGXAgAAowSXAiKYAgEAyQMAIZkCQADPAwAhmgJAAM8DACGbAgEAyAMAIZwCAQDIAwAhnQIBAMkDACGeAgEAAAABnwIBAMkDACEDAAAAHwAgAQAAIAAwAgAAIQAgEggAAKEEACALAADiAwAgkQIAAJ8EADCSAgAAIwAQkwIAAJ8EADCUAgEAyAMAIZUCQADPAwAhlwIAAKAE4wIimQJAAM8DACGaAkAAzwMAIZ0CAQDIAwAhugJAAM4DACHRAgEAyAMAId4CQADPAwAh3wJAAM8DACHgAkAAzgMAIeECQADOAwAh4wIgAMsDACEFCAAA4wYAIAsAAPwGACC6AgAAwgQAIOACAADCBAAg4QIAAMIEACASCAAAoQQAIAsAAOIDACCRAgAAnwQAMJICAAAjABCTAgAAnwQAMJQCAQAAAAGVAkAAzwMAIZcCAACgBOMCIpkCQADPAwAhmgJAAM8DACGdAgEAyAMAIboCQADOAwAh0QIBAAAAAd4CQADPAwAh3wJAAM8DACHgAkAAzgMAIeECQADOAwAh4wIgAMsDACEDAAAAIwAgAQAAJAAwAgAAJQAgAQAAAA4AIAEAAAAXACABAAAAGwAgAQAAAB8AIAEAAAAjACABAAAAEgAgAQAAAAkAIAEAAAAOACABAAAAHwAgAwAAAB8AIAEAACAAMAIAACEAIAEAAAAJACABAAAAHwAgAQAAABIAIAEAAAADACADAAAAGwAgAQAAHAAwAgAAHQAgAwAAAB8AIAEAACAAMAIAACEAIAEAAAAbACABAAAAHwAgAwAAAAkAIAEAAAoAMAIAAAsAIAMAAAASACABAAATADACAAAUACADAAAAHwAgAQAAIAAwAgAAIQAgAQAAAAMAIAEAAAAJACABAAAAEgAgAQAAAB8AIAEAAAASACABAAAAAwAgDQsAAOIDACCRAgAAnAQAMJICAABCABCTAgAAnAQAMJQCAQDIAwAhmQJAAM8DACGaAkAAzwMAIboCQADOAwAhywIBAMkDACHNAiAAywMAIdECAQDIAwAh_AIAAJ4EgQMi_wIAAJ0EACADCwAA_AYAILoCAADCBAAgywIAAMIEACADAAAAQgAgAQAAQwAwAgAAAQAgDQsAAOIDACCRAgAA4QMAMJICAABFABCTAgAA4QMAMJQCAQDIAwAhmQJAAM8DACGaAkAAzwMAIboCQADOAwAhywIBAMkDACHNAiAAywMAIc8CAQDIAwAh0AIBAMgDACHRAgEAyAMAIQEAAABFACAMCwAA4gMAIJECAACJBAAwkgIAAEcAEJMCAACJBAAwlAIBAMgDACGZAkAAzwMAIZoCQADPAwAhuQIgAMsDACG6AkAAzgMAIcECCACKBAAh0QIBAMgDACH3AgEAyQMAIQEAAABHACAWCwAA4gMAIJECAAD9AwAwkgIAAEkAEJMCAAD9AwAwlAIBAMgDACGXAgAA_wPqAiKZAkAAzwMAIZoCQADPAwAh0QIBAMgDACHlAgEAyAMAIeYCEAD-AwAh5wIBAMgDACHoAgEAyQMAIeoCQADOAwAh6wIBAMkDACHsAgEAyAMAIe0CAQDIAwAh7gIAAIAEACDvAgEAyQMAIfACEACBBAAh8QIBAMkDACHyAgEAyQMAIQEAAABJACABAAAAIwAgAQAAAEIAIAEAAAABACADAAAAQgAgAQAAQwAwAgAAAQAgAwAAAEIAIAEAAEMAMAIAAAEAIAMAAABCACABAABDADACAAABACAKCwAAyAcAIJQCAQAAAAGZAkAAAAABmgJAAAAAAboCQAAAAAHLAgEAAAABzQIgAAAAAdECAQAAAAH8AgAAAIEDAv8CgAAAAAEBHgAAUQAgCZQCAQAAAAGZAkAAAAABmgJAAAAAAboCQAAAAAHLAgEAAAABzQIgAAAAAdECAQAAAAH8AgAAAIEDAv8CgAAAAAEBHgAAUwAwAR4AAFMAMAoLAADHBwAglAIBAMYEACGZAkAAxwQAIZoCQADHBAAhugJAANkEACHLAgEAyQQAIc0CIADbBAAh0QIBAMYEACH8AgAA-wSBAyL_AoAAAAABAgAAAAEAIB4AAFYAIAmUAgEAxgQAIZkCQADHBAAhmgJAAMcEACG6AkAA2QQAIcsCAQDJBAAhzQIgANsEACHRAgEAxgQAIfwCAAD7BIEDIv8CgAAAAAECAAAAQgAgHgAAWAAgAgAAAEIAIB4AAFgAIAMAAAABACAlAABRACAmAABWACABAAAAAQAgAQAAAEIAIAUNAADEBwAgKwAAxgcAICwAAMUHACC6AgAAwgQAIMsCAADCBAAgDJECAACYBAAwkgIAAF8AEJMCAACYBAAwlAIBAKkDACGZAkAAqgMAIZoCQACqAwAhugJAALwDACHLAgEArAMAIc0CIAC5AwAh0QIBAKkDACH8AgAAmQSBAyL_AgAA5gMAIAMAAABCACABAABeADAqAABfACADAAAAQgAgAQAAQwAwAgAAAQAgAQAAABkAIAEAAAAZACADAAAAFwAgAQAAGAAwAgAAGQAgAwAAABcAIAEAABgAMAIAABkAIAMAAAAXACABAAAYADACAAAZACALCAAAwwcAIJQCAQAAAAGZAkAAAAABmgJAAAAAAZ0CAQAAAAHMAiAAAAAB3gJAAAAAAd8CQAAAAAH8AgAAAPwCAv0CAgAAAAH-AkAAAAABAR4AAGcAIAqUAgEAAAABmQJAAAAAAZoCQAAAAAGdAgEAAAABzAIgAAAAAd4CQAAAAAHfAkAAAAAB_AIAAAD8AgL9AgIAAAAB_gJAAAAAAQEeAABpADABHgAAaQAwCwgAAMIHACCUAgEAxgQAIZkCQADHBAAhmgJAAMcEACGdAgEAxgQAIcwCIADbBAAh3gJAANkEACHfAkAA2QQAIfwCAADuBfwCIv0CAgDvBQAh_gJAANkEACECAAAAGQAgHgAAbAAgCpQCAQDGBAAhmQJAAMcEACGaAkAAxwQAIZ0CAQDGBAAhzAIgANsEACHeAkAA2QQAId8CQADZBAAh_AIAAO4F_AIi_QICAO8FACH-AkAA2QQAIQIAAAAXACAeAABuACACAAAAFwAgHgAAbgAgAwAAABkAICUAAGcAICYAAGwAIAEAAAAZACABAAAAFwAgCQ0AAL0HACArAADABwAgLAAAvwcAID0AAL4HACA-AADBBwAg3gIAAMIEACDfAgAAwgQAIP0CAADCBAAg_gIAAMIEACANkQIAAJQEADCSAgAAdQAQkwIAAJQEADCUAgEAqQMAIZkCQACqAwAhmgJAAKoDACGdAgEAqQMAIcwCIAC5AwAh3gJAALwDACHfAkAAvAMAIfwCAACVBPwCIv0CAgDnAwAh_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_A-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_wYAID0AAP4GACA-AACBBwAgywIAAMIEACDWAgAAwgQAINcCAADCBAAg2AIAAMIEACDZAgAAwgQAINoCAADCBAAg2wIAAMIEACDcAgAAwgQAIN0CAADCBAAgGJECAADjAwAwkgIAAK4CABCTAgAA4wMAMJQCAQCpAwAhlQJAAKoDACGXAgAA5QPWAiKZAkAAqgMAIZoCQACqAwAhmwIBAKkDACGcAgEAqQMAIbkCIAC5AwAhvAIAAOYDACDLAgEArAMAIc4CAQCpAwAh0gIBAKkDACHUAgAA5APUAiLWAkAAvAMAIdcCQAC8AwAh2AICAOcDACHZAkAAvAMAIdoCQAC8AwAh2wIBAKwDACHcAkAAvAMAId0CAQCsAwAhAwAAAAkAIAEAAK0CADAqAACuAgAgAwAAAAkAIAEAAAoAMAIAAAsAIA0LAADiAwAgkQIAAOEDADCSAgAARQAQkwIAAOEDADCUAgEAAAABmQJAAM8DACGaAkAAzwMAIboCQADOAwAhywIBAMkDACHNAiAAywMAIc8CAQDIAwAh0AIBAMgDACHRAgEAAAABAQAAALECACABAAAAsQIAIAMLAAD8BgAgugIAAMIEACDLAgAAwgQAIAMAAABFACABAAC0AgAwAgAAsQIAIAMAAABFACABAAC0AgAwAgAAsQIAIAMAAABFACABAAC0AgAwAgAAsQIAIAoLAAD7BgAglAIBAAAAAZkCQAAAAAGaAkAAAAABugJAAAAAAcsCAQAAAAHNAiAAAAABzwIBAAAAAdACAQAAAAHRAgEAAAABAR4AALgCACAJlAIBAAAAAZkCQAAAAAGaAkAAAAABugJAAAAAAcsCAQAAAAHNAiAAAAABzwIBAAAAAdACAQAAAAHRAgEAAAABAR4AALoCADABHgAAugIAMAoLAAD6BgAglAIBAMYEACGZAkAAxwQAIZoCQADHBAAhugJAANkEACHLAgEAyQQAIc0CIADbBAAhzwIBAMYEACHQAgEAxgQAIdECAQDGBAAhAgAAALECACAeAAC9AgAgCZQCAQDGBAAhmQJAAMcEACGaAkAAxwQAIboCQADZBAAhywIBAMkEACHNAiAA2wQAIc8CAQDGBAAh0AIBAMYEACHRAgEAxgQAIQIAAABFACAeAAC_AgAgAgAAAEUAIB4AAL8CACADAAAAsQIAICUAALgCACAmAAC9AgAgAQAAALECACABAAAARQAgBQ0AAPcGACArAAD5BgAgLAAA-AYAILoCAADCBAAgywIAAMIEACAMkQIAAOADADCSAgAAxgIAEJMCAADgAwAwlAIBAKkDACGZAkAAqgMAIZoCQACqAwAhugJAALwDACHLAgEArAMAIc0CIAC5AwAhzwIBAKkDACHQAgEAqQMAIdECAQCpAwAhAwAAAEUAIAEAAMUCADAqAADGAgAgAwAAAEUAIAEAALQCADACAACxAgAgAQAAABAAIAEAAAAQACADAAAADgAgAQAADwAwAgAAEAAgAwAAAA4AIAEAAA8AMAIAABAAIAMAAAAOACABAAAPADACAAAQACAMBgAA_gUAIAgAAPYGACCUAgEAAAABmQJAAAAAAZoCQAAAAAGrAgEAAAABugJAAAAAAcoCAQAAAAHLAgEAAAABzAIgAAAAAc0CIAAAAAHOAgEAAAABAR4AAM4CACAKlAIBAAAAAZkCQAAAAAGaAkAAAAABqwIBAAAAAboCQAAAAAHKAgEAAAABywIBAAAAAcwCIAAAAAHNAiAAAAABzgIBAAAAAQEeAADQAgAwAR4AANACADAMBgAA_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-QIAMAIAAPUCACADAAAA-AIAIAEAAPkCADACAAD1AgAgFAQAAN8GACAIAADgBgAgEwAA4QYAIJQCAQAAAAGXAgAAALgCApkCQAAAAAGaAkAAAAABqwIBAAAAAawCAQAAAAGtAgEAAAABrgIBAAAAAa8CAQAAAAGwAgEAAAABsQIBAAAAAbMCAAAAswICtAIgAAAAAbYCAAAAtgICuAIgAAAAAbkCIAAAAAG6AkAAAAABAR4AAP0CACARlAIBAAAAAZcCAAAAuAICmQJAAAAAAZoCQAAAAAGrAgEAAAABrAIBAAAAAa0CAQAAAAGuAgEAAAABrwIBAAAAAbACAQAAAAGxAgEAAAABswIAAACzAgK0AiAAAAABtgIAAAC2AgK4AiAAAAABuQIgAAAAAboCQAAAAAEBHgAA_wIAMAEeAAD_AgAwFAQAAI4FACAIAACPBQAgEwAAkAUAIJQCAQDGBAAhlwIAAI0FuAIimQJAAMcEACGaAkAAxwQAIasCAQDGBAAhrAIBAMYEACGtAgEAyQQAIa4CAQDJBAAhrwIBAMkEACGwAgEAyQQAIbECAQDJBAAhswIAAIsFswIitAIgANsEACG2AgAAjAW2AiK4AiAA2wQAIbkCIADbBAAhugJAANkEACECAAAA9QIAIB4AAIIDACARlAIBAMYEACGXAgAAjQW4AiKZAkAAxwQAIZoCQADHBAAhqwIBAMYEACGsAgEAxgQAIa0CAQDJBAAhrgIBAMkEACGvAgEAyQQAIbACAQDJBAAhsQIBAMkEACGzAgAAiwWzAiK0AiAA2wQAIbYCAACMBbYCIrgCIADbBAAhuQIgANsEACG6AkAA2QQAIQIAAAD4AgAgHgAAhAMAIAIAAAD4AgAgHgAAhAMAIAMAAAD1AgAgJQAA_QIAICYAAIIDACABAAAA9QIAIAEAAAD4AgAgCQ0AAIgFACArAACKBQAgLAAAiQUAIK0CAADCBAAgrgIAAMIEACCvAgAAwgQAILACAADCBAAgsQIAAMIEACC6AgAAwgQAIBSRAgAAtwMAMJICAACLAwAQkwIAALcDADCUAgEAqQMAIZcCAAC7A7gCIpkCQACqAwAhmgJAAKoDACGrAgEAqQMAIawCAQCpAwAhrQIBAKwDACGuAgEArAMAIa8CAQCsAwAhsAIBAKwDACGxAgEArAMAIbMCAAC4A7MCIrQCIAC5AwAhtgIAALoDtgIiuAIgALkDACG5AiAAuQMAIboCQAC8AwAhAwAAAPgCACABAACKAwAwKgAAiwMAIAMAAAD4AgAgAQAA-QIAMAIAAPUCACABAAAAIQAgAQAAACEAIAMAAAAfACABAAAgADACAAAhACADAAAAHwAgAQAAIAAwAgAAIQAgAwAAAB8AIAEAACAAMAIAACEAIBUEAAD_BAAgCAAAgAUAIAwAAIcFACAPAAD-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_A7gCIgSgAgAAALgCAqECAAAAuAIIogIAAAC4AgiqAgAAwAO4AiIHDQAAsQMAICsAAMIDACAsAADCAwAgoAIAAAC2AgKhAgAAALYCCKICAAAAtgIIqgIAAMEDtgIiBKACAAAAtgICoQIAAAC2AgiiAgAAALYCCKoCAADCA7YCIgUNAACxAwAgKwAAxAMAICwAAMQDACCgAiAAAAABqgIgAMMDACECoAIgAAAAAaoCIADEAwAhBw0AALEDACArAADGAwAgLAAAxgMAIKACAAAAswICoQIAAACzAgiiAgAAALMCCKoCAADFA7MCIgSgAgAAALMCAqECAAAAswIIogIAAACzAgiqAgAAxgOzAiIXBAAA0AMAIAgAANEDACATAADSAwAgkQIAAMcDADCSAgAA-AIAEJMCAADHAwAwlAIBAMgDACGXAgAAzQO4AiKZAkAAzwMAIZoCQADPAwAhqwIBAMgDACGsAgEAyAMAIa0CAQDJAwAhrgIBAMkDACGvAgEAyQMAIbACAQDJAwAhsQIBAMkDACGzAgAAygOzAiK0AiAAywMAIbYCAADMA7YCIrgCIADLAwAhuQIgAMsDACG6AkAAzgMAIQugAgEAAAABoQIBAAAABKICAQAAAASjAgEAAAABpAIBAAAAAaUCAQAAAAGmAgEAAAABpwIBAAAAAagCAQAAAAGpAgEAAAABqgIBALYDACELoAIBAAAAAaECAQAAAAWiAgEAAAAFowIBAAAAAaQCAQAAAAGlAgEAAAABpgIBAAAAAacCAQAAAAGoAgEAAAABqQIBAAAAAaoCAQCvAwAhBKACAAAAswICoQIAAACzAgiiAgAAALMCCKoCAADGA7MCIgKgAiAAAAABqgIgAMQDACEEoAIAAAC2AgKhAgAAALYCCKICAAAAtgIIqgIAAMIDtgIiBKACAAAAuAICoQIAAAC4AgiiAgAAALgCCKoCAADAA7gCIgigAkAAAAABoQJAAAAABaICQAAAAAWjAkAAAAABpAJAAAAAAaUCQAAAAAGmAkAAAAABqgJAAL4DACEIoAJAAAAAAaECQAAAAASiAkAAAAAEowJAAAAAAaQCQAAAAAGlAkAAAAABpgJAAAAAAaoCQAC0AwAhEAMAAI0EACARAACOBAAgEgAAjwQAIJECAACMBAAwkgIAAAcAEJMCAACMBAAwlAIBAMgDACGZAkAAzwMAIZoCQADPAwAhuQIgAMsDACG6AkAAzgMAIbsCAQDJAwAhvAIAAIAEACDDAgEAyAMAIYMDAAAHACCEAwAABwAgGQMAAI0EACAHAACTBAAgCQAAtwQAIAoAALgEACALAACPBAAgDAAAuQQAIJECAAC0BAAwkgIAABIAEJMCAAC0BAAwlAIBAMgDACGXAgAAtQTBAiKZAkAAzwMAIZoCQADPAwAhuQIgAMsDACG6AkAAzgMAIbsCAQDJAwAhvAIAAIAEACC9AgEAyQMAIb4CAQDJAwAhvwIgAMsDACHBAggAtgQAIcICAgCSBAAhwwIBAMgDACGDAwAAEgAghAMAABIAIBUDAACNBAAgCwAAjwQAIA8AALgEACCRAgAAwAQAMJICAAADABCTAgAAwAQAMJQCAQDIAwAhmQJAAM8DACGaAkAAzwMAIbkCIADLAwAhugJAAM4DACG7AgEAyAMAIbwCAACABAAgvgIBAMgDACHDAgEAyAMAId0CAQDJAwAh9AIAAMEE9AIi9QIBAMkDACH2AkAAzgMAIYMDAAADACCEAwAAAwAgEZECAADTAwAwkgIAAPICABCTAgAA0wMAMJQCAQCpAwAhlwIAANUDwQIimQJAAKoDACGaAkAAqgMAIbkCIAC5AwAhugJAALwDACG7AgEArAMAIbwCAADUAwAgvQIBAKwDACG-AgEArAMAIb8CIAC5AwAhwQIIANYDACHCAgIA1wMAIcMCAQCpAwAhDw0AAK4DACArAADeAwAgLAAA3gMAIKACgAAAAAGjAoAAAAABpAKAAAAAAaUCgAAAAAGmAoAAAAABqgKAAAAAAcQCAQAAAAHFAgEAAAABxgIBAAAAAccCgAAAAAHIAoAAAAAByQKAAAAAAQcNAACxAwAgKwAA3QMAICwAAN0DACCgAgAAAMECAqECAAAAwQIIogIAAADBAgiqAgAA3APBAiINDQAArgMAICsAANsDACAsAADbAwAgPQAA2wMAID4AANsDACCgAggAAAABoQIIAAAABaICCAAAAAWjAggAAAABpAIIAAAAAaUCCAAAAAGmAggAAAABqgIIANoDACENDQAAsQMAICsAALEDACAsAACxAwAgPQAA2QMAID4AALEDACCgAgIAAAABoQICAAAABKICAgAAAASjAgIAAAABpAICAAAAAaUCAgAAAAGmAgIAAAABqgICANgDACENDQAAsQMAICsAALEDACAsAACxAwAgPQAA2QMAID4AALEDACCgAgIAAAABoQICAAAABKICAgAAAASjAgIAAAABpAICAAAAAaUCAgAAAAGmAgIAAAABqgICANgDACEIoAIIAAAAAaECCAAAAASiAggAAAAEowIIAAAAAaQCCAAAAAGlAggAAAABpgIIAAAAAaoCCADZAwAhDQ0AAK4DACArAADbAwAgLAAA2wMAID0AANsDACA-AADbAwAgoAIIAAAAAaECCAAAAAWiAggAAAAFowIIAAAAAaQCCAAAAAGlAggAAAABpgIIAAAAAaoCCADaAwAhCKACCAAAAAGhAggAAAAFogIIAAAABaMCCAAAAAGkAggAAAABpQIIAAAAAaYCCAAAAAGqAggA2wMAIQcNAACxAwAgKwAA3QMAICwAAN0DACCgAgAAAMECAqECAAAAwQIIogIAAADBAgiqAgAA3APBAiIEoAIAAADBAgKhAgAAAMECCKICAAAAwQIIqgIAAN0DwQIiDKACgAAAAAGjAoAAAAABpAKAAAAAAaUCgAAAAAGmAoAAAAABqgKAAAAAAcQCAQAAAAHFAgEAAAABxgIBAAAAAccCgAAAAAHIAoAAAAAByQKAAAAAAQ2RAgAA3wMAMJICAADcAgAQkwIAAN8DADCUAgEAqQMAIZkCQACqAwAhmgJAAKoDACGrAgEAqQMAIboCQAC8AwAhygIBAKwDACHLAgEArAMAIcwCIAC5AwAhzQIgALkDACHOAgEAqQMAIQyRAgAA4AMAMJICAADGAgAQkwIAAOADADCUAgEAqQMAIZkCQACqAwAhmgJAAKoDACG6AkAAvAMAIcsCAQCsAwAhzQIgALkDACHPAgEAqQMAIdACAQCpAwAh0QIBAKkDACENCwAA4gMAIJECAADhAwAwkgIAAEUAEJMCAADhAwAwlAIBAMgDACGZAkAAzwMAIZoCQADPAwAhugJAAM4DACHLAgEAyQMAIc0CIADLAwAhzwIBAMgDACHQAgEAyAMAIdECAQDIAwAhGgQAAKUEACAIAADRAwAgDAAAqwQAIA8AAKQEACARAACmBAAgEwAA0gMAIBUAAKcEACAWAACoBAAgFwAAqQQAIBgAAKoEACCRAgAAogQAMJICAAAfABCTAgAAogQAMJQCAQDIAwAhlQJAAM8DACGXAgAAowSXAiKYAgEAyQMAIZkCQADPAwAhmgJAAM8DACGbAgEAyAMAIZwCAQDIAwAhnQIBAMkDACGeAgEAyAMAIZ8CAQDJAwAhgwMAAB8AIIQDAAAfACAYkQIAAOMDADCSAgAArgIAEJMCAADjAwAwlAIBAKkDACGVAkAAqgMAIZcCAADlA9YCIpkCQACqAwAhmgJAAKoDACGbAgEAqQMAIZwCAQCpAwAhuQIgALkDACG8AgAA5gMAIMsCAQCsAwAhzgIBAKkDACHSAgEAqQMAIdQCAADkA9QCItYCQAC8AwAh1wJAALwDACHYAgIA5wMAIdkCQAC8AwAh2gJAALwDACHbAgEArAMAIdwCQAC8AwAh3QIBAKwDACEHDQAAsQMAICsAAO0DACAsAADtAwAgoAIAAADUAgKhAgAAANQCCKICAAAA1AIIqgIAAOwD1AIiBw0AALEDACArAADrAwAgLAAA6wMAIKACAAAA1gICoQIAAADWAgiiAgAAANYCCKoCAADqA9YCIg8NAACxAwAgKwAA6QMAICwAAOkDACCgAoAAAAABowKAAAAAAaQCgAAAAAGlAoAAAAABpgKAAAAAAaoCgAAAAAHEAgEAAAABxQIBAAAAAcYCAQAAAAHHAoAAAAAByAKAAAAAAckCgAAAAAENDQAArgMAICsAAK4DACAsAACuAwAgPQAA2wMAID4AAK4DACCgAgIAAAABoQICAAAABaICAgAAAAWjAgIAAAABpAICAAAAAaUCAgAAAAGmAgIAAAABqgICAOgDACENDQAArgMAICsAAK4DACAsAACuAwAgPQAA2wMAID4AAK4DACCgAgIAAAABoQICAAAABaICAgAAAAWjAgIAAAABpAICAAAAAaUCAgAAAAGmAgIAAAABqgICAOgDACEMoAKAAAAAAaMCgAAAAAGkAoAAAAABpQKAAAAAAaYCgAAAAAGqAoAAAAABxAIBAAAAAcUCAQAAAAHGAgEAAAABxwKAAAAAAcgCgAAAAAHJAoAAAAABBw0AALEDACArAADrAwAgLAAA6wMAIKACAAAA1gICoQIAAADWAgiiAgAAANYCCKoCAADqA9YCIgSgAgAAANYCAqECAAAA1gIIogIAAADWAgiqAgAA6wPWAiIHDQAAsQMAICsAAO0DACAsAADtAwAgoAIAAADUAgKhAgAAANQCCKICAAAA1AIIqgIAAOwD1AIiBKACAAAA1AICoQIAAADUAgiiAgAAANQCCKoCAADtA9QCIhCRAgAA7gMAMJICAACYAgAQkwIAAO4DADCUAgEAqQMAIZUCQACqAwAhlwIAAO8D4wIimQJAAKoDACGaAkAAqgMAIZ0CAQCpAwAhugJAALwDACHRAgEAqQMAId4CQACqAwAh3wJAAKoDACHgAkAAvAMAIeECQAC8AwAh4wIgALkDACEHDQAAsQMAICsAAPEDACAsAADxAwAgoAIAAADjAgKhAgAAAOMCCKICAAAA4wIIqgIAAPAD4wIiBw0AALEDACArAADxAwAgLAAA8QMAIKACAAAA4wICoQIAAADjAgiiAgAAAOMCCKoCAADwA-MCIgSgAgAAAOMCAqECAAAA4wIIogIAAADjAgiqAgAA8QPjAiIJkQIAAPIDADCSAgAAggIAEJMCAADyAwAwlAIBAKkDACGZAkAAqgMAIZoCQACqAwAhywIBAKwDACHMAiAAuQMAIeQCAQCpAwAhFZECAADzAwAwkgIAAOwBABCTAgAA8wMAMJQCAQCpAwAhlwIAAPUD6gIimQJAAKoDACGaAkAAqgMAIdECAQCpAwAh5QIBAKkDACHmAhAA9AMAIecCAQCpAwAh6AIBAKwDACHqAkAAvAMAIesCAQCsAwAh7AIBAKkDACHtAgEAqQMAIe4CAADUAwAg7wIBAKwDACHwAhAA9gMAIfECAQCsAwAh8gIBAKwDACENDQAAsQMAICsAAPwDACAsAAD8AwAgPQAA_AMAID4AAPwDACCgAhAAAAABoQIQAAAABKICEAAAAASjAhAAAAABpAIQAAAAAaUCEAAAAAGmAhAAAAABqgIQAPsDACEHDQAAsQMAICsAAPoDACAsAAD6AwAgoAIAAADqAgKhAgAAAOoCCKICAAAA6gIIqgIAAPkD6gIiDQ0AAK4DACArAAD4AwAgLAAA-AMAID0AAPgDACA-AAD4AwAgoAIQAAAAAaECEAAAAAWiAhAAAAAFowIQAAAAAaQCEAAAAAGlAhAAAAABpgIQAAAAAaoCEAD3AwAhDQ0AAK4DACArAAD4AwAgLAAA-AMAID0AAPgDACA-AAD4AwAgoAIQAAAAAaECEAAAAAWiAhAAAAAFowIQAAAAAaQCEAAAAAGlAhAAAAABpgIQAAAAAaoCEAD3AwAhCKACEAAAAAGhAhAAAAAFogIQAAAABaMCEAAAAAGkAhAAAAABpQIQAAAAAaYCEAAAAAGqAhAA-AMAIQcNAACxAwAgKwAA-gMAICwAAPoDACCgAgAAAOoCAqECAAAA6gIIogIAAADqAgiqAgAA-QPqAiIEoAIAAADqAgKhAgAAAOoCCKICAAAA6gIIqgIAAPoD6gIiDQ0AALEDACArAAD8AwAgLAAA_AMAID0AAPwDACA-AAD8AwAgoAIQAAAAAaECEAAAAASiAhAAAAAEowIQAAAAAaQCEAAAAAGlAhAAAAABpgIQAAAAAaoCEAD7AwAhCKACEAAAAAGhAhAAAAAEogIQAAAABKMCEAAAAAGkAhAAAAABpQIQAAAAAaYCEAAAAAGqAhAA_AMAIRYLAADiAwAgkQIAAP0DADCSAgAASQAQkwIAAP0DADCUAgEAyAMAIZcCAAD_A-oCIpkCQADPAwAhmgJAAM8DACHRAgEAyAMAIeUCAQDIAwAh5gIQAP4DACHnAgEAyAMAIegCAQDJAwAh6gJAAM4DACHrAgEAyQMAIewCAQDIAwAh7QIBAMgDACHuAgAAgAQAIO8CAQDJAwAh8AIQAIEEACHxAgEAyQMAIfICAQDJAwAhCKACEAAAAAGhAhAAAAAEogIQAAAABKMCEAAAAAGkAhAAAAABpQIQAAAAAaYCEAAAAAGqAhAA_AMAIQSgAgAAAOoCAqECAAAA6gIIogIAAADqAgiqAgAA-gPqAiIMoAKAAAAAAaMCgAAAAAGkAoAAAAABpQKAAAAAAaYCgAAAAAGqAoAAAAABxAIBAAAAAcUCAQAAAAHGAgEAAAABxwKAAAAAAcgCgAAAAAHJAoAAAAABCKACEAAAAAGhAhAAAAAFogIQAAAABaMCEAAAAAGkAhAAAAABpQIQAAAAAaYCEAAAAAGqAhAA-AMAIRCRAgAAggQAMJICAADUAQAQkwIAAIIEADCUAgEAqQMAIZkCQACqAwAhmgJAAKoDACG5AiAAuQMAIboCQAC8AwAhuwIBAKkDACG8AgAA1AMAIL4CAQCpAwAhwwIBAKkDACHdAgEArAMAIfQCAACDBPQCIvUCAQCsAwAh9gJAALwDACEHDQAAsQMAICsAAIUEACAsAACFBAAgoAIAAAD0AgKhAgAAAPQCCKICAAAA9AIIqgIAAIQE9AIiBw0AALEDACArAACFBAAgLAAAhQQAIKACAAAA9AICoQIAAAD0AgiiAgAAAPQCCKoCAACEBPQCIgSgAgAAAPQCAqECAAAA9AIIogIAAAD0AgiqAgAAhQT0AiILkQIAAIYEADCSAgAAvgEAEJMCAACGBAAwlAIBAKkDACGZAkAAqgMAIZoCQACqAwAhuQIgALkDACG6AkAAvAMAIcECCACHBAAh0QIBAKkDACH3AgEArAMAIQ0NAACxAwAgKwAA2QMAICwAANkDACA9AADZAwAgPgAA2QMAIKACCAAAAAGhAggAAAAEogIIAAAABKMCCAAAAAGkAggAAAABpQIIAAAAAaYCCAAAAAGqAggAiAQAIQ0NAACxAwAgKwAA2QMAICwAANkDACA9AADZAwAgPgAA2QMAIKACCAAAAAGhAggAAAAEogIIAAAABKMCCAAAAAGkAggAAAABpQIIAAAAAaYCCAAAAAGqAggAiAQAIQwLAADiAwAgkQIAAIkEADCSAgAARwAQkwIAAIkEADCUAgEAyAMAIZkCQADPAwAhmgJAAM8DACG5AiAAywMAIboCQADOAwAhwQIIAIoEACHRAgEAyAMAIfcCAQDJAwAhCKACCAAAAAGhAggAAAAEogIIAAAABKMCCAAAAAGkAggAAAABpQIIAAAAAaYCCAAAAAGqAggA2QMAIQuRAgAAiwQAMJICAACmAQAQkwIAAIsEADCUAgEAqQMAIZkCQACqAwAhmgJAAKoDACG5AiAAuQMAIboCQAC8AwAhuwIBAKwDACG8AgAA1AMAIMMCAQCpAwAhDgMAAI0EACARAACOBAAgEgAAjwQAIJECAACMBAAwkgIAAAcAEJMCAACMBAAwlAIBAMgDACGZAkAAzwMAIZoCQADPAwAhuQIgAMsDACG6AkAAzgMAIbsCAQDJAwAhvAIAAIAEACDDAgEAyAMAIRkEAADQAwAgCAAA0QMAIBMAANIDACCRAgAAxwMAMJICAAD4AgAQkwIAAMcDADCUAgEAyAMAIZcCAADNA7gCIpkCQADPAwAhmgJAAM8DACGrAgEAyAMAIawCAQDIAwAhrQIBAMkDACGuAgEAyQMAIa8CAQDJAwAhsAIBAMkDACGxAgEAyQMAIbMCAADKA7MCIrQCIADLAwAhtgIAAMwDtgIiuAIgAMsDACG5AiAAywMAIboCQADOAwAhgwMAAPgCACCEAwAA-AIAIAP4AgAACQAg-QIAAAkAIPoCAAAJACAD-AIAAB8AIPkCAAAfACD6AgAAHwAgC5ECAACQBAAwkgIAAI4BABCTAgAAkAQAMJQCAQCpAwAhmQJAAKoDACGaAkAAqgMAIasCAQCpAwAhygIBAKwDACHLAgEArAMAIcwCIAC5AwAh2AICANcDACENBQAAjgQAIA4AAJMEACCRAgAAkQQAMJICAAB7ABCTAgAAkQQAMJQCAQDIAwAhmQJAAM8DACGaAkAAzwMAIasCAQDIAwAhygIBAMkDACHLAgEAyQMAIcwCIADLAwAh2AICAJIEACEIoAICAAAAAaECAgAAAASiAgIAAAAEowICAAAAAaQCAgAAAAGlAgIAAAABpgICAAAAAaoCAgCxAwAhA_gCAAAOACD5AgAADgAg-gIAAA4AIA2RAgAAlAQAMJICAAB1ABCTAgAAlAQAMJQCAQCpAwAhmQJAAKoDACGaAkAAqgMAIZ0CAQCpAwAhzAIgALkDACHeAkAAvAMAId8CQAC8AwAh_AIAAJUE_AIi_QICAOcDACH-AkAAvAMAIQcNAACxAwAgKwAAlwQAICwAAJcEACCgAgAAAPwCAqECAAAA_AIIogIAAAD8AgiqAgAAlgT8AiIHDQAAsQMAICsAAJcEACAsAACXBAAgoAIAAAD8AgKhAgAAAPwCCKICAAAA_AIIqgIAAJYE_AIiBKACAAAA_AICoQIAAAD8AgiiAgAAAPwCCKoCAACXBPwCIgyRAgAAmAQAMJICAABfABCTAgAAmAQAMJQCAQCpAwAhmQJAAKoDACGaAkAAqgMAIboCQAC8AwAhywIBAKwDACHNAiAAuQMAIdECAQCpAwAh_AIAAJkEgQMi_wIAAOYDACAHDQAAsQMAICsAAJsEACAsAACbBAAgoAIAAACBAwKhAgAAAIEDCKICAAAAgQMIqgIAAJoEgQMiBw0AALEDACArAACbBAAgLAAAmwQAIKACAAAAgQMCoQIAAACBAwiiAgAAAIEDCKoCAACaBIEDIgSgAgAAAIEDAqECAAAAgQMIogIAAACBAwiqAgAAmwSBAyINCwAA4gMAIJECAACcBAAwkgIAAEIAEJMCAACcBAAwlAIBAMgDACGZAkAAzwMAIZoCQADPAwAhugJAAM4DACHLAgEAyQMAIc0CIADLAwAh0QIBAMgDACH8AgAAngSBAyL_AgAAnQQAIAygAoAAAAABowKAAAAAAaQCgAAAAAGlAoAAAAABpgKAAAAAAaoCgAAAAAHEAgEAAAABxQIBAAAAAcYCAQAAAAHHAoAAAAAByAKAAAAAAckCgAAAAAEEoAIAAACBAwKhAgAAAIEDCKICAAAAgQMIqgIAAJsEgQMiEggAAKEEACALAADiAwAgkQIAAJ8EADCSAgAAIwAQkwIAAJ8EADCUAgEAyAMAIZUCQADPAwAhlwIAAKAE4wIimQJAAM8DACGaAkAAzwMAIZ0CAQDIAwAhugJAAM4DACHRAgEAyAMAId4CQADPAwAh3wJAAM8DACHgAkAAzgMAIeECQADOAwAh4wIgAMsDACEEoAIAAADjAgKhAgAAAOMCCKICAAAA4wIIqgIAAPED4wIiGQMAAI0EACAHAACTBAAgCQAAtwQAIAoAALgEACALAACPBAAgDAAAuQQAIJECAAC0BAAwkgIAABIAEJMCAAC0BAAwlAIBAMgDACGXAgAAtQTBAiKZAkAAzwMAIZoCQADPAwAhuQIgAMsDACG6AkAAzgMAIbsCAQDJAwAhvAIAAIAEACC9AgEAyQMAIb4CAQDJAwAhvwIgAMsDACHBAggAtgQAIcICAgCSBAAhwwIBAMgDACGDAwAAEgAghAMAABIAIBgEAAClBAAgCAAA0QMAIAwAAKsEACAPAACkBAAgEQAApgQAIBMAANIDACAVAACnBAAgFgAAqAQAIBcAAKkEACAYAACqBAAgkQIAAKIEADCSAgAAHwAQkwIAAKIEADCUAgEAyAMAIZUCQADPAwAhlwIAAKMElwIimAIBAMkDACGZAkAAzwMAIZoCQADPAwAhmwIBAMgDACGcAgEAyAMAIZ0CAQDJAwAhngIBAMgDACGfAgEAyQMAIQSgAgAAAJcCAqECAAAAlwIIogIAAACXAgiqAgAAsgOXAiIPBQAAjgQAIBAAAI8EACATAACtBAAgFAAArgQAIJECAACsBAAwkgIAABsAEJMCAACsBAAwlAIBAMgDACGZAkAAzwMAIZoCQADPAwAhywIBAMkDACHMAiAAywMAIeQCAQDIAwAhgwMAABsAIIQDAAAbACAQAwAAjQQAIBEAAI4EACASAACPBAAgkQIAAIwEADCSAgAABwAQkwIAAIwEADCUAgEAyAMAIZkCQADPAwAhmgJAAM8DACG5AiAAywMAIboCQADOAwAhuwIBAMkDACG8AgAAgAQAIMMCAQDIAwAhgwMAAAcAIIQDAAAHACAeBAAApQQAIAYAALsEACAPAACkBAAgEAAAvwQAIJECAAC8BAAwkgIAAAkAEJMCAAC8BAAwlAIBAMgDACGVAkAAzwMAIZcCAAC-BNYCIpkCQADPAwAhmgJAAM8DACGbAgEAyAMAIZwCAQDIAwAhuQIgAMsDACG8AgAAnQQAIMsCAQDJAwAhzgIBAMgDACHSAgEAyAMAIdQCAAC9BNQCItYCQADOAwAh1wJAAM4DACHYAgIAswQAIdkCQADOAwAh2gJAAM4DACHbAgEAyQMAIdwCQADOAwAh3QIBAMkDACGDAwAACQAghAMAAAkAIAP4AgAAQgAg-QIAAEIAIPoCAABCACAPCwAA4gMAIJECAADhAwAwkgIAAEUAEJMCAADhAwAwlAIBAMgDACGZAkAAzwMAIZoCQADPAwAhugJAAM4DACHLAgEAyQMAIc0CIADLAwAhzwIBAMgDACHQAgEAyAMAIdECAQDIAwAhgwMAAEUAIIQDAABFACAOCwAA4gMAIJECAACJBAAwkgIAAEcAEJMCAACJBAAwlAIBAMgDACGZAkAAzwMAIZoCQADPAwAhuQIgAMsDACG6AkAAzgMAIcECCACKBAAh0QIBAMgDACH3AgEAyQMAIYMDAABHACCEAwAARwAgGAsAAOIDACCRAgAA_QMAMJICAABJABCTAgAA_QMAMJQCAQDIAwAhlwIAAP8D6gIimQJAAM8DACGaAkAAzwMAIdECAQDIAwAh5QIBAMgDACHmAhAA_gMAIecCAQDIAwAh6AIBAMkDACHqAkAAzgMAIesCAQDJAwAh7AIBAMgDACHtAgEAyAMAIe4CAACABAAg7wIBAMkDACHwAhAAgQQAIfECAQDJAwAh8gIBAMkDACGDAwAASQAghAMAAEkAIBQIAAChBAAgCwAA4gMAIJECAACfBAAwkgIAACMAEJMCAACfBAAwlAIBAMgDACGVAkAAzwMAIZcCAACgBOMCIpkCQADPAwAhmgJAAM8DACGdAgEAyAMAIboCQADOAwAh0QIBAMgDACHeAkAAzwMAId8CQADPAwAh4AJAAM4DACHhAkAAzgMAIeMCIADLAwAhgwMAACMAIIQDAAAjACANBQAAjgQAIBAAAI8EACATAACtBAAgFAAArgQAIJECAACsBAAwkgIAABsAEJMCAACsBAAwlAIBAMgDACGZAkAAzwMAIZoCQADPAwAhywIBAMkDACHMAiAAywMAIeQCAQDIAwAhA_gCAAADACD5AgAAAwAg-gIAAAMAIAP4AgAAEgAg-QIAABIAIPoCAAASACADnQIBAAAAAfwCAAAA_AIC_QICAAAAAQOdAgEAAAAB_AIAAAD8AgL-AkAAAAABDggAAKEEACCRAgAAsQQAMJICAAAXABCTAgAAsQQAMJQCAQDIAwAhmQJAAM8DACGaAkAAzwMAIZ0CAQDIAwAhzAIgAMsDACHeAkAAzgMAId8CQADOAwAh_AIAALIE_AIi_QICALMEACH-AkAAzgMAIQSgAgAAAPwCAqECAAAA_AIIogIAAAD8AgiqAgAAlwT8AiIIoAICAAAAAaECAgAAAAWiAgIAAAAFowICAAAAAaQCAgAAAAGlAgIAAAABpgICAAAAAaoCAgCuAwAhFwMAAI0EACAHAACTBAAgCQAAtwQAIAoAALgEACALAACPBAAgDAAAuQQAIJECAAC0BAAwkgIAABIAEJMCAAC0BAAwlAIBAMgDACGXAgAAtQTBAiKZAkAAzwMAIZoCQADPAwAhuQIgAMsDACG6AkAAzgMAIbsCAQDJAwAhvAIAAIAEACC9AgEAyQMAIb4CAQDJAwAhvwIgAMsDACHBAggAtgQAIcICAgCSBAAhwwIBAMgDACEEoAIAAADBAgKhAgAAAMECCKICAAAAwQIIqgIAAN0DwQIiCKACCAAAAAGhAggAAAAFogIIAAAABaMCCAAAAAGkAggAAAABpQIIAAAAAaYCCAAAAAGqAggA2wMAIQP4AgAAFwAg-QIAABcAIPoCAAAXACAD-AIAABsAIPkCAAAbACD6AgAAGwAgA_gCAAAjACD5AgAAIwAg-gIAACMAIA8GAAC7BAAgCAAArgQAIJECAAC6BAAwkgIAAA4AEJMCAAC6BAAwlAIBAMgDACGZAkAAzwMAIZoCQADPAwAhqwIBAMgDACG6AkAAzgMAIcoCAQDJAwAhywIBAMkDACHMAiAAywMAIc0CIADLAwAhzgIBAMgDACEPBQAAjgQAIA4AAJMEACCRAgAAkQQAMJICAAB7ABCTAgAAkQQAMJQCAQDIAwAhmQJAAM8DACGaAkAAzwMAIasCAQDIAwAhygIBAMkDACHLAgEAyQMAIcwCIADLAwAh2AICAJIEACGDAwAAewAghAMAAHsAIBwEAAClBAAgBgAAuwQAIA8AAKQEACAQAAC_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_wKAAAAAAQIAAAABACAlAAD9BAAgAwAAAAEAICUAAP0EACAmAAD8BAAgAR4AAKsIADANCwAA4gMAIJECAACcBAAwkgIAAEIAEJMCAACcBAAwlAIBAAAAAZkCQADPAwAhmgJAAM8DACG6AkAAzgMAIcsCAQDJAwAhzQIgAMsDACHRAgEAyAMAIfwCAACeBIEDIv8CAACdBAAgAgAAAAEAIB4AAPwEACACAAAA-QQAIB4AAPoEACAMkQIAAPgEADCSAgAA-QQAEJMCAAD4BAAwlAIBAMgDACGZAkAAzwMAIZoCQADPAwAhugJAAM4DACHLAgEAyQMAIc0CIADLAwAh0QIBAMgDACH8AgAAngSBAyL_AgAAnQQAIAyRAgAA-AQAMJICAAD5BAAQkwIAAPgEADCUAgEAyAMAIZkCQADPAwAhmgJAAM8DACG6AkAAzgMAIcsCAQDJAwAhzQIgAMsDACHRAgEAyAMAIfwCAACeBIEDIv8CAACdBAAgCJQCAQDGBAAhmQJAAMcEACGaAkAAxwQAIboCQADZBAAhywIBAMkEACHNAiAA2wQAIfwCAAD7BIEDIv8CgAAAAAEBiwMAAACBAwIIlAIBAMYEACGZAkAAxwQAIZoCQADHBAAhugJAANkEACHLAgEAyQQAIc0CIADbBAAh_AIAAPsEgQMi_wKAAAAAAQiUAgEAAAABmQJAAAAAAZoCQAAAAAG6AkAAAAABywIBAAAAAc0CIAAAAAH8AgAAAIEDAv8CgAAAAAEDJQAAqQgAIIUDAACqCAAgiQMAAB0AIAMlAACnCAAghQMAAKgIACCJAwAAkQEAIAMlAAClCAAghQMAAKYIACCJAwAAFAAgAyUAAKMIACCFAwAApAgAIIkDAAALACADJQAAoQgAIIUDAACiCAAgiQMAAAUAIAQlAADxBAAwhQMAAPIEADCJAwAA9QQAMIoDAAD0BAAgAyUAAOwEACCFAwAA7QQAIIkDAACxAgAgAyUAAOYEACCFAwAA5wQAIIkDAACpAQAgAyUAAN4EACCFAwAA3wQAIIkDAADXAQAgAyUAANQEACCFAwAA1QQAIIkDAAAlACAAAAABiwMAAACzAgIBiwMAAAC2AgIBiwMAAAC4AgIHJQAAwgYAICYAAMUGACCFAwAAwwYAIIYDAADEBgAghwMAAAcAIIgDAAAHACCJAwAAkQEAIAclAACkBgAgJgAApwYAIIUDAAClBgAghgMAAKYGACCHAwAAEgAgiAMAABIAIIkDAAAUACAHJQAAkQUAICYAAJQFACCFAwAAkgUAIIYDAACTBQAghwMAAAMAIIgDAAADACCJAwAABQAgDgsAAKMGACAPAACiBgAglAIBAAAAAZkCQAAAAAGaAkAAAAABuQIgAAAAAboCQAAAAAG7AgEAAAABvAKAAAAAAb4CAQAAAAHdAgEAAAAB9AIAAAD0AgL1AgEAAAAB9gJAAAAAAQIAAAAFACAlAACRBQAgAwAAAAMAICUAAJEFACAmAACVBQAgEAAAAAMAIAsAAJgFACAPAACXBQAgHgAAlQUAIJQCAQDGBAAhmQJAAMcEACGaAkAAxwQAIbkCIADbBAAhugJAANkEACG7AgEAxgQAIbwCgAAAAAG-AgEAxgQAId0CAQDJBAAh9AIAAJYF9AIi9QIBAMkEACH2AkAA2QQAIQ4LAACYBQAgDwAAlwUAIJQCAQDGBAAhmQJAAMcEACGaAkAAxwQAIbkCIADbBAAhugJAANkEACG7AgEAxgQAIbwCgAAAAAG-AgEAxgQAId0CAQDJBAAh9AIAAJYF9AIi9QIBAMkEACH2AkAA2QQAIQGLAwAAAPQCAgolAAClBQAwJgAAqQUAMIUDAACmBQAwhgMAAKcFADCHAwAAqAUAMIgDAACoBQAwiQMAAKgFADCLAwAAqAUAMIwDAACqBQAwjQMAAKsFADALJQAAmQUAMCYAAJ4FADCFAwAAmgUAMIYDAACbBQAwhwMAAJ0FADCIAwAAnQUAMIkDAACdBQAwigMAAJwFACCLAwAAnQUAMIwDAACfBQAwjQMAAKAFADATBAAA_wQAIAgAAIAFACAMAACHBQAgDwAA_gQAIBEAAIEFACAVAACDBQAgFgAAhAUAIBcAAIUFACAYAACGBQAglAIBAAAAAZUCQAAAAAGXAgAAAJcCApgCAQAAAAGZAkAAAAABmgJAAAAAAZsCAQAAAAGcAgEAAAABnQIBAAAAAZ4CAQAAAAECAAAAIQAgJQAApAUAIAMAAAAhACAlAACkBQAgJgAAowUAIAEeAACgCAAwGAQAAKUEACAIAADRAwAgDAAAqwQAIA8AAKQEACARAACmBAAgEwAA0gMAIBUAAKcEACAWAACoBAAgFwAAqQQAIBgAAKoEACCRAgAAogQAMJICAAAfABCTAgAAogQAMJQCAQAAAAGVAkAAzwMAIZcCAACjBJcCIpgCAQDJAwAhmQJAAM8DACGaAkAAzwMAIZsCAQDIAwAhnAIBAMgDACGdAgEAyQMAIZ4CAQAAAAGfAgEAyQMAIQIAAAAhACAeAACjBQAgAgAAAKEFACAeAACiBQAgDpECAACgBQAwkgIAAKEFABCTAgAAoAUAMJQCAQDIAwAhlQJAAM8DACGXAgAAowSXAiKYAgEAyQMAIZkCQADPAwAhmgJAAM8DACGbAgEAyAMAIZwCAQDIAwAhnQIBAMkDACGeAgEAyAMAIZ8CAQDJAwAhDpECAACgBQAwkgIAAKEFABCTAgAAoAUAMJQCAQDIAwAhlQJAAM8DACGXAgAAowSXAiKYAgEAyQMAIZkCQADPAwAhmgJAAM8DACGbAgEAyAMAIZwCAQDIAwAhnQIBAMkDACGeAgEAyAMAIZ8CAQDJAwAhCpQCAQDGBAAhlQJAAMcEACGXAgAAyASXAiKYAgEAyQQAIZkCQADHBAAhmgJAAMcEACGbAgEAxgQAIZwCAQDGBAAhnQIBAMkEACGeAgEAxgQAIRMEAADLBAAgCAAAzAQAIAwAANMEACAPAADKBAAgEQAAzQQAIBUAAM8EACAWAADQBAAgFwAA0QQAIBgAANIEACCUAgEAxgQAIZUCQADHBAAhlwIAAMgElwIimAIBAMkEACGZAkAAxwQAIZoCQADHBAAhmwIBAMYEACGcAgEAxgQAIZ0CAQDJBAAhngIBAMYEACETBAAA_wQAIAgAAIAFACAMAACHBQAgDwAA_gQAIBEAAIEFACAVAACDBQAgFgAAhAUAIBcAAIUFACAYAACGBQAglAIBAAAAAZUCQAAAAAGXAgAAAJcCApgCAQAAAAGZAkAAAAABmgJAAAAAAZsCAQAAAAGcAgEAAAABnQIBAAAAAZ4CAQAAAAEJBQAAnwYAIBAAAKEGACAUAACgBgAglAIBAAAAAZkCQAAAAAGaAkAAAAABywIBAAAAAcwCIAAAAAHkAgEAAAABAgAAAB0AICUAAJ4GACADAAAAHQAgJQAAngYAICYAAK4FACANBQAAjgQAIBAAAI8EACATAACtBAAgFAAArgQAIJECAACsBAAwkgIAABsAEJMCAACsBAAwlAIBAAAAAZkCQADPAwAhmgJAAM8DACHLAgEAyQMAIcwCIADLAwAh5AIBAAAAAQIAAAAdACAeAACuBQAgAgAAAKwFACAeAACtBQAgCZECAACrBQAwkgIAAKwFABCTAgAAqwUAMJQCAQDIAwAhmQJAAM8DACGaAkAAzwMAIcsCAQDJAwAhzAIgAMsDACHkAgEAyAMAIQmRAgAAqwUAMJICAACsBQAQkwIAAKsFADCUAgEAyAMAIZkCQADPAwAhmgJAAM8DACHLAgEAyQMAIcwCIADLAwAh5AIBAMgDACEGlAIBAMYEACGZAkAAxwQAIZoCQADHBAAhywIBAMkEACHMAiAA2wQAIeQCAQDGBAAhCQUAAK8FACAQAACxBQAgFAAAsAUAIJQCAQDGBAAhmQJAAMcEACGaAkAAxwQAIcsCAQDJBAAhzAIgANsEACHkAgEAxgQAIQslAACFBgAwJgAAigYAMIUDAACGBgAwhgMAAIcGADCHAwAAiQYAMIgDAACJBgAwiQMAAIkGADCKAwAAiAYAIIsDAACJBgAwjAMAAIsGADCNAwAAjAYAMAolAAC7BQAwJgAAvwUAMIUDAAC8BQAwhgMAAL0FADCHAwAAvgUAMIgDAAC-BQAwiQMAAL4FADCLAwAAvgUAMIwDAADABQAwjQMAAMEFADALJQAAsgUAMCYAALYFADCFAwAAswUAMIYDAAC0BQAwhwMAAJ0FADCIAwAAnQUAMIkDAACdBQAwigMAALUFACCLAwAAnQUAMIwDAAC3BQAwjQMAAKAFADATBAAA_wQAIAgAAIAFACAMAACHBQAgEQAAgQUAIBMAAIIFACAVAACDBQAgFgAAhAUAIBcAAIUFACAYAACGBQAglAIBAAAAAZUCQAAAAAGXAgAAAJcCApgCAQAAAAGZAkAAAAABmgJAAAAAAZwCAQAAAAGdAgEAAAABngIBAAAAAZ8CAQAAAAECAAAAIQAgJQAAugUAIAMAAAAhACAlAAC6BQAgJgAAuQUAIAEeAACfCAAwAgAAACEAIB4AALkFACACAAAAoQUAIB4AALgFACAKlAIBAMYEACGVAkAAxwQAIZcCAADIBJcCIpgCAQDJBAAhmQJAAMcEACGaAkAAxwQAIZwCAQDGBAAhnQIBAMkEACGeAgEAxgQAIZ8CAQDJBAAhEwQAAMsEACAIAADMBAAgDAAA0wQAIBEAAM0EACATAADOBAAgFQAAzwQAIBYAANAEACAXAADRBAAgGAAA0gQAIJQCAQDGBAAhlQJAAMcEACGXAgAAyASXAiKYAgEAyQQAIZkCQADHBAAhmgJAAMcEACGcAgEAxgQAIZ0CAQDJBAAhngIBAMYEACGfAgEAyQQAIRMEAAD_BAAgCAAAgAUAIAwAAIcFACARAACBBQAgEwAAggUAIBUAAIMFACAWAACEBQAgFwAAhQUAIBgAAIYFACCUAgEAAAABlQJAAAAAAZcCAAAAlwICmAIBAAAAAZkCQAAAAAGaAkAAAAABnAIBAAAAAZ0CAQAAAAGeAgEAAAABnwIBAAAAARMDAACCBgAgBwAAgAYAIAkAAIEGACALAACDBgAgDAAAhAYAIJQCAQAAAAGXAgAAAMECApkCQAAAAAGaAkAAAAABuQIgAAAAAboCQAAAAAG7AgEAAAABvAKAAAAAAb0CAQAAAAG-AgEAAAABvwIgAAAAAcECCAAAAAHCAgIAAAABwwIBAAAAAQIAAAAUACAlAAD_BQAgAwAAABQAICUAAP8FACAmAADHBQAgFwMAAI0EACAHAACTBAAgCQAAtwQAIAoAALgEACALAACPBAAgDAAAuQQAIJECAAC0BAAwkgIAABIAEJMCAAC0BAAwlAIBAAAAAZcCAAC1BMECIpkCQADPAwAhmgJAAM8DACG5AiAAywMAIboCQADOAwAhuwIBAMkDACG8AgAAgAQAIL0CAQDJAwAhvgIBAMkDACG_AiAAywMAIcECCAC2BAAhwgICAJIEACHDAgEAAAABAgAAABQAIB4AAMcFACACAAAAwgUAIB4AAMMFACARkQIAAMEFADCSAgAAwgUAEJMCAADBBQAwlAIBAMgDACGXAgAAtQTBAiKZAkAAzwMAIZoCQADPAwAhuQIgAMsDACG6AkAAzgMAIbsCAQDJAwAhvAIAAIAEACC9AgEAyQMAIb4CAQDJAwAhvwIgAMsDACHBAggAtgQAIcICAgCSBAAhwwIBAMgDACERkQIAAMEFADCSAgAAwgUAEJMCAADBBQAwlAIBAMgDACGXAgAAtQTBAiKZAkAAzwMAIZoCQADPAwAhuQIgAMsDACG6AkAAzgMAIbsCAQDJAwAhvAIAAIAEACC9AgEAyQMAIb4CAQDJAwAhvwIgAMsDACHBAggAtgQAIcICAgCSBAAhwwIBAMgDACEOlAIBAMYEACGXAgAAxAXBAiKZAkAAxwQAIZoCQADHBAAhuQIgANsEACG6AkAA2QQAIbsCAQDJBAAhvAKAAAAAAb0CAQDJBAAhvgIBAMkEACG_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_wQAIAwAAIcFACAPAAD-BAAgEQAAgQUAIBMAAIIFACAVAACDBQAgFgAAhAUAIBcAAIUFACAYAACGBQAglAIBAAAAAZUCQAAAAAGXAgAAAJcCApgCAQAAAAGZAkAAAAABmgJAAAAAAZsCAQAAAAGcAgEAAAABngIBAAAAAZ8CAQAAAAECAAAAIQAgJQAA4wUAIAMAAAAhACAlAADjBQAgJgAA4gUAIAEeAACVCAAwAgAAACEAIB4AAOIFACACAAAAoQUAIB4AAOEFACAKlAIBAMYEACGVAkAAxwQAIZcCAADIBJcCIpgCAQDJBAAhmQJAAMcEACGaAkAAxwQAIZsCAQDGBAAhnAIBAMYEACGeAgEAxgQAIZ8CAQDJBAAhEwQAAMsEACAMAADTBAAgDwAAygQAIBEAAM0EACATAADOBAAgFQAAzwQAIBYAANAEACAXAADRBAAgGAAA0gQAIJQCAQDGBAAhlQJAAMcEACGXAgAAyASXAiKYAgEAyQQAIZkCQADHBAAhmgJAAMcEACGbAgEAxgQAIZwCAQDGBAAhngIBAMYEACGfAgEAyQQAIRMEAAD_BAAgDAAAhwUAIA8AAP4EACARAACBBQAgEwAAggUAIBUAAIMFACAWAACEBQAgFwAAhQUAIBgAAIYFACCUAgEAAAABlQJAAAAAAZcCAAAAlwICmAIBAAAAAZkCQAAAAAGaAkAAAAABmwIBAAAAAZwCAQAAAAGeAgEAAAABnwIBAAAAAQmUAgEAAAABmQJAAAAAAZoCQAAAAAHMAiAAAAAB3gJAAAAAAd8CQAAAAAH8AgAAAPwCAv0CAgAAAAH-AkAAAAABAgAAABkAICUAAPEFACADAAAAGQAgJQAA8QUAICYAAPAFACABHgAAlAgAMBAIAAChBAAgkQIAALEEADCSAgAAFwAQkwIAALEEADCUAgEAAAABmQJAAM8DACGaAkAAzwMAIZ0CAQDIAwAhzAIgAMsDACHeAkAAzgMAId8CQADOAwAh_AIAALIE_AIi_QICALMEACH-AkAAzgMAIYEDAACvBAAgggMAALAEACACAAAAGQAgHgAA8AUAIAIAAADsBQAgHgAA7QUAIA2RAgAA6wUAMJICAADsBQAQkwIAAOsFADCUAgEAyAMAIZkCQADPAwAhmgJAAM8DACGdAgEAyAMAIcwCIADLAwAh3gJAAM4DACHfAkAAzgMAIfwCAACyBPwCIv0CAgCzBAAh_gJAAM4DACENkQIAAOsFADCSAgAA7AUAEJMCAADrBQAwlAIBAMgDACGZAkAAzwMAIZoCQADPAwAhnQIBAMgDACHMAiAAywMAId4CQADOAwAh3wJAAM4DACH8AgAAsgT8AiL9AgIAswQAIf4CQADOAwAhCZQCAQDGBAAhmQJAAMcEACGaAkAAxwQAIcwCIADbBAAh3gJAANkEACHfAkAA2QQAIfwCAADuBfwCIv0CAgDvBQAh_gJAANkEACEBiwMAAAD8AgIFiwMCAAAAAY4DAgAAAAGPAwIAAAABkAMCAAAAAZEDAgAAAAEJlAIBAMYEACGZAkAAxwQAIZoCQADHBAAhzAIgANsEACHeAkAA2QQAId8CQADZBAAh_AIAAO4F_AIi_QICAO8FACH-AkAA2QQAIQmUAgEAAAABmQJAAAAAAZoCQAAAAAHMAiAAAAAB3gJAAAAAAd8CQAAAAAH8AgAAAPwCAv0CAgAAAAH-AkAAAAABCwYAAP4FACCUAgEAAAABmQJAAAAAAZoCQAAAAAGrAgEAAAABugJAAAAAAcoCAQAAAAHLAgEAAAABzAIgAAAAAc0CIAAAAAHOAgEAAAABAgAAABAAICUAAP0FACADAAAAEAAgJQAA_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_AiAAAAABwQIIAAAAAcICAgAAAAECAAAAFAAgJQAApAYAIAMAAAASACAlAACkBgAgJgAAqAYAIBQAAAASACAHAADIBQAgCQAAyQUAIAoAAKkGACALAADLBQAgDAAAzAUAIB4AAKgGACCUAgEAxgQAIZcCAADEBcECIpkCQADHBAAhmgJAAMcEACG5AiAA2wQAIboCQADZBAAhuwIBAMkEACG8AoAAAAABvQIBAMkEACG-AgEAyQQAIb8CIADbBAAhwQIIAMUFACHCAgIAxgUAIRIHAADIBQAgCQAAyQUAIAoAAKkGACALAADLBQAgDAAAzAUAIJQCAQDGBAAhlwIAAMQFwQIimQJAAMcEACGaAkAAxwQAIbkCIADbBAAhugJAANkEACG7AgEAyQQAIbwCgAAAAAG9AgEAyQQAIb4CAQDJBAAhvwIgANsEACHBAggAxQUAIcICAgDGBQAhCiUAAKoGADAmAACtBgAwhQMAAKsGADCGAwAArAYAMIcDAACoBQAwiAMAAKgFADCJAwAAqAUAMIsDAACoBQAwjAMAAK4GADCNAwAAqwUAMAkFAACfBgAgEAAAoQYAIBMAAMAGACCUAgEAAAABmQJAAAAAAZoCQAAAAAHLAgEAAAABzAIgAAAAAeQCAQAAAAECAAAAHQAgJQAAvwYAIAMAAAAdACAlAAC_BgAgJgAAsAYAIAIAAAAdACAeAACwBgAgAgAAAKwFACAeAACvBgAgBpQCAQDGBAAhmQJAAMcEACGaAkAAxwQAIcsCAQDJBAAhzAIgANsEACHkAgEAxgQAIQkFAACvBQAgEAAAsQUAIBMAALEGACCUAgEAxgQAIZkCQADHBAAhmgJAAMcEACHLAgEAyQQAIcwCIADbBAAh5AIBAMYEACEKJQAAsgYAMCYAALYGADCFAwAAswYAMIYDAAC0BgAwhwMAALUGADCIAwAAtQYAMIkDAAC1BgAwiwMAALUGADCMAwAAtwYAMI0DAAC4BgAwDwMAAL4GACALAACjBgAglAIBAAAAAZkCQAAAAAGaAkAAAAABuQIgAAAAAboCQAAAAAG7AgEAAAABvAKAAAAAAb4CAQAAAAHDAgEAAAAB3QIBAAAAAfQCAAAA9AIC9QIBAAAAAfYCQAAAAAECAAAABQAgJQAAvQYAIAMAAAAFACAlAAC9BgAgJgAAuwYAIBMDAACNBAAgCwAAjwQAIA8AALgEACCRAgAAwAQAMJICAAADABCTAgAAwAQAMJQCAQAAAAGZAkAAzwMAIZoCQADPAwAhuQIgAMsDACG6AkAAzgMAIbsCAQDIAwAhvAIAAIAEACC-AgEAyAMAIcMCAQAAAAHdAgEAyQMAIfQCAADBBPQCIvUCAQDJAwAh9gJAAM4DACECAAAABQAgHgAAuwYAIAIAAAC5BgAgHgAAugYAIBCRAgAAuAYAMJICAAC5BgAQkwIAALgGADCUAgEAyAMAIZkCQADPAwAhmgJAAM8DACG5AiAAywMAIboCQADOAwAhuwIBAMgDACG8AgAAgAQAIL4CAQDIAwAhwwIBAMgDACHdAgEAyQMAIfQCAADBBPQCIvUCAQDJAwAh9gJAAM4DACEQkQIAALgGADCSAgAAuQYAEJMCAAC4BgAwlAIBAMgDACGZAkAAzwMAIZoCQADPAwAhuQIgAMsDACG6AkAAzgMAIbsCAQDIAwAhvAIAAIAEACC-AgEAyAMAIcMCAQDIAwAh3QIBAMkDACH0AgAAwQT0AiL1AgEAyQMAIfYCQADOAwAhDZQCAQDGBAAhmQJAAMcEACGaAkAAxwQAIbkCIADbBAAhugJAANkEACG7AgEAxgQAIbwCgAAAAAG-AgEAxgQAIcMCAQDGBAAh3QIBAMkEACH0AgAAlgX0AiL1AgEAyQQAIfYCQADZBAAhDwMAALwGACALAACYBQAglAIBAMYEACGZAkAAxwQAIZoCQADHBAAhuQIgANsEACG6AkAA2QQAIbsCAQDGBAAhvAKAAAAAAb4CAQDGBAAhwwIBAMYEACHdAgEAyQQAIfQCAACWBfQCIvUCAQDJBAAh9gJAANkEACEFJQAA_QcAICYAAIAIACCFAwAA_gcAIIYDAAD_BwAgiQMAAPUCACAPAwAAvgYAIAsAAKMGACCUAgEAAAABmQJAAAAAAZoCQAAAAAG5AiAAAAABugJAAAAAAbsCAQAAAAG8AoAAAAABvgIBAAAAAcMCAQAAAAHdAgEAAAAB9AIAAAD0AgL1AgEAAAAB9gJAAAAAAQMlAAD9BwAghQMAAP4HACCJAwAA9QIAIAkFAACfBgAgEAAAoQYAIBMAAMAGACCUAgEAAAABmQJAAAAAAZoCQAAAAAHLAgEAAAABzAIgAAAAAeQCAQAAAAEDJQAAsgYAMIUDAACzBgAwiQMAALUGADADJQAAqgYAMIUDAACrBgAwiQMAAKgFADAJEQAA3QYAIBIAAN4GACCUAgEAAAABmQJAAAAAAZoCQAAAAAG5AiAAAAABugJAAAAAAbsCAQAAAAG8AoAAAAABAgAAAJEBACAlAADCBgAgAwAAAAcAICUAAMIGACAmAADGBgAgCwAAAAcAIBEAAMcGACASAADIBgAgHgAAxgYAIJQCAQDGBAAhmQJAAMcEACGaAkAAxwQAIbkCIADbBAAhugJAANkEACG7AgEAyQQAIbwCgAAAAAEJEQAAxwYAIBIAAMgGACCUAgEAxgQAIZkCQADHBAAhmgJAAMcEACG5AiAA2wQAIboCQADZBAAhuwIBAMkEACG8AoAAAAABCyUAANIGADAmAADWBgAwhQMAANMGADCGAwAA1AYAMIcDAACJBgAwiAMAAIkGADCJAwAAiQYAMIoDAADVBgAgiwMAAIkGADCMAwAA1wYAMI0DAACMBgAwCyUAAMkGADAmAADNBgAwhQMAAMoGADCGAwAAywYAMIcDAACdBQAwiAMAAJ0FADCJAwAAnQUAMIoDAADMBgAgiwMAAJ0FADCMAwAAzgYAMI0DAACgBQAwEwgAAIAFACAMAACHBQAgDwAA_gQAIBEAAIEFACATAACCBQAgFQAAgwUAIBYAAIQFACAXAACFBQAgGAAAhgUAIJQCAQAAAAGVAkAAAAABlwIAAACXAgKYAgEAAAABmQJAAAAAAZoCQAAAAAGbAgEAAAABnQIBAAAAAZ4CAQAAAAGfAgEAAAABAgAAACEAICUAANEGACADAAAAIQAgJQAA0QYAICYAANAGACABHgAA_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-BQAwiAMAAL4FADCJAwAAvgUAMIsDAAC-BQAwjAMAAPIGADCNAwAAwQUAMBMDAACCBgAgCQAAgQYAIAoAAMEGACALAACDBgAgDAAAhAYAIJQCAQAAAAGXAgAAAMECApkCQAAAAAGaAkAAAAABuQIgAAAAAboCQAAAAAG7AgEAAAABvAKAAAAAAb0CAQAAAAG-AgEAAAABvwIgAAAAAcECCAAAAAHCAgIAAAABwwIBAAAAAQIAAAAUACAlAAD1BgAgAwAAABQAICUAAPUGACAmAAD0BgAgAgAAABQAIB4AAPQGACACAAAAwgUAIB4AAPMGACAOlAIBAMYEACGXAgAAxAXBAiKZAkAAxwQAIZoCQADHBAAhuQIgANsEACG6AkAA2QQAIbsCAQDJBAAhvAKAAAAAAb0CAQDJBAAhvgIBAMkEACG_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_BAAgCAAAgAUAIAwAAIcFACAPAAD-BAAgEQAAgQUAIBMAAIIFACAVAACDBQAgFgAAhAUAIBgAAIYFACCUAgEAAAABlQJAAAAAAZcCAAAAlwICmAIBAAAAAZkCQAAAAAGaAkAAAAABmwIBAAAAAZwCAQAAAAGdAgEAAAABngIBAAAAAZ8CAQAAAAECAAAAIQAgJQAA5wcAIAMAAAAfACAlAADnBwAgJgAA6wcAIBYAAAAfACAEAADLBAAgCAAAzAQAIAwAANMEACAPAADKBAAgEQAAzQQAIBMAAM4EACAVAADPBAAgFgAA0AQAIBgAANIEACAeAADrBwAglAIBAMYEACGVAkAAxwQAIZcCAADIBJcCIpgCAQDJBAAhmQJAAMcEACGaAkAAxwQAIZsCAQDGBAAhnAIBAMYEACGdAgEAyQQAIZ4CAQDGBAAhnwIBAMkEACEUBAAAywQAIAgAAMwEACAMAADTBAAgDwAAygQAIBEAAM0EACATAADOBAAgFQAAzwQAIBYAANAEACAYAADSBAAglAIBAMYEACGVAkAAxwQAIZcCAADIBJcCIpgCAQDJBAAhmQJAAMcEACGaAkAAxwQAIZsCAQDGBAAhnAIBAMYEACGdAgEAyQQAIZ4CAQDGBAAhnwIBAMkEACEUBAAA_wQAIAgAAIAFACAMAACHBQAgDwAA_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_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_wKAAAAAARMDAACCBgAgBwAAgAYAIAkAAIEGACAKAADBBgAgCwAAgwYAIJQCAQAAAAGXAgAAAMECApkCQAAAAAGaAkAAAAABuQIgAAAAAboCQAAAAAG7AgEAAAABvAKAAAAAAb0CAQAAAAG-AgEAAAABvwIgAAAAAcECCAAAAAHCAgIAAAABwwIBAAAAAQIAAAAUACAlAACsCAAgAwAAABIAICUAAKwIACAmAACwCAAgFQAAABIAIAMAAMoFACAHAADIBQAgCQAAyQUAIAoAAKkGACALAADLBQAgHgAAsAgAIJQCAQDGBAAhlwIAAMQFwQIimQJAAMcEACGaAkAAxwQAIbkCIADbBAAhugJAANkEACG7AgEAyQQAIbwCgAAAAAG9AgEAyQQAIb4CAQDJBAAhvwIgANsEACHBAggAxQUAIcICAgDGBQAhwwIBAMYEACETAwAAygUAIAcAAMgFACAJAADJBQAgCgAAqQYAIAsAAMsFACCUAgEAxgQAIZcCAADEBcECIpkCQADHBAAhmgJAAMcEACG5AiAA2wQAIboCQADZBAAhuwIBAMkEACG8AoAAAAABvQIBAMkEACG-AgEAyQQAIb8CIADbBAAhwQIIAMUFACHCAgIAxgUAIcMCAQDGBAAhAwAAAAMAICUAAKEIACAmAACzCAAgEQAAAAMAIAMAALwGACAPAACXBQAgHgAAswgAIJQCAQDGBAAhmQJAAMcEACGaAkAAxwQAIbkCIADbBAAhugJAANkEACG7AgEAxgQAIbwCgAAAAAG-AgEAxgQAIcMCAQDGBAAh3QIBAMkEACH0AgAAlgX0AiL1AgEAyQQAIfYCQADZBAAhDwMAALwGACAPAACXBQAglAIBAMYEACGZAkAAxwQAIZoCQADHBAAhuQIgANsEACG6AkAA2QQAIbsCAQDGBAAhvAKAAAAAAb4CAQDGBAAhwwIBAMYEACHdAgEAyQQAIfQCAACWBfQCIvUCAQDJBAAh9gJAANkEACEDAAAACQAgJQAAowgAICYAALYIACAaAAAACQAgBAAAkgYAIAYAAJMGACAPAADaBgAgHgAAtggAIJQCAQDGBAAhlQJAAMcEACGXAgAAkAbWAiKZAkAAxwQAIZoCQADHBAAhmwIBAMYEACGcAgEAxgQAIbkCIADbBAAhvAKAAAAAAcsCAQDJBAAhzgIBAMYEACHSAgEAxgQAIdQCAACPBtQCItYCQADZBAAh1wJAANkEACHYAgIA7wUAIdkCQADZBAAh2gJAANkEACHbAgEAyQQAIdwCQADZBAAh3QIBAMkEACEYBAAAkgYAIAYAAJMGACAPAADaBgAglAIBAMYEACGVAkAAxwQAIZcCAACQBtYCIpkCQADHBAAhmgJAAMcEACGbAgEAxgQAIZwCAQDGBAAhuQIgANsEACG8AoAAAAABywIBAMkEACHOAgEAxgQAIdICAQDGBAAh1AIAAI8G1AIi1gJAANkEACHXAkAA2QQAIdgCAgDvBQAh2QJAANkEACHaAkAA2QQAIdsCAQDJBAAh3AJAANkEACHdAgEAyQQAIQMAAAASACAlAAClCAAgJgAAuQgAIBUAAAASACADAADKBQAgBwAAyAUAIAkAAMkFACAKAACpBgAgDAAAzAUAIB4AALkIACCUAgEAxgQAIZcCAADEBcECIpkCQADHBAAhmgJAAMcEACG5AiAA2wQAIboCQADZBAAhuwIBAMkEACG8AoAAAAABvQIBAMkEACG-AgEAyQQAIb8CIADbBAAhwQIIAMUFACHCAgIAxgUAIcMCAQDGBAAhEwMAAMoFACAHAADIBQAgCQAAyQUAIAoAAKkGACAMAADMBQAglAIBAMYEACGXAgAAxAXBAiKZAkAAxwQAIZoCQADHBAAhuQIgANsEACG6AkAA2QQAIbsCAQDJBAAhvAKAAAAAAb0CAQDJBAAhvgIBAMkEACG_AiAA2wQAIcECCADFBQAhwgICAMYFACHDAgEAxgQAIQMAAAAHACAlAACnCAAgJgAAvAgAIAwAAAAHACADAACcBwAgEQAAxwYAIB4AALwIACCUAgEAxgQAIZkCQADHBAAhmgJAAMcEACG5AiAA2wQAIboCQADZBAAhuwIBAMkEACG8AoAAAAABwwIBAMYEACEKAwAAnAcAIBEAAMcGACCUAgEAxgQAIZkCQADHBAAhmgJAAMcEACG5AiAA2wQAIboCQADZBAAhuwIBAMkEACG8AoAAAAABwwIBAMYEACEDAAAAGwAgJQAAqQgAICYAAL8IACALAAAAGwAgBQAArwUAIBMAALEGACAUAACwBQAgHgAAvwgAIJQCAQDGBAAhmQJAAMcEACGaAkAAxwQAIcsCAQDJBAAhzAIgANsEACHkAgEAxgQAIQkFAACvBQAgEwAAsQYAIBQAALAFACCUAgEAxgQAIZkCQADHBAAhmgJAAMcEACHLAgEAyQQAIcwCIADbBAAh5AIBAMYEACEBCwACCwQABghACgxLDA0AFg8AAxEABxNBBBVEARZGExdIFBhKFQUFOQcNABIQOwITBgQUOgoEAwAFCzYCDQARDzUDAwQIBggzChM0BAQDAAUNABARDAcSMAIEBAAGBgAIDwADEC8CAwUNBw0ADw4RCQMGAAgIFQoNAA4HAwAFBxYJCRoLCh4DCyICDCYMDQANAQgACgIIAAoLAAIFBycACSgACikACyoADCsAAQgsAAIFLQAOLgACETEAEjIAAgs4AA83AAQFPQAQPwATPAAUPgABCwACAQsAAgELAAIBFUwAAAELAAIBCwACAw0AGysAHCwAHQAAAAMNABsrABwsAB0BCAAKAQgACgUNACIrACUsACY9ACM-ACQAAAAAAAUNACIrACUsACY9ACM-ACQAAAUNACsrAC4sAC89ACw-AC0AAAAAAAUNACsrAC4sAC89ACw-AC0BAwAFAQMABQMNADQrADUsADYAAAADDQA0KwA1LAA2AQsAAgELAAIFDQA7KwA-LAA_PQA8PgA9AAAAAAAFDQA7KwA-LAA_PQA8PgA9AQMABQEDAAUDDQBEKwBFLABGAAAAAw0ARCsARSwARgELAAIBCwACBQ0ASysATiwATz0ATD4ATQAAAAAABQ0ASysATiwATz0ATD4ATQAAAw0AVCsAVSwAVgAAAAMNAFQrAFUsAFYCCAAKCwACAggACgsAAgMNAFsrAFwsAF0AAAADDQBbKwBcLABdAwQABgYACA8AAwMEAAYGAAgPAAMFDQBiKwBlLABmPQBjPgBkAAAAAAAFDQBiKwBlLABmPQBjPgBkAQsAAgELAAIDDQBrKwBsLABtAAAAAw0AaysAbCwAbQEGAAgBBgAIAw0AcisAcywAdAAAAAMNAHIrAHMsAHQBAwAFAQMABQUNAHkrAHwsAH09AHo-AHsAAAAAAAUNAHkrAHwsAH09AHo-AHsAAAMNAIIBKwCDASwAhAEAAAADDQCCASsAgwEsAIQBBQQABgiYAwoPAAMRAAcTmQMEBQQABgifAwoPAAMRAAcToAMEAw0AiQErAIoBLACLAQAAAAMNAIkBKwCKASwAiwEZAgEaTQEbTgEcTwEdUAEfUgEgVBchVRgiVwEjWRckWhknWwEoXAEpXRctYBouYR4vYgswYwsxZAsyZQszZgs0aAs1ahc2ax83bQs4bxc5cCA6cQs7cgs8cxc_diFAdydBeQhCeghDfQhEfghFfwhGgQEIR4MBF0iEAShJhgEISogBF0uJASlMigEITYsBCE6MARdPjwEqUJABMFGSAQZSkwEGU5UBBlSWAQZVlwEGVpkBBlebARdYnAExWZ4BBlqgARdboQEyXKIBBl2jAQZepAEXX6cBM2CoATdhqgEUYqsBFGOtARRkrgEUZa8BFGaxARRnswEXaLQBOGm2ARRquAEXa7kBOWy6ARRtuwEUbrwBF2-_ATpwwAFAccEBBHLCAQRzwwEEdMQBBHXFAQR2xwEEd8kBF3jKAUF5zAEEes4BF3vPAUJ80AEEfdEBBH7SARd_1QFDgAHWAUeBAdgBFYIB2QEVgwHbARWEAdwBFYUB3QEVhgHfARWHAeEBF4gB4gFIiQHkARWKAeYBF4sB5wFJjAHoARWNAekBFY4B6gEXjwHtAUqQAe4BUJEB7wEDkgHwAQOTAfEBA5QB8gEDlQHzAQOWAfUBA5cB9wEXmAH4AVGZAfoBA5oB_AEXmwH9AVKcAf4BA50B_wEDngGAAhefAYMCU6ABhAJXoQGFAgyiAYYCDKMBhwIMpAGIAgylAYkCDKYBiwIMpwGNAheoAY4CWKkBkAIMqgGSAherAZMCWawBlAIMrQGVAgyuAZYCF68BmQJasAGaAl6xAZsCB7IBnAIHswGdAge0AZ4CB7UBnwIHtgGhAge3AaMCF7gBpAJfuQGmAge6AagCF7sBqQJgvAGqAge9AasCB74BrAIXvwGvAmHAAbACZ8EBsgITwgGzAhPDAbUCE8QBtgITxQG3AhPGAbkCE8cBuwIXyAG8AmjJAb4CE8oBwAIXywHBAmnMAcICE80BwwITzgHEAhfPAccCatAByAJu0QHJAgnSAcoCCdMBywIJ1AHMAgnVAc0CCdYBzwIJ1wHRAhfYAdICb9kB1AIJ2gHWAhfbAdcCcNwB2AIJ3QHZAgneAdoCF98B3QJx4AHeAnXhAd8CCuIB4AIK4wHhAgrkAeICCuUB4wIK5gHlAgrnAecCF-gB6AJ26QHqAgrqAewCF-sB7QJ37AHuAgrtAe8CCu4B8AIX7wHzAnjwAfQCfvEB9gIF8gH3AgXzAfoCBfQB-wIF9QH8AgX2Af4CBfcBgAMX-AGBA3_5AYMDBfoBhQMX-wGGA4AB_AGHAwX9AYgDBf4BiQMX_wGMA4EBgAKNA4UBgQKOAwKCAo8DAoMCkAMChAKRAwKFApIDAoYClAMChwKWAxeIApcDhgGJApsDAooCnQMXiwKeA4cBjAKhAwKNAqIDAo4CowMXjwKmA4gBkAKnA4wB"
 };
 async function decodeBase64AsWasm(wasmBase64) {
   const { Buffer: Buffer2 } = await import("buffer");
@@ -321,6 +321,7 @@ var ScheduleScalarFieldEnum = {
 };
 var ServiceScalarFieldEnum = {
   id: "id",
+  title: "title",
   description: "description",
   priority: "priority",
   status: "status",
@@ -472,17 +473,18 @@ var WorkOrderStatus = {
   COMPLETED: "COMPLETED",
   CANCELLED: "CANCELLED"
 };
+var ScheduleStatus = {
+  SCHEDULED: "SCHEDULED",
+  CONFIRMED: "CONFIRMED",
+  COMPLETED: "COMPLETED",
+  CANCELLED: "CANCELLED"
+};
 var PaymentStatus = {
   UNPAID: "UNPAID",
   PAID: "PAID",
   FAILED: "FAILED",
   CANCELLED: "CANCELLED",
   REFUNDED: "REFUNDED"
-};
-var ManagerVerificationStatus = {
-  PENDING: "PENDING",
-  APPROVED: "APPROVED",
-  REJECTED: "REJECTED"
 };
 
 // generated/prisma/client.ts
@@ -637,6 +639,50 @@ var jwtUtils = {
   verifyToken
 };
 
+// src/app/utils/utility.ts
+var parseTimeOnDate = (timeValue, baseDate) => {
+  const timeStr = typeof timeValue === "string" ? timeValue : timeValue.toISOString().substring(11, 16);
+  const [hours, minutes] = timeStr.split(":").map(Number);
+  const parsedDate = new Date(baseDate);
+  parsedDate.setUTCHours(hours, minutes, 0, 0);
+  return parsedDate;
+};
+var toDateKeyUTC = (date) => {
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+};
+var getUTCDayOfWeek = (date) => new Date(date).getUTCDay();
+var utcDayRange = (date) => {
+  const start = new Date(date);
+  start.setUTCHours(0, 0, 0, 0);
+  const end = new Date(date);
+  end.setUTCHours(23, 59, 59, 999);
+  return { start, end };
+};
+var formatDateToYYYYMMDD = (date) => {
+  if (!date) return void 0;
+  return date.toISOString().substring(0, 10);
+};
+var formatTimeToHHmm = (date) => {
+  if (!date) return void 0;
+  return date.toISOString().substring(11, 16);
+};
+var TZ = "Asia/Dhaka";
+var dateTimeFmt = new Intl.DateTimeFormat("en-US", {
+  timeZone: TZ,
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit"
+});
+function formatDateTime(iso) {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return dateTimeFmt.format(d);
+}
+
 // src/app/module/auth/auth.service.ts
 var roleProfileMap = {
   CUSTOMER: "customer",
@@ -780,30 +826,30 @@ var verifyEmail = async (payload) => {
 var loginUser = async (payload) => {
   const { password } = payload;
   const email = payload.email.trim().toLowerCase();
-  const user = await prisma.user.findUnique({
+  const isUser = await prisma.user.findUnique({
     where: { email }
   });
-  if (!user) {
+  if (!isUser) {
     throw new AppError(httpStatus3.NOT_FOUND, "User not found");
   }
-  if (user.status === "BLOCKED") {
+  if (isUser.status === "BLOCKED") {
     throw new AppError(httpStatus3.FORBIDDEN, "User is blocked");
   }
-  if (user.isDeleted || user.status === "DELETED") {
+  if (isUser.isDeleted || isUser.status === "DELETED") {
     throw new AppError(httpStatus3.FORBIDDEN, "User is deleted");
   }
   const isPasswordMatched = await bcrypt.compare(
     password,
-    user.password
+    isUser.password
   );
   if (!isPasswordMatched) {
     throw new AppError(httpStatus3.UNAUTHORIZED, "Invalid credentials");
   }
   const jwtPayload = {
-    userId: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role
+    userId: isUser.id,
+    name: isUser.name,
+    email: isUser.email,
+    role: isUser.role
   };
   const accessToken = jwtUtils.createToken(
     jwtPayload,
@@ -815,7 +861,9 @@ var loginUser = async (payload) => {
     env_default.jwt_refresh_secret,
     env_default.jwt_refresh_expires_in
   );
+  const { password: pass, ...user } = isUser;
   return {
+    user,
     accessToken,
     refreshToken: refreshToken3
   };
@@ -824,7 +872,27 @@ var getMe = async (user) => {
   const dynamicInclude = {};
   const userRoleLower = user.role?.toLowerCase();
   if (userRoleLower && ["customer", "technician", "manager"].includes(userRoleLower)) {
-    dynamicInclude[userRoleLower] = true;
+    if (userRoleLower === "manager") {
+      dynamicInclude["manager"] = {
+        include: {
+          region: true
+        }
+      };
+    } else if (userRoleLower === "technician") {
+      dynamicInclude["technician"] = {
+        include: {
+          regions: true,
+          availability: true,
+          skills: {
+            include: {
+              category: true
+            }
+          }
+        }
+      };
+    } else {
+      dynamicInclude[userRoleLower] = true;
+    }
   }
   const isUserExists = await prisma.user.findUnique({
     where: {
@@ -837,6 +905,14 @@ var getMe = async (user) => {
   });
   if (!isUserExists) {
     throw new AppError(httpStatus3.NOT_FOUND, "User not found");
+  }
+  const technician = isUserExists.technician;
+  if (technician?.availability) {
+    technician.availability = technician.availability.map((slot) => ({
+      ...slot,
+      startTime: formatTimeToHHmm(slot.startTime),
+      endTime: formatTimeToHHmm(slot.endTime)
+    }));
   }
   return isUserExists;
 };
@@ -994,6 +1070,33 @@ var sendResponse = (res, data) => {
 
 // src/app/module/auth/auth.controller.ts
 import httpStatus4 from "http-status";
+
+// src/app/utils/redirect.ts
+var redirectUrl = (role) => {
+  let url;
+  if (role === UserRole.ADMIN) {
+    url = `/admin-dashboard`;
+  } else if (role === UserRole.CUSTOMER) {
+    url = `/customer-dashboard`;
+  } else if (role === UserRole.MANAGER) {
+    url = `/manager-dashboard`;
+  } else if (role === UserRole.TECHNICIAN) {
+    url = `/technician-dashboard`;
+  } else {
+    url = `/login`;
+  }
+  return url;
+};
+
+// src/app/module/auth/auth.controller.ts
+var isProduction = env_default.node_env === "production";
+var getAuthCookieOptions = (maxAge) => ({
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "lax",
+  path: "/",
+  maxAge
+});
 var registerOTP2 = catchAsync(async (req, res) => {
   const payload = req.body;
   await AuthService.registerOTP(payload);
@@ -1036,26 +1139,23 @@ var verifyEmail2 = catchAsync(async (req, res) => {
 var loginUser2 = catchAsync(async (req, res) => {
   const payload = req.body;
   const result = await AuthService.loginUser(payload);
-  const { accessToken, refreshToken: refreshToken3 } = result;
-  res.cookie("accessToken", accessToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: "none",
-    maxAge: 1e3 * 60 * 60 * 24
-    // 24 hour or 1 day
-  });
-  res.cookie("refreshToken", refreshToken3, {
-    httpOnly: true,
-    secure: false,
-    sameSite: "none",
-    maxAge: 1e3 * 60 * 60 * 24 * 7
-    // 7 days
-  });
+  const { user, accessToken, refreshToken: refreshToken3 } = result;
+  res.cookie(
+    "accessToken",
+    accessToken,
+    getAuthCookieOptions(1e3 * 60 * 60 * 24)
+  );
+  res.cookie(
+    "refreshToken",
+    refreshToken3,
+    getAuthCookieOptions(1e3 * 60 * 60 * 24 * 7)
+  );
   sendResponse(res, {
     statusCode: httpStatus4.OK,
     success: true,
     message: "User logged in successfully",
     data: {
+      user,
       accessToken,
       refreshToken: refreshToken3
     }
@@ -1083,20 +1183,16 @@ var refreshToken2 = catchAsync(async (req, res) => {
   }
   const result = await AuthService.refreshToken(req.cookies.refreshToken);
   const { accessToken, refreshToken: newRefreshToken } = result;
-  res.cookie("accessToken", accessToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: "none",
-    maxAge: 1e3 * 60 * 60 * 24
-    // 24 hour or 1 day
-  });
-  res.cookie("refreshToken", newRefreshToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: "none",
-    maxAge: 1e3 * 60 * 60 * 24 * 7
-    // 7 days
-  });
+  res.cookie(
+    "accessToken",
+    accessToken,
+    getAuthCookieOptions(1e3 * 60 * 60 * 24)
+  );
+  res.cookie(
+    "refreshToken",
+    refreshToken2,
+    getAuthCookieOptions(1e3 * 60 * 60 * 24 * 7)
+  );
   sendResponse(res, {
     statusCode: httpStatus4.OK,
     success: true,
@@ -1136,7 +1232,7 @@ var googleLogin = catchAsync(async (req, res) => {
     );
   }
   const jwtPayload = {
-    userId: user.userId,
+    userId: user.id,
     name: user.name,
     email: user.email,
     role: user.role
@@ -1151,18 +1247,18 @@ var googleLogin = catchAsync(async (req, res) => {
     env_default.jwt_refresh_secret,
     env_default.jwt_refresh_expires_in
   );
-  res.cookie("accessToken", accessToken, {
-    httpOnly: true,
-    secure: env_default.node_env === "production",
-    sameSite: env_default.node_env === "production" ? "none" : "lax",
-    maxAge: 1e3 * 60 * 60 * 24
-  });
-  res.cookie("refreshToken", refreshToken3, {
-    httpOnly: true,
-    secure: env_default.node_env === "production",
-    sameSite: env_default.node_env === "production" ? "none" : "lax",
-    maxAge: 1e3 * 60 * 60 * 24 * 7
-  });
+  res.cookie(
+    "accessToken",
+    accessToken,
+    getAuthCookieOptions(1e3 * 60 * 60 * 24)
+  );
+  res.cookie(
+    "refreshToken",
+    refreshToken3,
+    getAuthCookieOptions(1e3 * 60 * 60 * 24 * 7)
+  );
+  const url = redirectUrl(user.role);
+  res.redirect(`${env_default.frontend_url}/${url}`);
   sendResponse(res, {
     statusCode: httpStatus4.OK,
     success: true,
@@ -1182,7 +1278,7 @@ var facebookLogin = catchAsync(async (req, res) => {
     );
   }
   const jwtPayload = {
-    userId: user.userId,
+    userId: user.id,
     name: user.name,
     email: user.email,
     role: user.role
@@ -1197,18 +1293,18 @@ var facebookLogin = catchAsync(async (req, res) => {
     env_default.jwt_refresh_secret,
     env_default.jwt_refresh_expires_in
   );
-  res.cookie("accessToken", accessToken, {
-    httpOnly: true,
-    secure: env_default.node_env === "production",
-    sameSite: env_default.node_env === "production" ? "none" : "lax",
-    maxAge: 1e3 * 60 * 60 * 24
-  });
-  res.cookie("refreshToken", refreshToken3, {
-    httpOnly: true,
-    secure: env_default.node_env === "production",
-    sameSite: env_default.node_env === "production" ? "none" : "lax",
-    maxAge: 1e3 * 60 * 60 * 24 * 7
-  });
+  res.cookie(
+    "accessToken",
+    accessToken,
+    getAuthCookieOptions(1e3 * 60 * 60 * 24)
+  );
+  res.cookie(
+    "refreshToken",
+    refreshToken3,
+    getAuthCookieOptions(1e3 * 60 * 60 * 24 * 7)
+  );
+  const url = redirectUrl(user.role);
+  res.redirect(`${env_default.frontend_url}/${url}`);
   sendResponse(res, {
     statusCode: httpStatus4.OK,
     success: true,
@@ -1221,16 +1317,8 @@ var facebookLogin = catchAsync(async (req, res) => {
 });
 var logout = catchAsync(async (req, res) => {
   const user = req.user;
-  res.clearCookie("accessToken", {
-    path: "/",
-    secure: true,
-    sameSite: "strict"
-  });
-  res.clearCookie("refreshToken", {
-    path: "/",
-    secure: true,
-    sameSite: "strict"
-  });
+  res.clearCookie("accessToken", getAuthCookieOptions());
+  res.clearCookie("refreshToken", getAuthCookieOptions());
   sendResponse(res, {
     statusCode: httpStatus4.OK,
     success: true,
@@ -1322,7 +1410,7 @@ var auth = (...requiredRoles) => {
     if (!verifiedToken.success) {
       throw new AppError(httpStatus6.UNAUTHORIZED, verifiedToken.error);
     }
-    const { email, name, userId, role } = verifiedToken.data;
+    const { userId, name, email, role } = verifiedToken.data;
     if (requiredRoles.length && !requiredRoles.includes(role)) {
       throw new AppError(
         httpStatus6.FORBIDDEN,
@@ -1350,9 +1438,9 @@ var auth = (...requiredRoles) => {
       );
     }
     req.user = {
-      email,
-      name,
       userId,
+      name,
+      email,
       role
     };
     next();
@@ -1393,10 +1481,13 @@ route.post(
 );
 route.get(
   "/google",
-  passport.authenticate("google", {
-    session: false,
-    scope: ["profile", "email"]
-  })
+  passport.authenticate(
+    "google",
+    {
+      session: false,
+      scope: ["profile", "email"]
+    }
+  )
 );
 route.get(
   "/google/callback",
@@ -1415,7 +1506,7 @@ route.get(
   passport.authenticate("facebook", { session: false }),
   authController.facebookLogin
 );
-route.get(
+route.post(
   "/logout",
   auth(
     UserRole.ADMIN,
@@ -1719,11 +1810,39 @@ var updateRegion = async (payload, regionId, user) => {
   });
   return updateRegion3;
 };
+var statusUpdate = async (regionId) => {
+  const isRegion = await prisma.region.findUnique({
+    where: { id: regionId }
+  });
+  if (!isRegion) {
+    throw new AppError(httpStatus7.NOT_FOUND, "region not found");
+  }
+  if (isRegion.isActive === true) {
+    await prisma.region.update({
+      where: {
+        id: regionId
+      },
+      data: {
+        isActive: false
+      }
+    });
+  } else {
+    await prisma.region.update({
+      where: {
+        id: regionId
+      },
+      data: {
+        isActive: true
+      }
+    });
+  }
+};
 var regionService = {
   createRegion,
   getAllRegion,
   getRegions,
-  updateRegion
+  updateRegion,
+  statusUpdate
 };
 
 // src/app/module/region/region.controller.ts
@@ -1743,9 +1862,6 @@ var getAllRegion2 = catchAsync(async (req, res) => {
   const query = req.query;
   const user = req.user;
   const { area, meta } = await regionService.getAllRegion(query, user);
-  if (area.length === 0) {
-    throw new AppError(httpStatus8.NOT_FOUND, "region not found");
-  }
   sendResponse(res, {
     statusCode: httpStatus8.OK,
     success: true,
@@ -1757,9 +1873,6 @@ var getAllRegion2 = catchAsync(async (req, res) => {
 var getRegions2 = catchAsync(async (req, res) => {
   const query = req.query;
   const { area, meta } = await regionService.getRegions(query);
-  if (area.length === 0) {
-    throw new AppError(httpStatus8.NOT_FOUND, "region not found");
-  }
   sendResponse(res, {
     statusCode: httpStatus8.OK,
     success: true,
@@ -1780,11 +1893,22 @@ var updateRegion2 = catchAsync(async (req, res) => {
     data: result
   });
 });
+var statusUpdate2 = catchAsync(async (req, res) => {
+  const id = req.params.regionId;
+  const result = await regionService.statusUpdate(id);
+  sendResponse(res, {
+    statusCode: httpStatus8.OK,
+    success: true,
+    message: `region status updated successfully`,
+    data: result
+  });
+});
 var regionController = {
   createRegion: createRegion2,
   getAllRegion: getAllRegion2,
   getRegions: getRegions2,
-  updateRegion: updateRegion2
+  updateRegion: updateRegion2,
+  statusUpdate: statusUpdate2
 };
 
 // src/app/module/region/region.route.ts
@@ -1805,17 +1929,51 @@ route2.put(
   auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
   regionController.updateRegion
 );
+route2.patch(
+  "/:regionId",
+  auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+  regionController.statusUpdate
+);
 var regionRouter = route2;
 
 // src/app/module/manager/manager.route.ts
 import { Router as Router3 } from "express";
 
 // src/app/module/manager/manager.service.ts
-import httpStatus9 from "http-status";
+import httpStatus10 from "http-status";
 import bcrypt2 from "bcryptjs";
-import crypto2 from "crypto";
+import crypto3 from "crypto";
 import path4 from "path";
 import ejs2 from "ejs";
+
+// src/app/utils/randomPassword.ts
+import httpStatus9 from "http-status";
+import crypto2 from "crypto";
+var generateRandomPass = (lenght = 10) => {
+  if (lenght < 8) {
+    throw new AppError(
+      httpStatus9.BAD_REQUEST,
+      "Lenght must be at least 8 characters"
+    );
+  }
+  const lower = "abcdefghijklmnopqrstuvwxyz";
+  const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const digit = "0123456789";
+  const special = "!@#$%^&*_?+=";
+  const all = lower + upper + digit + special;
+  const pick = (chars2) => chars2[crypto2.randomInt(chars2.length)];
+  const chars = [pick(lower), pick(upper), pick(digit), pick(special)];
+  for (let i = chars.length; i < lenght; i++) {
+    chars.push(pick(all));
+  }
+  for (let i = chars.length; i < lenght; i++) {
+    const j = crypto2.randomInt(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join("");
+};
+
+// src/app/module/manager/manager.service.ts
 var applyManager = async (payload) => {
   const isManager = await prisma.user.findUnique({
     where: {
@@ -1823,7 +1981,7 @@ var applyManager = async (payload) => {
     }
   });
   if (isManager) {
-    throw new AppError(httpStatus9.CONFLICT, "manager already exists");
+    throw new AppError(httpStatus10.CONFLICT, "manager already exists");
   }
   const regionIds = payload.manager.region || [];
   if (regionIds.length > 0) {
@@ -1835,22 +1993,15 @@ var applyManager = async (payload) => {
     const invalidIds = regionIds.filter((id) => !existingIds.includes(id));
     if (invalidIds.length > 0) {
       throw new AppError(
-        httpStatus9.BAD_REQUEST,
+        httpStatus10.BAD_REQUEST,
         `Invalid region ID(s): ${invalidIds.join(", ")}. These regions do not exist.`
       );
     }
   }
-  const randomPass = Math.random().toString(36).slice(-8);
-  console.log("random pass", randomPass);
-  const hashPass = await bcrypt2.hash(
-    randomPass,
-    Number(env_default.bcrypt_salt_rounds)
-  );
   const { region, ...managerData } = payload.manager;
   const apply = await prisma.user.create({
     data: {
       ...payload.user,
-      password: hashPass,
       needPasswordChange: true,
       role: UserRole.MANAGER,
       manager: {
@@ -1875,7 +2026,7 @@ var applyManager = async (payload) => {
   });
   const expirationTime = 60 * 60;
   const otpKey = `manager-otp-key: ${payload.user.email}`;
-  const otp = crypto2.randomInt(99999, 1e6);
+  const otp = crypto3.randomInt(99999, 1e6);
   await redisClient.set(otpKey, otp, {
     expiration: {
       type: "EX",
@@ -1910,22 +2061,22 @@ var emailVerify = async (payload) => {
     }
   });
   if (!isManager) {
-    throw new AppError(httpStatus9.NOT_FOUND, "Manager does not exist");
+    throw new AppError(httpStatus10.NOT_FOUND, "Manager does not exist");
   }
   if (isManager.emailVerified) {
-    throw new AppError(httpStatus9.CONFLICT, "manager's email alredy verified");
+    throw new AppError(httpStatus10.CONFLICT, "manager's email alredy verified");
   }
   const otpKey = `manager-otp-key: ${email}`;
   const redisOTP = await redisClient.get(otpKey);
   if (!redisOTP) {
     throw new AppError(
-      httpStatus9.BAD_REQUEST,
+      httpStatus10.BAD_REQUEST,
       "otp expired. please apply again"
     );
   }
   if (redisOTP !== otp) {
     throw new AppError(
-      httpStatus9.BAD_REQUEST,
+      httpStatus10.BAD_REQUEST,
       "OTP mismatch. please give valid OTP"
     );
   }
@@ -1962,66 +2113,95 @@ var approveManager = async (payload, reviewer) => {
     }
   });
   if (!isManager) {
-    throw new AppError(httpStatus9.NOT_FOUND, "Manager not found");
+    throw new AppError(httpStatus10.NOT_FOUND, "Manager not found");
   }
   if (!isManager.emailVerified) {
     throw new AppError(
-      httpStatus9.BAD_REQUEST,
+      httpStatus10.BAD_REQUEST,
       "Manager email not verified yet"
     );
   }
   if (isManager.isDeleted) {
-    throw new AppError(httpStatus9.FORBIDDEN, "Manager is deleted");
+    throw new AppError(httpStatus10.FORBIDDEN, "Manager is deleted");
   }
   if (isManager.manager?.verificationStatus === "APPROVED") {
-    throw new AppError(httpStatus9.CONFLICT, "manager already approved");
+    throw new AppError(httpStatus10.CONFLICT, "manager already approved");
   }
   if (isManager.manager?.verificationStatus !== "PENDING") {
     throw new AppError(
-      httpStatus9.CONFLICT,
+      httpStatus10.CONFLICT,
       `you can't update varification status from  '${isManager.manager?.verificationStatus.toLowerCase()}'.`
     );
   }
   if (verificationStatus === "REJECTED" && !rejectionReason) {
     throw new AppError(
-      httpStatus9.BAD_REQUEST,
+      httpStatus10.BAD_REQUEST,
       "for rejection must need to rejection reason"
     );
   }
-  const updateStatus2 = await prisma.managerProfile.update({
-    where: {
-      id: isManager.manager.id
+  let password = null;
+  let hashPass = null;
+  if (payload.verificationStatus === "APPROVED") {
+    password = generateRandomPass();
+    hashPass = await bcrypt2.hash(
+      password,
+      Number(env_default.bcrypt_salt_rounds)
+    );
+  }
+  const transactionRes = await prisma.$transaction(
+    async (tx) => {
+      await tx.user.update({
+        where: {
+          id: isManager.id
+        },
+        data: {
+          password: hashPass
+        }
+      });
+      const updateStatus2 = await tx.managerProfile.update({
+        where: {
+          id: isManager.manager?.id
+        },
+        data: {
+          verificationStatus,
+          rejectionReason: verificationStatus === "REJECTED" ? rejectionReason : null,
+          reviewdBy: reviewer.userId,
+          reviewdAt: /* @__PURE__ */ new Date()
+        },
+        include: {
+          region: true
+        }
+      });
+      const isApproved = updateStatus2.verificationStatus === "APPROVED";
+      const templateName = isApproved ? "manager-apply-approved.ejs" : "manager-apply-rejected.ejs";
+      const templatePath = path4.join(
+        process.cwd(),
+        `src/app/template/${templateName}`
+      );
+      const templateData = {
+        name: isManager.name,
+        email: isManager.email,
+        password,
+        reason: rejectionReason,
+        // only used in the rejected template,
+        appName: env_default.app_name,
+        loginUrl: `${env_default.frontend_url}/login`
+      };
+      const html = await ejs2.renderFile(templatePath, templateData);
+      await transporter.sendMail({
+        from: env_default.smtp_sender,
+        to: isManager.email,
+        subject: isApproved ? "Your Manager Application Has Been Approved" : "Your Manager Application Has Been Rejected",
+        html
+      });
+      return updateStatus2;
     },
-    data: {
-      verificationStatus,
-      rejectionReason: verificationStatus === "REJECTED" ? rejectionReason : null,
-      reviewdBy: reviewer.userId,
-      reviewdAt: /* @__PURE__ */ new Date()
-    },
-    include: {
-      region: true
+    {
+      maxWait: 1e4,
+      timeout: 15e3
     }
-  });
-  const isApproved = updateStatus2.verificationStatus === "APPROVED";
-  const templateName = isApproved ? "manager-apply-approved.ejs" : "manager-apply-rejected.ejs";
-  const templatePath = path4.join(
-    process.cwd(),
-    `src/app/template/${templateName}`
   );
-  const templateData = {
-    name: isManager.name,
-    reason: rejectionReason,
-    // only used in the rejected template,
-    appName: env_default.app_name
-  };
-  const html = await ejs2.renderFile(templatePath, templateData);
-  await transporter.sendMail({
-    from: env_default.smtp_sender,
-    to: isManager.email,
-    subject: isApproved ? "Your Manager Application Has Been Approved" : "Your Manager Application Has Been Rejected",
-    html
-  });
-  return updateStatus2;
+  return transactionRes;
 };
 var getAllManagers = async (query) => {
   const sort = query.sortBy ? query.sortBy : "createdAt";
@@ -2051,6 +2231,18 @@ var getAllManagers = async (query) => {
               mode: "insensitive"
             }
           }
+        },
+        {
+          phone: {
+            contains: query.search,
+            mode: "insensitive"
+          }
+        },
+        {
+          nid: {
+            contains: query.search,
+            mode: "insensitive"
+          }
         }
       ]
     });
@@ -2058,6 +2250,13 @@ var getAllManagers = async (query) => {
   if (query.verificationStatus) {
     andConditions.push({
       verificationStatus: query.verificationStatus
+    });
+  }
+  if (query.emailVerified) {
+    andConditions.push({
+      user: {
+        emailVerified: Boolean(query.emailVerified)
+      }
     });
   }
   const managers = await prisma.managerProfile.findMany({
@@ -2070,6 +2269,7 @@ var getAllManagers = async (query) => {
       [sort]: order
     },
     include: {
+      region: true,
       user: {
         omit: {
           password: true
@@ -2101,12 +2301,12 @@ var managerService = {
 };
 
 // src/app/module/manager/manager.controller.ts
-import httpStatus10 from "http-status";
+import httpStatus11 from "http-status";
 var applyManger = catchAsync(async (req, res) => {
   const body = req.body;
   const result = await managerService.applyManager(body);
   sendResponse(res, {
-    statusCode: httpStatus10.OK,
+    statusCode: httpStatus11.OK,
     success: true,
     message: `Manager apply and OTP send successfully`,
     data: null
@@ -2116,7 +2316,7 @@ var emailVerify2 = catchAsync(async (req, res) => {
   const body = req.body;
   const result = await managerService.emailVerify(body);
   sendResponse(res, {
-    statusCode: httpStatus10.OK,
+    statusCode: httpStatus11.OK,
     success: true,
     message: `manager email verified successfully`,
     data: result
@@ -2127,7 +2327,7 @@ var approveManger = catchAsync(async (req, res) => {
   const user = req.user;
   const result = await managerService.approveManager(body, user);
   sendResponse(res, {
-    statusCode: httpStatus10.OK,
+    statusCode: httpStatus11.OK,
     success: true,
     message: `Manager approved/rejected successfully`,
     data: result
@@ -2136,16 +2336,8 @@ var approveManger = catchAsync(async (req, res) => {
 var getAllMangers = catchAsync(async (req, res) => {
   const query = req.query;
   const { managers, meta } = await managerService.getAllManagers(query);
-  if (managers.length === 0) {
-    return sendResponse(res, {
-      statusCode: httpStatus10.NOT_FOUND,
-      success: false,
-      message: `mangers not found`,
-      data: null
-    });
-  }
   sendResponse(res, {
-    statusCode: httpStatus10.OK,
+    statusCode: httpStatus11.OK,
     success: true,
     message: `managers retrived successfully`,
     data: managers,
@@ -2218,7 +2410,7 @@ var managerRouter = route3;
 import { Router as Router4 } from "express";
 
 // src/app/module/category/category.service.ts
-import httpStatus11 from "http-status";
+import httpStatus12 from "http-status";
 var createCategory = async (payload, user) => {
   const isUser = await prisma.user.findUnique({
     where: {
@@ -2226,7 +2418,7 @@ var createCategory = async (payload, user) => {
     }
   });
   if (!isUser) {
-    throw new AppError(httpStatus11.NOT_FOUND, "user not found");
+    throw new AppError(httpStatus12.NOT_FOUND, "user not found");
   }
   const isCategory = await prisma.category.findUnique({
     where: {
@@ -2234,7 +2426,7 @@ var createCategory = async (payload, user) => {
     }
   });
   if (isCategory) {
-    throw new AppError(httpStatus11.CONFLICT, "category already exist");
+    throw new AppError(httpStatus12.CONFLICT, "category already exist");
   }
   const category = await prisma.category.create({
     data: {
@@ -2355,7 +2547,7 @@ var udpateCategory = async (payload, id) => {
     where: { id }
   });
   if (!isCategory) {
-    throw new AppError(httpStatus11.NOT_FOUND, "category not found");
+    throw new AppError(httpStatus12.NOT_FOUND, "category not found");
   }
   const update = await prisma.category.update({
     where: {
@@ -2367,21 +2559,49 @@ var udpateCategory = async (payload, id) => {
   });
   return update;
 };
+var statusUpdate3 = async (id) => {
+  const isCategory = await prisma.category.findUnique({
+    where: { id }
+  });
+  if (!isCategory) {
+    throw new AppError(httpStatus12.NOT_FOUND, "category not found");
+  }
+  if (isCategory.isActive === true) {
+    await prisma.category.update({
+      where: {
+        id
+      },
+      data: {
+        isActive: false
+      }
+    });
+  } else {
+    await prisma.category.update({
+      where: {
+        id
+      },
+      data: {
+        isActive: true
+      }
+    });
+  }
+};
 var categoryService = {
   createCategory,
   getAllCategory,
   getCategories,
-  udpateCategory
+  udpateCategory,
+  statusUpdate: statusUpdate3
 };
 
 // src/app/module/category/category.controller.ts
-import httpStatus12 from "http-status";
+import httpStatus13 from "http-status";
 var createCategory2 = catchAsync(async (req, res) => {
   const body = req.body;
   const user = req.user;
   const result = await categoryService.createCategory(body, user);
   sendResponse(res, {
-    statusCode: httpStatus12.CREATED,
+    statusCode: httpStatus13.CREATED,
     success: true,
     message: `category created successfully`,
     data: result
@@ -2390,11 +2610,8 @@ var createCategory2 = catchAsync(async (req, res) => {
 var getAllCategory2 = catchAsync(async (req, res) => {
   const query = req.query;
   const { category, meta } = await categoryService.getAllCategory(query);
-  if (category.length === 0) {
-    throw new AppError(httpStatus12.NOT_FOUND, "category not found");
-  }
   sendResponse(res, {
-    statusCode: httpStatus12.OK,
+    statusCode: httpStatus13.OK,
     success: true,
     message: `category retrive successfully`,
     data: category,
@@ -2404,11 +2621,8 @@ var getAllCategory2 = catchAsync(async (req, res) => {
 var getCategories2 = catchAsync(async (req, res) => {
   const query = req.query;
   const { category, meta } = await categoryService.getCategories(query);
-  if (category.length === 0) {
-    throw new AppError(httpStatus12.NOT_FOUND, "category not found");
-  }
   sendResponse(res, {
-    statusCode: httpStatus12.OK,
+    statusCode: httpStatus13.OK,
     success: true,
     message: `category retrive successfully`,
     data: category,
@@ -2420,9 +2634,19 @@ var udpateCategory2 = catchAsync(async (req, res) => {
   const body = req.body;
   const result = await categoryService.udpateCategory(body, id);
   sendResponse(res, {
-    statusCode: httpStatus12.OK,
+    statusCode: httpStatus13.OK,
     success: true,
     message: `category updated successfully`,
+    data: result
+  });
+});
+var statusUpdate4 = catchAsync(async (req, res) => {
+  const id = req.params.categoryId;
+  const result = await categoryService.statusUpdate(id);
+  sendResponse(res, {
+    statusCode: httpStatus13.OK,
+    success: true,
+    message: `category status updated successfully`,
     data: result
   });
 });
@@ -2430,7 +2654,8 @@ var categoryController = {
   createCategory: createCategory2,
   getAllCategory: getAllCategory2,
   getCategories: getCategories2,
-  udpateCategory: udpateCategory2
+  udpateCategory: udpateCategory2,
+  statusUpdate: statusUpdate4
 };
 
 // src/app/module/category/category.route.ts
@@ -2451,40 +2676,19 @@ route4.put(
   auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
   categoryController.udpateCategory
 );
-var categoryRotuer = route4;
+route4.patch(
+  "/:categoryId",
+  auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+  categoryController.statusUpdate
+);
+var categoryRouter = route4;
 
 // src/app/module/service/service.route.ts
 import { Router as Router5 } from "express";
 
 // src/app/module/service/service.service.ts
-import {
-  addMinutes,
-  endOfDay,
-  getDay,
-  isBefore,
-  isWithinInterval,
-  startOfDay
-} from "date-fns";
-import httpStatus13 from "http-status";
-
-// src/app/utils/utility.ts
-var parseTimeOnDate = (timeValue, baseDate) => {
-  const timeStr = typeof timeValue === "string" ? timeValue : timeValue.toISOString().substring(11, 16);
-  const [hours, minutes] = timeStr.split(":").map(Number);
-  const parsedDate = new Date(baseDate);
-  parsedDate.setHours(hours, minutes, 0, 0);
-  return parsedDate;
-};
-var formatDateToYYYYMMDD = (date) => {
-  if (!date) return void 0;
-  return date.toISOString().substring(0, 10);
-};
-var formatTimeToHHmm = (date) => {
-  if (!date) return void 0;
-  return date.toISOString().substring(11, 16);
-};
-
-// src/app/module/service/service.service.ts
+import { addMinutes, isBefore } from "date-fns";
+import httpStatus14 from "http-status";
 import path5 from "path";
 import ejs3 from "ejs";
 
@@ -2572,30 +2776,7 @@ var getBkashIdToken = async () => {
 };
 
 // src/app/module/service/service.service.ts
-var toDateKey = (date) => {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
 var timeToDate = (time) => time ? /* @__PURE__ */ new Date(`1970-01-01T${time}:00.000Z`) : void 0;
-var formatServiceDates = (service) => ({
-  ...service,
-  servicingDate: formatDateToYYYYMMDD(service.servicingDate),
-  preferredStartTime: formatTimeToHHmm(service.preferredStartTime),
-  preferredEndTime: formatTimeToHHmm(service.preferredEndTime)
-});
-var formatTechnicianResponse = (technician) => ({
-  id: technician.id,
-  userId: technician.userId,
-  rating: technician.rating,
-  jobsCompleted: technician.jobsCompleted,
-  user: technician.user,
-  phone: technician.phone,
-  skills: technician.skills,
-  regions: technician.regions
-});
 var createService = async (payload, user) => {
   const isCustomer = await prisma.user.findUnique({
     where: {
@@ -2611,7 +2792,7 @@ var createService = async (payload, user) => {
     }
   });
   if (!isCustomer?.customer?.id) {
-    throw new AppError(httpStatus13.NOT_FOUND, "customer not found");
+    throw new AppError(httpStatus14.NOT_FOUND, "customer not found");
   }
   const category = await prisma.category.findUnique({
     where: {
@@ -2619,7 +2800,7 @@ var createService = async (payload, user) => {
     }
   });
   if (!category) {
-    throw new AppError(httpStatus13.NOT_FOUND, "this category not found");
+    throw new AppError(httpStatus14.NOT_FOUND, "this category not found");
   }
   const now = /* @__PURE__ */ new Date();
   console.log({
@@ -2628,12 +2809,14 @@ var createService = async (payload, user) => {
   });
   if (isBefore(payload.servicingDate, now)) {
     throw new AppError(
-      httpStatus13.BAD_REQUEST,
+      httpStatus14.BAD_REQUEST,
       "serviceing date can not be before current date"
     );
   }
+  const preferredStartTime = timeToDate(payload.preferredStartTime);
   const service = await prisma.service.create({
     data: {
+      title: payload.title,
       description: payload.description,
       servicingDate: payload.servicingDate,
       address: payload.address,
@@ -2641,15 +2824,104 @@ var createService = async (payload, user) => {
       categoryId: payload.categoryId,
       priority: payload.priority,
       regionId: payload.regionId,
-      preferredStartTime: timeToDate(payload.preferredStartTime),
-      preferredEndTime: timeToDate(payload.preferredEndTime),
-      customerId: isCustomer.customer?.id
+      preferredStartTime,
+      preferredEndTime: preferredStartTime ? addMinutes(preferredStartTime, category.duration) : void 0,
+      customerId: isCustomer.customer?.id,
+      workOrders: {
+        create: {
+          servicingDate: payload.servicingDate,
+          customerId: isCustomer.customer?.id,
+          status: "SCHEDULED",
+          regionId: payload.regionId
+        }
+      }
+    },
+    include: {
+      customer: true,
+      workOrders: true
+    }
+  });
+  return {
+    ...service,
+    servicingDate: formatDateToYYYYMMDD(service.servicingDate),
+    preferredStartTime: formatTimeToHHmm(service.preferredStartTime),
+    preferredEndTime: formatTimeToHHmm(service.preferredEndTime)
+  };
+};
+var updateService = async (id, payload, user) => {
+  const isService = await prisma.service.findUnique({
+    where: {
+      id,
+      customer: {
+        userId: user.userId
+      }
+    }
+  });
+  if (!isService) {
+    throw new AppError(httpStatus14.NOT_FOUND, "service not found");
+  }
+  if (isService.status !== "PENDING") {
+    throw new AppError(httpStatus14.BAD_REQUEST, "service cannot be updated");
+  }
+  let duration = isService.duration;
+  if (payload.categoryId) {
+    const category = await prisma.category.findUnique({
+      where: {
+        id: payload.categoryId
+      }
+    });
+    if (!category) {
+      throw new AppError(httpStatus14.NOT_FOUND, "this category not found");
+    }
+    duration = category.duration;
+  }
+  if (payload.regionId) {
+    const region = await prisma.region.findUnique({
+      where: {
+        id: payload.regionId
+      }
+    });
+    if (!region) {
+      throw new AppError(httpStatus14.NOT_FOUND, "this region not found");
+    }
+  }
+  const now = /* @__PURE__ */ new Date();
+  console.log({
+    now,
+    serviceing: payload.servicingDate
+  });
+  if (payload.servicingDate && isBefore(payload.servicingDate, now)) {
+    throw new AppError(
+      httpStatus14.BAD_REQUEST,
+      "serviceing date can not be before current date"
+    );
+  }
+  const preferredStartTime = timeToDate(payload.preferredStartTime) ?? isService.preferredStartTime;
+  const updatedService = await prisma.service.update({
+    where: {
+      id
+    },
+    data: {
+      description: payload.description,
+      servicingDate: payload.servicingDate,
+      address: payload.address,
+      categoryId: payload.categoryId,
+      duration,
+      priority: payload.priority,
+      regionId: payload.regionId,
+      preferredStartTime,
+      preferredEndTime: preferredStartTime ? addMinutes(preferredStartTime, duration ?? 60) : void 0
     },
     include: {
       customer: true
     }
   });
-  return formatServiceDates(service);
+  return {
+    ...updatedService,
+    servicingDate: formatDateToYYYYMMDD(updatedService.servicingDate),
+    preferredStartTime: formatTimeToHHmm(updatedService.preferredStartTime),
+    preferredEndTime: formatTimeToHHmm(updatedService.preferredEndTime)
+  };
 };
 var getMyServices = async (query, user) => {
   const sort = query.sortBy ? query.sortBy : "createdAt";
@@ -2662,11 +2934,14 @@ var getMyServices = async (query, user) => {
     }
   });
   if (!customer) {
-    throw new AppError(httpStatus13.NOT_FOUND, "customer not found");
+    throw new AppError(httpStatus14.NOT_FOUND, "customer not found");
   }
   const andCondition = [
     {
       customerId: customer.id
+    },
+    {
+      isDeleted: false
     }
   ];
   if (query.status) {
@@ -2688,8 +2963,42 @@ var getMyServices = async (query, user) => {
     orderBy: {
       [sort]: order
     },
-    include: {
-      workOrders: true
+    select: {
+      id: true,
+      title: true,
+      address: true,
+      description: true,
+      preferredEndTime: true,
+      preferredStartTime: true,
+      priority: true,
+      rejectionReason: true,
+      servicingDate: true,
+      status: true,
+      workOrders: {
+        select: {
+          id: true,
+          technician: {
+            select: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  profileImg: true,
+                  emailVerified: true,
+                  status: true
+                }
+              }
+            }
+          }
+        }
+      },
+      category: {
+        select: {
+          name: true,
+          id: true
+        }
+      }
     }
   });
   const total = await prisma.service.count({
@@ -2704,7 +3013,12 @@ var getMyServices = async (query, user) => {
     totalPages: Math.ceil(total / limit)
   };
   return {
-    services: services.map(formatServiceDates),
+    data: services.map((s) => ({
+      ...s,
+      servicingDate: formatDateToYYYYMMDD(s.servicingDate),
+      preferredStartTime: formatTimeToHHmm(s.preferredStartTime),
+      preferredEndTime: formatTimeToHHmm(s.preferredEndTime)
+    })),
     meta
   };
 };
@@ -2719,7 +3033,7 @@ var getALLServices = async (query, user) => {
     }
   });
   if (!isUser) {
-    throw new AppError(httpStatus13.NOT_FOUND, "user not found");
+    throw new AppError(httpStatus14.NOT_FOUND, "user not found");
   }
   const andCondition = [];
   if (query.status) {
@@ -2742,6 +3056,7 @@ var getALLServices = async (query, user) => {
       [sort]: order
     },
     include: {
+      category: true,
       workOrders: true
     }
   });
@@ -2757,7 +3072,89 @@ var getALLServices = async (query, user) => {
     totalPages: Math.ceil(total / limit)
   };
   return {
-    services: services.map(formatServiceDates),
+    data: services.map((s) => ({
+      ...s,
+      servicingDate: formatDateToYYYYMMDD(s.servicingDate),
+      preferredStartTime: formatTimeToHHmm(s.preferredStartTime),
+      preferredEndTime: formatTimeToHHmm(s.preferredEndTime)
+    })),
+    meta
+  };
+};
+var getMyRegionServices = async (query, user) => {
+  const sort = query.sortBy ? query.sortBy : "createdAt";
+  const order = query.sortOrder ? query.sortOrder : "desc";
+  const page = Number(query.page || 1);
+  const limit = Number(query.limit || 9);
+  const isManager = await prisma.managerProfile.findUnique({
+    where: {
+      userId: user.userId
+    },
+    include: {
+      region: true
+    }
+  });
+  if (!isManager) {
+    throw new AppError(httpStatus14.NOT_FOUND, "manager not found");
+  }
+  const managerRegionIds = isManager.region.map((r) => r.id);
+  const allowStatus = ["APPROVED", "ASSIGNED", "COMPLETED", "IN_PROGRESS", "PENDING"];
+  const andCondition = [
+    { regionId: { in: managerRegionIds } },
+    { status: { in: allowStatus } },
+    { isDeleted: false }
+  ];
+  if (query.status) {
+    andCondition.push({
+      status: query.status
+    });
+  }
+  if (query.priority) {
+    andCondition.push({
+      priority: query.priority
+    });
+  }
+  const services = await prisma.service.findMany({
+    where: {
+      AND: andCondition
+    },
+    take: limit,
+    skip: (page - 1) * limit,
+    orderBy: {
+      [sort]: order
+    },
+    include: {
+      customer: {
+        select: {
+          user: {
+            omit: {
+              password: true
+            }
+          }
+        }
+      },
+      category: true,
+      workOrders: true
+    }
+  });
+  const total = await prisma.service.count({
+    where: {
+      AND: andCondition
+    }
+  });
+  const meta = {
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit)
+  };
+  return {
+    data: services.map((s) => ({
+      ...s,
+      servicingDate: formatDateToYYYYMMDD(s.servicingDate),
+      preferredStartTime: formatTimeToHHmm(s.preferredStartTime),
+      preferredEndTime: formatTimeToHHmm(s.preferredEndTime)
+    })),
     meta
   };
 };
@@ -2772,124 +3169,73 @@ var getSingleService = async (serviceId, user) => {
     }
   });
   if (!isUser) {
-    throw new AppError(httpStatus13.NOT_FOUND, "user not found");
+    throw new AppError(httpStatus14.NOT_FOUND, "user not found");
   }
   const isService = await prisma.service.findUnique({
     where: {
       id: serviceId
     },
     include: {
-      workOrders: true
+      region: true,
+      customer: {
+        select: {
+          user: {
+            omit: {
+              password: true
+            }
+          }
+        }
+      },
+      workOrders: {
+        include: {
+          payment: {
+            omit: {
+              getwayResponse: true
+            }
+          },
+          manager: {
+            include: {
+              user: {
+                omit: {
+                  password: true
+                }
+              }
+            }
+          },
+          feedback: true,
+          attachment: true,
+          schedule: true,
+          technician: {
+            include: {
+              user: {
+                omit: {
+                  password: true
+                }
+              }
+            }
+          },
+          serviceReport: true
+        }
+      },
+      category: true
     }
   });
   if (!isService) {
-    throw new AppError(httpStatus13.NOT_FOUND, "service not found");
+    throw new AppError(httpStatus14.NOT_FOUND, "service not found");
   }
   if (user.role === "CUSTOMER") {
     if (isService.customerId !== isUser.customer?.id) {
-      throw new AppError(httpStatus13.UNAUTHORIZED, "unauthorized access");
+      throw new AppError(httpStatus14.UNAUTHORIZED, "unauthorized access");
     }
   }
-  return formatServiceDates(isService);
+  return {
+    ...isService,
+    servicingDate: formatDateToYYYYMMDD(isService.servicingDate),
+    preferredStartTime: formatTimeToHHmm(isService.preferredStartTime),
+    preferredEndTime: formatTimeToHHmm(isService.preferredEndTime)
+  };
 };
-var reviewService = async (payload, reviewer) => {
-  const { serviceId, status, rejectionReason } = payload;
-  const isManager = await prisma.managerProfile.findUnique({
-    where: {
-      userId: reviewer.userId
-    },
-    include: {
-      region: {
-        select: {
-          id: true,
-          area: true
-        }
-      }
-    }
-  });
-  if (!isManager) {
-    throw new AppError(httpStatus13.NOT_FOUND, "Manager not found");
-  }
-  if (isManager.isDeleted) {
-    throw new AppError(httpStatus13.BAD_REQUEST, "Manager deleted");
-  }
-  if (isManager.verificationStatus !== ManagerVerificationStatus.APPROVED) {
-    throw new AppError(httpStatus13.BAD_REQUEST, "manager not varified");
-  }
-  console.log("payload ", payload);
-  const isService = await prisma.service.findUnique({
-    where: {
-      id: serviceId
-    }
-  });
-  if (!isService) {
-    throw new AppError(httpStatus13.NOT_FOUND, "service not found");
-  }
-  const canReviewAnyService = isManager.region.some(
-    (region) => region.area === "All"
-  );
-  const canReviewService = canReviewAnyService || isManager.region.some((region) => region.id === isService.regionId);
-  if (!canReviewService) {
-    throw new AppError(
-      httpStatus13.FORBIDDEN,
-      "You can only review services in your assigned regions"
-    );
-  }
-  if (isService.status !== "PENDING") {
-    throw new AppError(
-      httpStatus13.CONFLICT,
-      `you can't update varification status from  '${isService.status.toString()}'.`
-    );
-  }
-  if (status === "REJECTED" && !rejectionReason) {
-    throw new AppError(
-      httpStatus13.BAD_REQUEST,
-      "for rejection must need to rejection reason"
-    );
-  }
-  const transactionResult = await prisma.$transaction(
-    async (tx) => {
-      await tx.service.update({
-        where: {
-          id: isService.id
-        },
-        data: {
-          status,
-          rejectionReason: status === "REJECTED" ? rejectionReason : null,
-          reviewedBy: reviewer.userId,
-          reviewedAt: /* @__PURE__ */ new Date()
-        }
-      });
-      if (status === "APPROVED") {
-        await tx.workOrder.create({
-          data: {
-            servicingDate: isService.servicingDate,
-            customerId: isService.customerId,
-            serviceId: isService.id,
-            status: "SCHEDULED",
-            regionId: isService.regionId,
-            managerId: isManager.id
-          }
-        });
-      }
-      const service = await tx.service.findUnique({
-        where: {
-          id: isService.id
-        },
-        include: {
-          workOrders: true
-        }
-      });
-      return service;
-    },
-    {
-      maxWait: 1e4,
-      timeout: 15e3
-    }
-  );
-  return transactionResult ? formatServiceDates(transactionResult) : transactionResult;
-};
-var getEligibleTechnicians = async (workOrderId) => {
+var getEligibleTechnicians = async (workOrderId, user) => {
   const workOrder = await prisma.workOrder.findUnique({
     where: {
       id: workOrderId
@@ -2904,67 +3250,111 @@ var getEligibleTechnicians = async (workOrderId) => {
     }
   });
   if (!workOrder) {
-    throw new AppError(httpStatus13.NOT_FOUND, "Work order not found");
+    throw new AppError(httpStatus14.NOT_FOUND, "Work order not found");
+  }
+  const isManager = await prisma.managerProfile.findUnique({
+    where: {
+      userId: user.userId
+    },
+    select: {
+      region: {
+        select: {
+          id: true,
+          area: true
+        }
+      }
+    }
+  });
+  if (!isManager) {
+    throw new AppError(httpStatus14.NOT_FOUND, "Manager not found");
+  }
+  if (isManager.region[0].area !== "All") {
+    const managesWorkOrderRegion = isManager.region.some(
+      (region) => region.id === workOrder.regionId
+    );
+    if (!managesWorkOrderRegion) {
+      throw new AppError(
+        httpStatus14.FORBIDDEN,
+        "You are not authorized to access work orders in this region"
+      );
+    }
   }
   const serviceDate = new Date(workOrder.servicingDate);
-  const startTime = workOrder.service.preferredStartTime ? parseTimeOnDate(workOrder.service.preferredStartTime, serviceDate) : new Date(serviceDate);
+  const startTime = workOrder.service.preferredStartTime ? parseTimeOnDate(workOrder.service.preferredStartTime, serviceDate) : parseTimeOnDate("09:00", serviceDate);
   const endTime = workOrder.service.preferredEndTime ? parseTimeOnDate(workOrder.service.preferredEndTime, serviceDate) : addMinutes(startTime, workOrder.service.category.duration ?? 60);
-  const startOfService = new Date(serviceDate);
-  startOfService.setHours(9, 0, 0, 0);
+  if (endTime.getTime() <= startTime.getTime()) {
+    throw new AppError(httpStatus14.BAD_REQUEST, "Invalid service time window");
+  }
   const candidates = await prisma.technicianProfile.findMany({
     where: {
       status: "AVAILABLE",
       isDeleted: false,
       isProfileCompleted: true,
+      user: { status: "ACTIVE", isDeleted: false },
       regions: {
-        some: { id: workOrder.regionId }
+        some: { id: workOrder.regionId, isActive: true }
       },
       skills: {
-        some: { categoryId: workOrder.service.categoryId }
+        some: { categoryId: workOrder.service.categoryId, isActive: true }
       }
     },
-    select: {
-      id: true,
-      userId: true,
-      rating: true,
-      jobsCompleted: true,
-      user: { select: { name: true, email: true } },
-      phone: true,
-      skills: {
-        where: { categoryId: workOrder.service.categoryId },
-        select: { id: true, name: true }
+    include: {
+      user: {
+        omit: {
+          password: true
+        }
+      },
+      availability: {
+        omit: {
+          technicianId: true,
+          createdAt: true,
+          updatedAt: true,
+          isActive: true
+        }
       },
       regions: {
-        where: { id: workOrder.regionId },
-        select: { id: true, area: true }
-      },
-      availability: { where: { isActive: true } }
+        select: {
+          id: true,
+          area: true
+        }
+      }
     }
   });
-  if (candidates.length === 0) {
-    throw new AppError(httpStatus13.NOT_FOUND, "No eligible technicians found");
-  }
+  console.log("eligible technician==========", candidates);
+  if (candidates.length === 0) return [];
+  const { start: dayStart, end: dayEnd } = utcDayRange(serviceDate);
   const techIds = candidates.map((t) => t.id);
   const scheduleConflicts = await prisma.schedule.findMany({
     where: {
       technicianId: { in: techIds },
+      workOrderId: { not: workOrderId },
+      isdeleted: false,
       servicingDate: {
-        gte: startOfDay(serviceDate),
-        lte: endOfDay(serviceDate)
+        gte: dayStart,
+        lte: dayEnd
       },
       status: { in: ["SCHEDULED", "CONFIRMED"] },
-      OR: [{ startTime: { lt: endTime }, endTime: { gt: startTime } }]
+      AND: [{ startTime: { lt: endTime } }, { endTime: { gt: startTime } }]
     },
     select: { technicianId: true }
   });
   const conflictedTechIds = new Set(
     scheduleConflicts.map((c) => c.technicianId)
   );
+  const serviceDateKey = toDateKeyUTC(serviceDate);
+  const serviceDOW = getUTCDayOfWeek(serviceDate);
   const eligible = candidates.filter((tech) => {
     if (conflictedTechIds.has(tech.id)) return false;
-    const isBlocked = tech.availability.some(
-      (slot) => slot.type === "BLOCKED" && slot.date && toDateKey(slot.date) === toDateKey(serviceDate)
-    );
+    const isBlocked = tech.availability.some((slot) => {
+      if (slot.type !== "BLOCKED") return false;
+      const dateHit = slot.date ? toDateKeyUTC(slot.date) === serviceDateKey : false;
+      const dowHit = slot.dayOfWeek != null ? slot.dayOfWeek === serviceDOW : false;
+      if (!dateHit && !dowHit) return false;
+      if (!slot.startTime || !slot.endTime) return true;
+      const blockStart = parseTimeOnDate(slot.startTime, serviceDate);
+      const blockEnd = parseTimeOnDate(slot.endTime, serviceDate);
+      return blockStart.getTime() < endTime.getTime() && blockEnd.getTime() > startTime.getTime();
+    });
     if (isBlocked) return false;
     const hasAvailability = tech.availability.some((slot) => {
       if (slot.type === "BLOCKED") return false;
@@ -2973,45 +3363,27 @@ var getEligibleTechnicians = async (workOrderId) => {
       if (!slotStart || !slotEnd) return false;
       let coversDate = false;
       if (slot.type === "RECURRING")
-        coversDate = slot.dayOfWeek === getDay(serviceDate);
+        coversDate = slot.dayOfWeek === serviceDOW;
       else if (slot.type === "ONE_OFF" && slot.date)
-        coversDate = toDateKey(slot.date) === toDateKey(serviceDate);
+        coversDate = toDateKeyUTC(slot.date) === serviceDateKey;
       if (!coversDate) return false;
-      return isWithinInterval(startTime, { start: slotStart, end: slotEnd }) && isWithinInterval(endTime, { start: slotStart, end: slotEnd });
+      return slotStart.getTime() <= startTime.getTime() && endTime.getTime() <= slotEnd.getTime();
     });
     return hasAvailability;
   });
   eligible.sort(
-    (a, b) => (b.rating ?? 0) - (a.rating ?? 0) || a.jobsCompleted - b.jobsCompleted
+    (a, b) => (b.rating ?? 0) - (a.rating ?? 0) || b.jobsCompleted - a.jobsCompleted
   );
-  return eligible.map(formatTechnicianResponse);
+  return {
+    service: workOrder.service,
+    eligibleTech: eligible
+  };
 };
 var assignTechnician = async (payload, user) => {
-  const isManager = await prisma.managerProfile.findUnique({
-    where: {
-      userId: user.userId
-    }
-  });
-  if (!isManager) {
-    throw new AppError(httpStatus13.NOT_FOUND, "Manager not found");
-  }
-  const isTechnician = await prisma.technicianProfile.findUnique({
-    where: {
-      id: payload.technicianId
-    },
-    include: {
-      user: true
-    }
-  });
-  if (!isTechnician) {
-    throw new AppError(httpStatus13.NOT_FOUND, "technician not found");
-  }
-  if (isTechnician.status !== "AVAILABLE") {
-    throw new AppError(httpStatus13.CONFLICT, "technician no longer available");
-  }
+  const { amount, status, technicianId, workOrderId, rejectionReason } = payload;
   const isWorkOrder = await prisma.workOrder.findUnique({
     where: {
-      id: payload.workOrderId
+      id: workOrderId
     },
     include: {
       service: {
@@ -3023,59 +3395,110 @@ var assignTechnician = async (payload, user) => {
         select: {
           user: true
         }
-      }
+      },
+      region: true
     }
   });
   if (!isWorkOrder) {
-    throw new AppError(httpStatus13.NOT_FOUND, "order not found");
+    throw new AppError(httpStatus14.NOT_FOUND, "order not found");
+  }
+  const isManager = await prisma.managerProfile.findUnique({
+    where: {
+      userId: user.userId
+    },
+    include: {
+      region: true
+    }
+  });
+  if (!isManager) {
+    throw new AppError(httpStatus14.NOT_FOUND, "Manager not found");
+  }
+  if (isManager.region[0].area !== "All") {
+    const managesWorkOrderRegion = isManager.region.some(
+      (region) => region.id === isWorkOrder.regionId
+    );
+    if (!managesWorkOrderRegion) {
+      throw new AppError(
+        httpStatus14.FORBIDDEN,
+        "You are not authorized to access work orders in this region"
+      );
+    }
+  }
+  if (status === "REJECTED") {
+    const service = await prisma.service.update({
+      where: {
+        id: isWorkOrder.service.id
+      },
+      data: {
+        rejectionReason,
+        assignedAt: /* @__PURE__ */ new Date(),
+        status,
+        reviewedAt: /* @__PURE__ */ new Date(),
+        reviewedBy: user.userId
+      }
+    });
+    return service;
+  }
+  const isTechnician = await prisma.technicianProfile.findUnique({
+    where: {
+      id: technicianId
+    },
+    include: {
+      user: true
+    }
+  });
+  if (!isTechnician) {
+    throw new AppError(httpStatus14.NOT_FOUND, "technician not found");
+  }
+  if (isTechnician.status !== "AVAILABLE") {
+    throw new AppError(httpStatus14.CONFLICT, "technician no longer available");
   }
   if (isWorkOrder.status !== "SCHEDULED") {
     throw new AppError(
-      httpStatus13.BAD_REQUEST,
+      httpStatus14.BAD_REQUEST,
       `Status need to must be scheduled`
     );
   }
-  if (isWorkOrder.service.status !== "APPROVED") {
-    throw new AppError(httpStatus13.BAD_REQUEST, "service status not approved");
-  }
-  if (isWorkOrder.managerId !== isManager.id) {
-    throw new AppError(
-      httpStatus13.UNAUTHORIZED,
-      "you are not eligible to assign technician"
-    );
+  if (isWorkOrder.service.status !== "PENDING") {
+    throw new AppError(httpStatus14.BAD_REQUEST, "service status not approved");
   }
   const serviceDate = new Date(isWorkOrder.servicingDate);
-  const startTime = isWorkOrder.service.preferredStartTime ? parseTimeOnDate(isWorkOrder.service.preferredStartTime, serviceDate) : new Date(serviceDate);
+  const startTime = isWorkOrder.service.preferredStartTime ? parseTimeOnDate(isWorkOrder.service.preferredStartTime, serviceDate) : parseTimeOnDate("09:00", serviceDate);
   const endTime = isWorkOrder.service.preferredEndTime ? parseTimeOnDate(isWorkOrder.service.preferredEndTime, serviceDate) : addMinutes(startTime, isWorkOrder.service.category.duration ?? 60);
   const transactionResult = await prisma.$transaction(
     async (tx) => {
       const tech = await tx.technicianProfile.findUnique({
         where: {
-          id: payload.technicianId
+          id: technicianId
         }
       });
       if (!tech) {
         throw new AppError(
-          httpStatus13.CONFLICT,
+          httpStatus14.CONFLICT,
           "technician no longer available"
         );
       }
+      const { start: dayStart, end: dayEnd } = utcDayRange(
+        isWorkOrder.servicingDate
+      );
       const conflict = await tx.schedule.findFirst({
         where: {
-          technicianId: payload.technicianId,
+          technicianId,
+          workOrderId: { not: workOrderId },
+          isdeleted: false,
           servicingDate: {
-            gte: startOfDay(isWorkOrder.servicingDate),
-            lte: endOfDay(isWorkOrder.servicingDate)
+            gte: dayStart,
+            lte: dayEnd
           },
           status: {
             in: ["SCHEDULED", "CONFIRMED"]
           },
-          OR: [{ startTime: { lt: endTime }, endTime: { gt: startTime } }]
+          AND: [{ startTime: { lt: endTime } }, { endTime: { gt: startTime } }]
         }
       });
       if (conflict) {
         throw new AppError(
-          httpStatus13.CONFLICT,
+          httpStatus14.CONFLICT,
           "Technician has conflicting schedule"
         );
       }
@@ -3084,8 +3507,10 @@ var assignTechnician = async (payload, user) => {
           id: isWorkOrder.service.id
         },
         data: {
-          status: "ASSIGNED",
-          assignedAt: /* @__PURE__ */ new Date()
+          assignedAt: /* @__PURE__ */ new Date(),
+          status,
+          reviewedAt: /* @__PURE__ */ new Date(),
+          reviewedBy: user.userId
         }
       });
       const workOrder = await tx.workOrder.update({
@@ -3094,7 +3519,8 @@ var assignTechnician = async (payload, user) => {
         },
         data: {
           status: "EN_ROUTE",
-          technicianId: payload.technicianId
+          technicianId,
+          managerId: isManager.id
         },
         include: {
           service: {
@@ -3106,7 +3532,11 @@ var assignTechnician = async (payload, user) => {
           customer: true,
           technician: {
             include: {
-              user: true
+              user: {
+                omit: {
+                  password: true
+                }
+              }
             }
           }
         }
@@ -3124,17 +3554,17 @@ var assignTechnician = async (payload, user) => {
       );
       await tx.schedule.create({
         data: {
-          workOrderId: payload.workOrderId,
-          technicianId: payload.technicianId,
+          workOrderId,
+          technicianId,
           servicingDate: workOrder.servicingDate,
           startTime: scheduleStartTime,
           endTime: scheduleEndTime,
-          status: "CONFIRMED"
+          status: ScheduleStatus.CONFIRMED
         }
       });
       const id_token = await getBkashIdToken();
       if (!id_token) {
-        throw new AppError(httpStatus13.BAD_GATEWAY, "bkash id token faild");
+        throw new AppError(httpStatus14.BAD_GATEWAY, "bkash id token faild");
       }
       const createPayment2 = await fetch(
         `${env_default.bkash_base_url}/tokenized/checkout/create`,
@@ -3225,56 +3655,111 @@ var assignTechnician = async (payload, user) => {
   });
   return transactionResult;
 };
+var softDelete = async (id, user) => {
+  const isService = await prisma.service.findUnique({
+    where: {
+      id,
+      customer: {
+        userId: user.userId
+      }
+    }
+  });
+  if (!isService) {
+    throw new AppError(httpStatus14.NOT_FOUND, "service not found");
+  }
+  if (isService.isDeleted) {
+    throw new AppError(httpStatus14.BAD_REQUEST, "Already Deleted");
+  }
+  if (isService.status === "APPROVED" || isService.status === "IN_PROGRESS" || isService.status === "ASSIGNED") {
+    throw new AppError(httpStatus14.BAD_REQUEST, "service cannot be deleted");
+  }
+  await prisma.service.update({
+    where: {
+      id
+    },
+    data: {
+      isDeleted: true,
+      isDeletedAt: /* @__PURE__ */ new Date(),
+      status: "CANCELLED"
+    },
+    include: {
+      customer: true
+    }
+  });
+};
 var serviceService = {
   createService,
   getMyServices,
   getALLServices,
   getSingleService,
-  reviewService,
   getEligibleTechnicians,
-  assignTechnician
+  assignTechnician,
+  updateService,
+  softDelete,
+  getMyRegionServices
 };
 
 // src/app/module/service/service.controller.ts
-import httpStatus14 from "http-status";
+import httpStatus15 from "http-status";
 var createService2 = catchAsync(async (req, res) => {
   const body = req.body;
   const user = req.user;
   const result = await serviceService.createService(body, user);
   sendResponse(res, {
-    statusCode: httpStatus14.OK,
+    statusCode: httpStatus15.OK,
     success: true,
     message: `service request retrived successfully`,
+    data: result
+  });
+});
+var updateService2 = catchAsync(async (req, res) => {
+  const body = req.body;
+  const user = req.user;
+  const serviceId = req.params.serviceId;
+  const result = await serviceService.updateService(serviceId, body, user);
+  sendResponse(res, {
+    statusCode: httpStatus15.OK,
+    success: true,
+    message: "service updated successfully",
     data: result
   });
 });
 var getMyServices2 = catchAsync(async (req, res) => {
   const user = req.user;
   const query = req.query;
-  const { services, meta } = await serviceService.getMyServices(query, user);
-  if (services.length === 0) {
-    throw new AppError(httpStatus14.NOT_FOUND, "schedule not found");
-  }
+  const { data, meta } = await serviceService.getMyServices(query, user);
   sendResponse(res, {
-    statusCode: httpStatus14.CREATED,
+    statusCode: httpStatus15.CREATED,
     success: true,
     message: "service retrive successfully",
-    data: services,
+    data,
     meta
   });
 });
 var getAllServices = catchAsync(async (req, res) => {
   const user = req.user;
   const query = req.query;
-  const { services, meta } = await serviceService.getALLServices(query, user);
-  if (services.length === 0) {
-    throw new AppError(httpStatus14.NOT_FOUND, "service not found");
-  }
+  const { data, meta } = await serviceService.getALLServices(query, user);
   sendResponse(res, {
-    statusCode: httpStatus14.OK,
+    statusCode: httpStatus15.OK,
     success: true,
     message: "service retrive successfully",
-    data: services,
+    data,
+    meta
+  });
+});
+var getMyRegionServices2 = catchAsync(async (req, res) => {
+  const user = req.user;
+  const query = req.query;
+  const { data, meta } = await serviceService.getMyRegionServices(
+    query,
+    user
+  );
+  sendResponse(res, {
+    statusCode: httpStatus15.OK,
+    success: true,
+    message: "service retrive successfully",
+    data,
     meta
   });
 });
@@ -3283,20 +3768,9 @@ var getSingleService2 = catchAsync(async (req, res) => {
   const id = req.params.serviceId;
   const result = await serviceService.getSingleService(id, user);
   sendResponse(res, {
-    statusCode: httpStatus14.OK,
+    statusCode: httpStatus15.OK,
     success: true,
     message: "service retrive successfully",
-    data: result
-  });
-});
-var reviewService2 = catchAsync(async (req, res) => {
-  const user = req.user;
-  const body = req.body;
-  const result = await serviceService.reviewService(body, user);
-  sendResponse(res, {
-    statusCode: httpStatus14.OK,
-    success: true,
-    message: "service reviewed successfully",
     data: result
   });
 });
@@ -3304,12 +3778,9 @@ var getEligibleTechnicians2 = catchAsync(
   async (req, res) => {
     const user = req.user;
     const id = req.params.workOrderId;
-    const result = await serviceService.getEligibleTechnicians(id);
-    if (result.length === 0) {
-      throw new AppError(httpStatus14.NOT_FOUND, "technician not found");
-    }
+    const result = await serviceService.getEligibleTechnicians(id, user);
     sendResponse(res, {
-      statusCode: httpStatus14.OK,
+      statusCode: httpStatus15.OK,
       success: true,
       message: "eligible technician find successfully",
       data: result
@@ -3321,10 +3792,21 @@ var assignTechnician2 = catchAsync(async (req, res) => {
   const body = req.body;
   const result = await serviceService.assignTechnician(body, user);
   sendResponse(res, {
-    statusCode: httpStatus14.OK,
+    statusCode: httpStatus15.OK,
     success: true,
-    message: "technician assign successfully",
+    message: body.status === "REJECTED" ? "Service rejected successfully" : "Technician assigned successfully",
     data: result
+  });
+});
+var softDelete2 = catchAsync(async (req, res) => {
+  const user = req.user;
+  const serviceId = req.params.serviceId;
+  await serviceService.softDelete(serviceId, user);
+  sendResponse(res, {
+    statusCode: httpStatus15.OK,
+    success: true,
+    message: "service deleted successfully",
+    data: null
   });
 });
 var serviceController = {
@@ -3332,15 +3814,18 @@ var serviceController = {
   getMyServices: getMyServices2,
   getAllServices,
   getSingleService: getSingleService2,
-  reviewService: reviewService2,
   getEligibleTechnicians: getEligibleTechnicians2,
-  assignTechnician: assignTechnician2
+  assignTechnician: assignTechnician2,
+  updateService: updateService2,
+  softDelete: softDelete2,
+  getMyRegionServices: getMyRegionServices2
 };
 
 // src/app/module/service/service.validation.ts
 import { z as z3 } from "zod";
 var timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 var serviceZodSchema = z3.object({
+  title: z3.string().min(5),
   description: z3.string().min(5),
   servicingDate: z3.coerce.date(),
   address: z3.object({}).passthrough(),
@@ -3360,6 +3845,17 @@ var assignTechnicianZodSchema = z3.object({
   workOrderId: z3.uuid(),
   technicianId: z3.uuid()
 });
+var serviceUpdateZodSchema = z3.object({
+  title: z3.string().min(5).optional(),
+  description: z3.string().min(5).optional(),
+  servicingDate: z3.coerce.date().optional(),
+  address: z3.object({}).passthrough().optional(),
+  categoryId: z3.uuid().optional(),
+  priority: z3.string().optional(),
+  regionId: z3.uuid().optional(),
+  preferredStartTime: z3.string().regex(timeRegex, "preferredStartTime must be HH:mm format").optional(),
+  preferredEndTime: z3.string().regex(timeRegex, "preferredEndTime must be HH:mm format").optional()
+});
 
 // src/app/module/service/service.route.ts
 var route5 = Router5();
@@ -3368,6 +3864,12 @@ route5.post(
   zodValidation(serviceZodSchema),
   auth(UserRole.CUSTOMER),
   serviceController.createService
+);
+route5.put(
+  "/:serviceId",
+  zodValidation(serviceUpdateZodSchema),
+  auth(UserRole.CUSTOMER),
+  serviceController.updateService
 );
 route5.get(
   "/my-services",
@@ -3380,11 +3882,15 @@ route5.get(
   serviceController.getAllServices
 );
 route5.get(
+  "/my-region",
+  auth(UserRole.MANAGER),
+  serviceController.getMyRegionServices
+);
+route5.get(
   "/:serviceId",
-  auth(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.CUSTOMER),
+  auth(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.CUSTOMER, UserRole.MANAGER, UserRole.TECHNICIAN),
   serviceController.getSingleService
 );
-route5.post("/review", auth(UserRole.MANAGER), serviceController.reviewService);
 route5.post(
   "/assign-technician",
   auth(UserRole.MANAGER),
@@ -3400,13 +3906,18 @@ route5.patch(
   auth(UserRole.MANAGER),
   serviceController.assignTechnician
 );
+route5.patch(
+  "/delete/:serviceId",
+  auth(UserRole.CUSTOMER),
+  serviceController.softDelete
+);
 var serviceRouter = route5;
 
 // src/app/module/skill/skill.route.ts
 import { Router as Router6 } from "express";
 
 // src/app/module/skill/skill.service.ts
-import httpStatus15 from "http-status";
+import httpStatus16 from "http-status";
 var createSkill = async (payload, user) => {
   const isUser = await prisma.user.findUnique({
     where: {
@@ -3414,7 +3925,7 @@ var createSkill = async (payload, user) => {
     }
   });
   if (!isUser) {
-    throw new AppError(httpStatus15.NOT_FOUND, "user not found");
+    throw new AppError(httpStatus16.NOT_FOUND, "user not found");
   }
   const isCategory = await prisma.category.findUnique({
     where: {
@@ -3422,7 +3933,7 @@ var createSkill = async (payload, user) => {
     }
   });
   if (!isCategory) {
-    throw new AppError(httpStatus15.NOT_FOUND, "category not found");
+    throw new AppError(httpStatus16.NOT_FOUND, "category not found");
   }
   const isSkill = await prisma.skill.findUnique({
     where: {
@@ -3430,7 +3941,7 @@ var createSkill = async (payload, user) => {
     }
   });
   if (isSkill) {
-    throw new AppError(httpStatus15.CONFLICT, "skill already exist");
+    throw new AppError(httpStatus16.CONFLICT, "skill already exist");
   }
   const skill = await prisma.skill.create({
     data: {
@@ -3628,14 +4139,14 @@ var updateSkill = async (payload, id) => {
     where: { id }
   });
   if (!isSkill) {
-    throw new AppError(httpStatus15.NOT_FOUND, "skill not found");
+    throw new AppError(httpStatus16.NOT_FOUND, "skill not found");
   }
   if (payload.categoryId) {
     const isCategory = await prisma.category.findUnique({
       where: { id: payload.categoryId }
     });
     if (!isCategory) {
-      throw new AppError(httpStatus15.NOT_FOUND, "category not found");
+      throw new AppError(httpStatus16.NOT_FOUND, "category not found");
     }
   }
   if (payload.name && payload.name !== isSkill.name) {
@@ -3643,7 +4154,7 @@ var updateSkill = async (payload, id) => {
       where: { name: payload.name }
     });
     if (isNameExists) {
-      throw new AppError(httpStatus15.CONFLICT, "skill name already exist");
+      throw new AppError(httpStatus16.CONFLICT, "skill name already exist");
     }
   }
   const update = await prisma.skill.update({
@@ -3656,21 +4167,80 @@ var updateSkill = async (payload, id) => {
   });
   return update;
 };
+var statusUpdate5 = async (skillId) => {
+  const isSkill = await prisma.skill.findUnique({
+    where: { id: skillId }
+  });
+  if (!isSkill) {
+    throw new AppError(httpStatus16.NOT_FOUND, "skill not found");
+  }
+  if (isSkill.isActive) {
+    await prisma.skill.update({
+      where: {
+        id: skillId
+      },
+      data: {
+        isActive: false
+      }
+    });
+  } else {
+    await prisma.skill.update({
+      where: {
+        id: skillId
+      },
+      data: {
+        isActive: true
+      }
+    });
+  }
+};
+var deleteSkill = async (skillId) => {
+  const isSkill = await prisma.skill.findUnique({
+    where: { id: skillId }
+  });
+  if (!isSkill) {
+    throw new AppError(httpStatus16.NOT_FOUND, "skill not found");
+  }
+  if (isSkill.isDelete === true) {
+    await prisma.skill.update({
+      where: {
+        id: skillId
+      },
+      data: {
+        isDelete: false,
+        deletedAt: null
+      }
+    });
+  } else {
+    await prisma.skill.update({
+      where: {
+        id: skillId
+      },
+      data: {
+        isDelete: true,
+        deletedAt: /* @__PURE__ */ new Date()
+      }
+    });
+  }
+  ;
+};
 var skillService = {
   createSkill,
   getAllSkill,
   getSkills,
-  updateSkill
+  updateSkill,
+  statusUpdate: statusUpdate5,
+  deleteSkill
 };
 
 // src/app/module/skill/skill.controller.ts
-import httpStatus16 from "http-status";
+import httpStatus17 from "http-status";
 var createSkill2 = catchAsync(async (req, res) => {
   const body = req.body;
   const user = req.user;
   const result = await skillService.createSkill(body, user);
   sendResponse(res, {
-    statusCode: httpStatus16.CREATED,
+    statusCode: httpStatus17.CREATED,
     success: true,
     message: `skill created successfully`,
     data: result
@@ -3679,11 +4249,8 @@ var createSkill2 = catchAsync(async (req, res) => {
 var getAllSkill2 = catchAsync(async (req, res) => {
   const query = req.query;
   const { skill, meta } = await skillService.getAllSkill(query);
-  if (skill.length === 0) {
-    throw new AppError(httpStatus16.NOT_FOUND, "skill not found");
-  }
   sendResponse(res, {
-    statusCode: httpStatus16.OK,
+    statusCode: httpStatus17.OK,
     success: true,
     message: `skill retrive successfully`,
     data: skill,
@@ -3693,11 +4260,8 @@ var getAllSkill2 = catchAsync(async (req, res) => {
 var getSkills2 = catchAsync(async (req, res) => {
   const query = req.query;
   const { skill, meta } = await skillService.getSkills(query);
-  if (skill.length === 0) {
-    throw new AppError(httpStatus16.NOT_FOUND, "skill not found");
-  }
   sendResponse(res, {
-    statusCode: httpStatus16.OK,
+    statusCode: httpStatus17.OK,
     success: true,
     message: `skill retrive successfully`,
     data: skill,
@@ -3709,9 +4273,29 @@ var updateSkill2 = catchAsync(async (req, res) => {
   const body = req.body;
   const result = await skillService.updateSkill(body, id);
   sendResponse(res, {
-    statusCode: httpStatus16.OK,
+    statusCode: httpStatus17.OK,
     success: true,
     message: `skill updated successfully`,
+    data: result
+  });
+});
+var statusUpdate6 = catchAsync(async (req, res) => {
+  const id = req.params.skillId;
+  const result = await skillService.statusUpdate(id);
+  sendResponse(res, {
+    statusCode: httpStatus17.OK,
+    success: true,
+    message: `skill status updated successfully`,
+    data: result
+  });
+});
+var deleteSkill2 = catchAsync(async (req, res) => {
+  const id = req.params.skillId;
+  const result = await skillService.deleteSkill(id);
+  sendResponse(res, {
+    statusCode: httpStatus17.OK,
+    success: true,
+    message: `skill soft deleted update successfully`,
     data: result
   });
 });
@@ -3719,7 +4303,9 @@ var skillController = {
   createSkill: createSkill2,
   getAllSkill: getAllSkill2,
   getSkills: getSkills2,
-  updateSkill: updateSkill2
+  updateSkill: updateSkill2,
+  statusUpdate: statusUpdate6,
+  deleteSkill: deleteSkill2
 };
 
 // src/app/module/skill/skill.validate.ts
@@ -3757,6 +4343,16 @@ route6.put(
   auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
   zodValidation(updateSkillZodSchema),
   skillController.updateSkill
+);
+route6.patch(
+  "/:skillId",
+  auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+  skillController.statusUpdate
+);
+route6.patch(
+  "/delete/:skillId",
+  auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+  skillController.deleteSkill
 );
 var skillRoute = route6;
 
@@ -3834,20 +4430,20 @@ var completeProfileZodSchema = z5.object({
 });
 
 // src/app/module/technician/technician.controller.ts
-import httpStatus18 from "http-status";
+import httpStatus19 from "http-status";
 
 // src/app/module/technician/technician.service.ts
-import httpStatus17 from "http-status";
+import httpStatus18 from "http-status";
 var completeProfile = async (payload, user) => {
   const { phone, address, bio, nid, skills, region, availability } = payload;
   const isTechnician = await prisma.technicianProfile.findUnique({
     where: { userId: user.userId }
   });
   if (!isTechnician) {
-    throw new AppError(httpStatus17.NOT_FOUND, "technician not found");
+    throw new AppError(httpStatus18.NOT_FOUND, "technician not found");
   }
   if (isTechnician.isDeleted) {
-    throw new AppError(httpStatus17.FORBIDDEN, "This profile has been deleted");
+    throw new AppError(httpStatus18.FORBIDDEN, "This profile has been deleted");
   }
   if (skills !== void 0) {
     const existingSkills = await prisma.skill.findMany({
@@ -3858,7 +4454,7 @@ var completeProfile = async (payload, user) => {
       const existingIds = existingSkills.map((s) => s.id);
       const missingIds = skills.filter((id) => !existingIds.includes(id));
       throw new AppError(
-        httpStatus17.NOT_FOUND,
+        httpStatus18.NOT_FOUND,
         `Skill not found: ${missingIds.join(", ")}`
       );
     }
@@ -3872,7 +4468,7 @@ var completeProfile = async (payload, user) => {
       const existingIds = existingRegions.map((r) => r.id);
       const missingIds = region.filter((id) => !existingIds.includes(id));
       throw new AppError(
-        httpStatus17.NOT_FOUND,
+        httpStatus18.NOT_FOUND,
         `Region not found or inactive: ${missingIds.join(", ")}`
       );
     }
@@ -3888,7 +4484,7 @@ var completeProfile = async (payload, user) => {
         const existingIds = existing?.skills.map((s) => s.id) || [];
         mergedSkills = [.../* @__PURE__ */ new Set([...existingIds, ...skills])];
       }
-      const update = await tx.technicianProfile.update({
+      await tx.technicianProfile.update({
         where: { id: isTechnician.id },
         data: {
           ...phone !== void 0 && { phone },
@@ -3967,7 +4563,7 @@ var completeProfile = async (payload, user) => {
       });
       if (!tech) {
         throw new AppError(
-          httpStatus17.INTERNAL_SERVER_ERROR,
+          httpStatus18.INTERNAL_SERVER_ERROR,
           "Failed to retrieve updated technician profile"
         );
       }
@@ -3982,9 +4578,17 @@ var completeProfile = async (payload, user) => {
           isProfileCompleted
         }
       });
-      return { ...tech, isProfileCompleted };
+      return {
+        ...tech,
+        availability: tech.availability.map((slot) => ({
+          ...slot,
+          startTime: formatTimeToHHmm(slot.startTime),
+          endTime: formatTimeToHHmm(slot.endTime)
+        })),
+        isProfileCompleted
+      };
     },
-    { maxWait: 1e4, timeout: 15e3 }
+    { maxWait: 3e4, timeout: 5e4 }
   );
   return transactionResult;
 };
@@ -3998,12 +4602,12 @@ var completeProfile2 = catchAsync(async (req, res) => {
   const result = await technicianService.completeProfile(req.body, user);
   if (!result) {
     throw new AppError(
-      httpStatus18.INTERNAL_SERVER_ERROR,
+      httpStatus19.INTERNAL_SERVER_ERROR,
       "something went wrong"
     );
   }
   sendResponse(res, {
-    statusCode: httpStatus18.OK,
+    statusCode: httpStatus19.OK,
     success: true,
     message: result.isProfileCompleted ? "Technician profile completed successfully" : "Technician profile updated successfully",
     data: result
@@ -4015,7 +4619,7 @@ var technicianController = {
 
 // src/app/module/technician/technician.route.ts
 var route7 = Router7();
-route7.patch(
+route7.put(
   "/me/profile",
   zodValidation(completeProfileZodSchema),
   auth(UserRole.TECHNICIAN),
@@ -4027,10 +4631,28 @@ var technicianRoutes = route7;
 import { Router as Router8 } from "express";
 
 // src/app/module/workOrder/workOrder.controller.ts
-import httpStatus20 from "http-status";
+import httpStatus21 from "http-status";
 
 // src/app/module/workOrder/workOrder.service.ts
-import httpStatus19 from "http-status";
+import httpStatus20 from "http-status";
+var formatWorkOrder = (wo) => ({
+  ...wo,
+  servicingDate: formatDateToYYYYMMDD(wo.servicingDate) ?? wo.servicingDate,
+  service: wo.service ? {
+    ...wo.service,
+    servicingDate: formatDateToYYYYMMDD(wo.service.servicingDate) ?? wo.service.servicingDate,
+    preferredStartTime: formatTimeToHHmm(wo.service.preferredStartTime),
+    preferredEndTime: formatTimeToHHmm(wo.service.preferredEndTime)
+  } : wo.service,
+  schedule: wo.schedule ? {
+    ...wo.schedule,
+    servicingDate: formatDateToYYYYMMDD(wo.schedule.servicingDate) ?? wo.schedule.servicingDate,
+    startTime: formatTimeToHHmm(wo.schedule.startTime),
+    endTime: formatTimeToHHmm(wo.schedule.endTime),
+    actualStart: formatDateTime(wo.schedule.actualStart),
+    actualEnd: formatDateTime(wo.schedule.actualEnd)
+  } : wo.schedule
+});
 var getMyWrokOrders = async (query, user) => {
   const sort = query.sortBy ? query.sortBy : "createdAt";
   const order = query.sortOrder ? query.sortOrder : "desc";
@@ -4059,26 +4681,30 @@ var getMyWrokOrders = async (query, user) => {
     }
   });
   if (!isUser) {
-    throw new AppError(httpStatus19.NOT_FOUND, "user not found");
+    throw new AppError(httpStatus20.NOT_FOUND, "user not found");
   }
   let ownerCondition;
   switch (user.role) {
+    case UserRole.ADMIN:
+    case UserRole.SUPER_ADMIN:
+      ownerCondition = {};
+      break;
     case UserRole.MANAGER:
       if (!isUser.manager?.id) {
-        throw new AppError(httpStatus19.NOT_FOUND, "Manager profile not found");
+        throw new AppError(httpStatus20.NOT_FOUND, "Manager profile not found");
       }
       ownerCondition = { managerId: isUser.manager.id };
       break;
     case UserRole.CUSTOMER:
       if (!isUser.customer?.id) {
-        throw new AppError(httpStatus19.NOT_FOUND, "Customer profile not found");
+        throw new AppError(httpStatus20.NOT_FOUND, "Customer profile not found");
       }
       ownerCondition = { customerId: isUser.customer.id };
       break;
     case UserRole.TECHNICIAN:
       if (!isUser.technician?.id) {
         throw new AppError(
-          httpStatus19.NOT_FOUND,
+          httpStatus20.NOT_FOUND,
           "Technician profile not found"
         );
       }
@@ -4086,11 +4712,43 @@ var getMyWrokOrders = async (query, user) => {
       break;
     default:
       throw new AppError(
-        httpStatus19.FORBIDDEN,
+        httpStatus20.FORBIDDEN,
         "This user role cannot access work orders"
       );
   }
-  const andCondition = [ownerCondition];
+  const andCondition = [
+    ownerCondition,
+    {
+      service: {
+        isDeleted: false
+        // stat
+      }
+    }
+  ];
+  if (query.search) {
+    andCondition.push({
+      OR: [
+        {
+          service: {
+            title: {
+              contains: query.search,
+              mode: "insensitive"
+            }
+          }
+        },
+        {
+          service: {
+            category: {
+              name: {
+                contains: query.search,
+                mode: "insensitive"
+              }
+            }
+          }
+        }
+      ]
+    });
+  }
   if (query.status) {
     andCondition.push({
       status: query.status
@@ -4106,14 +4764,47 @@ var getMyWrokOrders = async (query, user) => {
       [sort]: order
     },
     include: {
-      customer: true,
-      manager: true,
+      feedback: true,
+      attachment: true,
+      serviceReport: true,
+      customer: {
+        include: {
+          user: {
+            omit: {
+              password: true
+            }
+          }
+        }
+      },
+      manager: {
+        include: {
+          user: {
+            omit: {
+              password: true
+            }
+          }
+        }
+      },
+      technician: {
+        include: {
+          user: {
+            omit: {
+              password: true
+            }
+          }
+        }
+      },
+      schedule: true,
       payment: {
         omit: {
           getwayResponse: true
         }
       },
-      service: true
+      service: {
+        include: {
+          category: true
+        }
+      }
     }
   });
   const total = await prisma.workOrder.count({
@@ -4128,9 +4819,124 @@ var getMyWrokOrders = async (query, user) => {
     totalPages: Math.ceil(total / limit)
   };
   return {
-    workOrders,
+    workOrders: workOrders.map(formatWorkOrder),
     meta
   };
+};
+var getWrokOrder = async (id, user) => {
+  const isUser = await prisma.user.findUnique({
+    where: {
+      id: user.userId
+    },
+    include: {
+      customer: {
+        select: {
+          id: true
+        }
+      },
+      manager: {
+        select: {
+          id: true
+        }
+      },
+      technician: {
+        select: {
+          id: true
+        }
+      }
+    }
+  });
+  if (!isUser) {
+    throw new AppError(httpStatus20.NOT_FOUND, "user not found");
+  }
+  let workOrderWhereCondition;
+  switch (user.role) {
+    case UserRole.MANAGER:
+      if (!isUser.manager?.id) {
+        throw new AppError(httpStatus20.NOT_FOUND, "Manager profile not found");
+      }
+      workOrderWhereCondition = {
+        id,
+        managerId: isUser.manager.id
+      };
+      break;
+    case UserRole.CUSTOMER:
+      if (!isUser.customer?.id) {
+        throw new AppError(httpStatus20.NOT_FOUND, "Customer profile not found");
+      }
+      workOrderWhereCondition = {
+        id,
+        customerId: isUser.customer.id
+      };
+      break;
+    case UserRole.TECHNICIAN:
+      if (!isUser.technician?.id) {
+        throw new AppError(
+          httpStatus20.NOT_FOUND,
+          "Technician profile not found"
+        );
+      }
+      workOrderWhereCondition = {
+        id,
+        technicianId: isUser.technician.id
+      };
+      break;
+    default:
+      throw new AppError(
+        httpStatus20.FORBIDDEN,
+        "This user role cannot access work orders"
+      );
+  }
+  const workOrder = await prisma.workOrder.findFirst({
+    where: workOrderWhereCondition,
+    include: {
+      feedback: true,
+      attachment: true,
+      serviceReport: true,
+      customer: {
+        include: {
+          user: {
+            omit: {
+              password: true
+            }
+          }
+        }
+      },
+      manager: {
+        include: {
+          user: {
+            omit: {
+              password: true
+            }
+          }
+        }
+      },
+      technician: {
+        include: {
+          user: {
+            omit: {
+              password: true
+            }
+          }
+        }
+      },
+      schedule: true,
+      payment: {
+        omit: {
+          getwayResponse: true
+        }
+      },
+      service: {
+        include: {
+          category: true
+        }
+      }
+    }
+  });
+  if (!workOrder) {
+    throw new AppError(httpStatus20.NOT_FOUND, "Work order not found");
+  }
+  return formatWorkOrder(workOrder);
 };
 var getNewWrokOrders = async (query, user) => {
   const sort = query.sortBy ? query.sortBy : "createdAt";
@@ -4150,7 +4956,7 @@ var getNewWrokOrders = async (query, user) => {
     }
   });
   if (!isUser) {
-    throw new AppError(httpStatus19.NOT_FOUND, "user not found");
+    throw new AppError(httpStatus20.NOT_FOUND, "user not found");
   }
   const andCondition = [
     {
@@ -4186,7 +4992,7 @@ var getNewWrokOrders = async (query, user) => {
     totalPages: Math.ceil(total / limit)
   };
   return {
-    workOrders,
+    workOrders: workOrders.map(formatWorkOrder),
     meta
   };
 };
@@ -4197,7 +5003,7 @@ var udpateStatus = async (payload, user) => {
     }
   });
   if (!isTech) {
-    throw new AppError(httpStatus19.NOT_FOUND, "technician not found");
+    throw new AppError(httpStatus20.NOT_FOUND, "technician not found");
   }
   const isExist = await prisma.workOrder.findUnique({
     where: {
@@ -4209,22 +5015,25 @@ var udpateStatus = async (payload, user) => {
     }
   });
   if (!isExist) {
-    throw new AppError(httpStatus19.NOT_FOUND, "order not found");
+    throw new AppError(httpStatus20.NOT_FOUND, "order not found");
   }
-  if (isExist.status === "COMPLETED") {
-    throw new AppError(httpStatus19.NOT_FOUND, "service work already completed");
+  if (isExist.status === WorkOrderStatus.COMPLETED) {
+    throw new AppError(httpStatus20.NOT_FOUND, "service work already completed");
   }
   if (isExist.status === "SCHEDULED") {
     throw new AppError(
-      httpStatus19.BAD_REQUEST,
+      httpStatus20.BAD_REQUEST,
       `You can't update status from ${isExist.status.toLocaleLowerCase()} to ${payload.status}`
     );
   }
   if (isExist.status === "CANCELLED") {
     throw new AppError(
-      httpStatus19.BAD_REQUEST,
+      httpStatus20.BAD_REQUEST,
       `work order already cancelled. You can't update`
     );
+  }
+  if (isExist.status === "EN_ROUTE" && payload.status === "COMPLETED") {
+    throw new AppError(httpStatus20.BAD_REQUEST, `work order status can't be updated from ${isExist.status} to ${payload.status}`);
   }
   const transactionResult = await prisma.$transaction(
     async (tx) => {
@@ -4269,7 +5078,8 @@ var udpateStatus = async (payload, user) => {
             workOrderId: isExist.id
           },
           data: {
-            actualEnd: /* @__PURE__ */ new Date()
+            actualEnd: /* @__PURE__ */ new Date(),
+            status: ScheduleStatus.COMPLETED
           }
         });
         await tx.technicianProfile.update({
@@ -4299,12 +5109,185 @@ var udpateStatus = async (payload, user) => {
       timeout: 15e3
     }
   );
-  return transactionResult;
+  return formatWorkOrder(transactionResult);
+};
+var getTodaysWorkOrders = async (query, user) => {
+  const sort = query.sortBy ? query.sortBy : "createdAt";
+  const order = query.sortOrder ? query.sortOrder : "desc";
+  const page = Number(query.page || 1);
+  const limit = Number(query.limit || 9);
+  const isUser = await prisma.user.findUnique({
+    where: {
+      id: user.userId
+    },
+    include: {
+      customer: {
+        select: {
+          id: true
+        }
+      },
+      manager: {
+        select: {
+          id: true
+        }
+      },
+      technician: {
+        select: {
+          id: true
+        }
+      }
+    }
+  });
+  if (!isUser) {
+    throw new AppError(httpStatus20.NOT_FOUND, "user not found");
+  }
+  let ownerCondition;
+  switch (user.role) {
+    case UserRole.ADMIN:
+    case UserRole.SUPER_ADMIN:
+      ownerCondition = {};
+      break;
+    case UserRole.MANAGER:
+      if (!isUser.manager?.id) {
+        throw new AppError(httpStatus20.NOT_FOUND, "Manager profile not found");
+      }
+      ownerCondition = { managerId: isUser.manager.id };
+      break;
+    case UserRole.CUSTOMER:
+      if (!isUser.customer?.id) {
+        throw new AppError(httpStatus20.NOT_FOUND, "Customer profile not found");
+      }
+      ownerCondition = { customerId: isUser.customer.id };
+      break;
+    case UserRole.TECHNICIAN:
+      if (!isUser.technician?.id) {
+        throw new AppError(
+          httpStatus20.NOT_FOUND,
+          "Technician profile not found"
+        );
+      }
+      ownerCondition = { technicianId: isUser.technician.id };
+      break;
+    default:
+      throw new AppError(
+        httpStatus20.FORBIDDEN,
+        "This user role cannot access work orders"
+      );
+  }
+  const startOfDay = /* @__PURE__ */ new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = /* @__PURE__ */ new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+  const andCondition = [
+    ownerCondition,
+    {
+      servicingDate: {
+        gte: startOfDay,
+        lte: endOfDay
+      }
+    }
+  ];
+  if (query.search) {
+    andCondition.push({
+      OR: [
+        {
+          service: {
+            title: {
+              contains: query.search,
+              mode: "insensitive"
+            }
+          }
+        },
+        {
+          service: {
+            category: {
+              name: {
+                contains: query.search,
+                mode: "insensitive"
+              }
+            }
+          }
+        }
+      ]
+    });
+  }
+  if (query.status) {
+    andCondition.push({
+      status: query.status
+    });
+  }
+  const workOrders = await prisma.workOrder.findMany({
+    where: {
+      AND: andCondition
+    },
+    take: limit,
+    skip: (page - 1) * limit,
+    orderBy: {
+      [sort]: order
+    },
+    include: {
+      customer: {
+        include: {
+          user: {
+            omit: {
+              password: true
+            }
+          }
+        }
+      },
+      manager: {
+        include: {
+          user: {
+            omit: {
+              password: true
+            }
+          }
+        }
+      },
+      technician: {
+        include: {
+          user: {
+            omit: {
+              password: true
+            }
+          }
+        }
+      },
+      schedule: true,
+      payment: {
+        omit: {
+          getwayResponse: true
+        }
+      },
+      service: {
+        include: {
+          category: true
+        }
+      }
+    }
+  });
+  const total = await prisma.workOrder.count({
+    where: {
+      AND: andCondition
+    }
+  });
+  const meta = {
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit)
+  };
+  return {
+    workOrders: workOrders.map(formatWorkOrder),
+    meta
+  };
 };
 var workOrderService = {
   getMyWrokOrders,
   getNewWrokOrders,
-  udpateStatus
+  udpateStatus,
+  getWrokOrder,
+  getTodaysWorkOrders
 };
 
 // src/app/module/workOrder/workOrder.controller.ts
@@ -4315,11 +5298,8 @@ var getMyWorkOrders = catchAsync(async (req, res) => {
     query,
     user
   );
-  if (workOrders.length === 0) {
-    throw new AppError(httpStatus20.NOT_FOUND, "my work order not found");
-  }
   sendResponse(res, {
-    statusCode: httpStatus20.OK,
+    statusCode: httpStatus21.OK,
     success: true,
     message: "work order retrive successfully",
     data: workOrders,
@@ -4333,13 +5313,25 @@ var getNewWorkOrders = catchAsync(async (req, res) => {
     query,
     user
   );
-  if (workOrders.length === 0) {
-    throw new AppError(httpStatus20.NOT_FOUND, "new incomming order not found");
-  }
   sendResponse(res, {
-    statusCode: httpStatus20.OK,
+    statusCode: httpStatus21.OK,
     success: true,
     message: "work order retrive successfully",
+    data: workOrders,
+    meta
+  });
+});
+var getTodaysWorkOrders2 = catchAsync(async (req, res) => {
+  const user = req.user;
+  const query = req.query;
+  const { workOrders, meta } = await workOrderService.getTodaysWorkOrders(
+    query,
+    user
+  );
+  sendResponse(res, {
+    statusCode: httpStatus21.OK,
+    success: true,
+    message: "today's work orders retrieve successfully",
     data: workOrders,
     meta
   });
@@ -4349,16 +5341,29 @@ var updateStatus = catchAsync(async (req, res) => {
   const body = req.body;
   const result = await workOrderService.udpateStatus(body, user);
   sendResponse(res, {
-    statusCode: httpStatus20.OK,
+    statusCode: httpStatus21.OK,
     success: true,
     message: "work order status successfully",
+    data: result
+  });
+});
+var getWorkOrder = catchAsync(async (req, res) => {
+  const user = req.user;
+  const id = req.params.workOrderId;
+  const result = await workOrderService.getWrokOrder(id, user);
+  sendResponse(res, {
+    statusCode: httpStatus21.OK,
+    success: true,
+    message: "work order retrive successfully",
     data: result
   });
 });
 var workOrderController = {
   getMyWorkOrders,
   getNewWorkOrders,
-  updateStatus
+  getTodaysWorkOrders: getTodaysWorkOrders2,
+  updateStatus,
+  getWorkOrder
 };
 
 // src/app/module/workOrder/workOrder.route.ts
@@ -4369,9 +5374,25 @@ route8.get(
   workOrderController.getMyWorkOrders
 );
 route8.get(
+  "/today",
+  auth(
+    UserRole.ADMIN,
+    UserRole.SUPER_ADMIN,
+    UserRole.CUSTOMER,
+    UserRole.MANAGER,
+    UserRole.TECHNICIAN
+  ),
+  workOrderController.getTodaysWorkOrders
+);
+route8.get(
   "/new-workorder",
   auth(UserRole.TECHNICIAN),
   workOrderController.getNewWorkOrders
+);
+route8.get(
+  "/:workOrderId",
+  auth(UserRole.ADMIN, UserRole.CUSTOMER, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN),
+  workOrderController.getWorkOrder
 );
 route8.patch(
   "/update",
@@ -4384,7 +5405,7 @@ var workOrderRouter = route8;
 import { Router as Router9 } from "express";
 
 // src/app/module/payment/payment.service.ts
-import httpStatus21 from "http-status";
+import httpStatus22 from "http-status";
 import PDFDocument from "pdfkit";
 var createPayment = async (payload, user) => {
   const isCustomer = await prisma.customerProfile.findUnique({
@@ -4396,7 +5417,7 @@ var createPayment = async (payload, user) => {
     }
   });
   if (!isCustomer) {
-    throw new AppError(httpStatus21.NOT_FOUND, "customer not found");
+    throw new AppError(httpStatus22.NOT_FOUND, "customer not found");
   }
   const isWorkOrder = await prisma.workOrder.findUnique({
     where: {
@@ -4409,36 +5430,30 @@ var createPayment = async (payload, user) => {
     }
   });
   if (!isWorkOrder) {
-    throw new AppError(httpStatus21.NOT_FOUND, "order not found");
+    throw new AppError(httpStatus22.NOT_FOUND, "order not found");
   }
   if (isWorkOrder.payment?.status === "PAID") {
-    throw new AppError(httpStatus21.CONFLICT, "you already completed payment");
+    throw new AppError(httpStatus22.CONFLICT, "you already completed payment");
   }
-  if (isWorkOrder.service.status === "REJECTED" || isWorkOrder.service.status === "CANCELLED" || isWorkOrder.service.status === "PENDING") {
+  if (isWorkOrder.service.status === "REJECTED" || isWorkOrder.service.status === "CANCELLED" || isWorkOrder.service.status === "PENDING" || isWorkOrder.service.status === "APPROVED" || isWorkOrder.service.status === "ASSIGNED") {
     throw new AppError(
-      httpStatus21.CONFLICT,
-      `your service is ${isWorkOrder.service.status.toString()}`
-    );
-  }
-  if (isWorkOrder.service.status !== "COMPLETED") {
-    throw new AppError(
-      httpStatus21.CONFLICT,
-      "you can not payment before completed work"
+      httpStatus22.CONFLICT,
+      `your service is ${isWorkOrder.service.status.toString()}. You can't payment before in-progress or completed`
     );
   }
   if (isWorkOrder.status === "CANCELLED") {
-    throw new AppError(httpStatus21.CONFLICT, "Yur order is cancelled");
+    throw new AppError(httpStatus22.CONFLICT, "Yur order is cancelled");
   }
-  if (isWorkOrder.status !== "COMPLETED") {
+  if (isWorkOrder.status === "EN_ROUTE") {
     throw new AppError(
-      httpStatus21.CONFLICT,
-      "Work is not completed. so you can not payemnt before completed"
+      httpStatus22.CONFLICT,
+      "Work is not completed. so you can not payemnt before completed or start"
     );
   }
   const amount = isWorkOrder.payment?.amount.toString();
   const id_token = await getBkashIdToken();
   if (!id_token) {
-    throw new AppError(httpStatus21.BAD_GATEWAY, "bkash id token faild");
+    throw new AppError(httpStatus22.BAD_GATEWAY, "bkash id token faild");
   }
   const createPayment2 = await fetch(
     `${env_default.bkash_base_url}/tokenized/checkout/create`,
@@ -4481,7 +5496,7 @@ var bkashCallback = async (query) => {
     async (tx) => {
       const id_token = await getBkashIdToken();
       if (!id_token) {
-        throw new AppError(httpStatus21.BAD_GATEWAY, "bkash id token failed");
+        throw new AppError(httpStatus22.BAD_GATEWAY, "bkash id token failed");
       }
       const paymentID = query.paymentID;
       const status = query.status;
@@ -4490,10 +5505,10 @@ var bkashCallback = async (query) => {
         status
       });
       if (!paymentID) {
-        throw new AppError(httpStatus21.BAD_REQUEST, "Payment id missing");
+        throw new AppError(httpStatus22.BAD_REQUEST, "Payment id missing");
       }
       if (!status) {
-        throw new AppError(httpStatus21.BAD_REQUEST, "status is missing");
+        throw new AppError(httpStatus22.BAD_REQUEST, "status is missing");
       }
       if (status === "failure" || status === "cancel") {
         await tx.payment.update({
@@ -4553,7 +5568,7 @@ var bkashCallback = async (query) => {
           }
         });
         if (!workOrder) {
-          throw new AppError(httpStatus21.NOT_FOUND, "work order not found");
+          throw new AppError(httpStatus22.NOT_FOUND, "work order not found");
         }
         await tx.payment.update({
           where: {
@@ -4592,7 +5607,7 @@ var bkashCallback = async (query) => {
         doc.text(`Technician Phone: ${workOrder.technician?.phone}`);
         doc.moveDown();
         doc.text(`Manager Name: ${workOrder.manager?.user.name}`);
-        doc.text(`Manager Phone: ${workOrder.manager.phone}`);
+        doc.text(`Manager Phone: ${workOrder.manager?.phone}`);
         doc.moveDown();
         doc.text(`Amount Paid: ${result.amount}`);
         doc.text(`Payment Method : bKash`);
@@ -4618,7 +5633,7 @@ var bkashCallback = async (query) => {
           redirectUrl: `${env_default.frontend_url}/dashboard/my-workorder?status=success`
         };
       } else {
-        throw new AppError(httpStatus21.BAD_REQUEST, "bkash callback error!");
+        throw new AppError(httpStatus22.BAD_REQUEST, "bkash callback error!");
       }
     },
     {
@@ -4628,273 +5643,93 @@ var bkashCallback = async (query) => {
   );
   return transactionResult;
 };
-var getMyPayment = async (query, user) => {
-  const sort = query.sortBy ? query.sortBy : "createdAt";
-  const order = query.sortOrder ? query.sortOrder : "desc";
-  const page = Number(query.page || 1);
-  const limit = Number(query.limit || 9);
-  const isCustomer = await prisma.customerProfile.findUnique({
-    where: {
-      userId: user.userId
-    }
-  });
-  if (!isCustomer) {
-    throw new AppError(httpStatus21.NOT_FOUND, "patient not found");
-  }
-  const andCondition = [
-    {
-      workOrder: {
-        customer: {
-          userId: user.userId
-        }
-      }
-    }
-  ];
-  if (query.search) {
-    andCondition.push({
-      OR: [
-        {
-          workOrder: {
-            technician: {
-              user: {
-                name: {
-                  contains: query.search,
-                  mode: "insensitive"
-                }
-              }
-            }
-          }
-        },
-        {
-          workOrder: {
-            manager: {
-              user: {
-                name: {
-                  contains: query.search,
-                  mode: "insensitive"
-                }
-              }
-            }
-          }
-        }
-      ]
-    });
-  }
-  if (query.status) {
-    andCondition.push({
-      status: query.status
-    });
-  }
-  const payment = await prisma.payment.findMany({
-    where: {
-      AND: andCondition
-    },
-    take: limit,
-    skip: (page - 1) * limit,
-    orderBy: {
-      [sort]: order
-    },
-    omit: {
-      getwayResponse: true
-    }
-  });
-  const total = await prisma.payment.count({
-    where: {
-      AND: andCondition
-    }
-  });
-  const meta = {
-    total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit)
-  };
-  return {
-    payment,
-    meta
-  };
-};
-var getTechnicianPayment = async (query, user) => {
-  const sort = query.sortBy ? query.sortBy : "createdAt";
-  const order = query.sortOrder ? query.sortOrder : "desc";
-  const page = Number(query.page || 1);
-  const limit = Number(query.limit || 9);
-  const isTech = await prisma.technicianProfile.findUnique({
-    where: {
-      userId: user.userId
-    }
-  });
-  if (!isTech) {
-    throw new AppError(httpStatus21.NOT_FOUND, "technician not found");
-  }
-  const andCondition = [
-    {
-      workOrder: {
-        technician: {
-          userId: user.userId
-        }
-      }
-    }
-  ];
-  if (query.search) {
-    andCondition.push({
-      OR: [
-        {
-          workOrder: {
-            customer: {
-              user: {
-                name: {
-                  contains: query.search,
-                  mode: "insensitive"
-                }
-              }
-            }
-          }
-        },
-        {
-          workOrder: {
-            manager: {
-              user: {
-                name: {
-                  contains: query.search,
-                  mode: "insensitive"
-                }
-              }
-            }
-          }
-        }
-      ]
-    });
-  }
-  if (query.status) {
-    andCondition.push({
-      status: query.status
-    });
-  }
-  const payment = await prisma.payment.findMany({
-    where: {
-      AND: andCondition
-    },
-    take: limit,
-    skip: (page - 1) * limit,
-    orderBy: {
-      [sort]: order
-    },
-    omit: {
-      getwayResponse: true
-    }
-  });
-  const total = await prisma.payment.count({
-    where: {
-      AND: andCondition
-    }
-  });
-  const meta = {
-    total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit)
-  };
-  return {
-    payment,
-    meta
-  };
-};
-var getManagerPayment = async (query, user) => {
-  const sort = query.sortBy ? query.sortBy : "createdAt";
-  const order = query.sortOrder ? query.sortOrder : "desc";
-  const page = Number(query.page || 1);
-  const limit = Number(query.limit || 9);
-  const isManager = await prisma.managerProfile.findUnique({
-    where: {
-      userId: user.userId
-    }
-  });
-  if (!isManager) {
-    throw new AppError(httpStatus21.NOT_FOUND, "Manager not found");
-  }
-  const andCondition = [
-    {
-      workOrder: {
-        manager: {
-          userId: user.userId
-        }
-      }
-    }
-  ];
-  if (query.search) {
-    andCondition.push({
-      OR: [
-        {
-          workOrder: {
-            customer: {
-              user: {
-                name: {
-                  contains: query.search,
-                  mode: "insensitive"
-                }
-              }
-            }
-          }
-        },
-        {
-          workOrder: {
-            technician: {
-              user: {
-                name: {
-                  contains: query.search,
-                  mode: "insensitive"
-                }
-              }
-            }
-          }
-        }
-      ]
-    });
-  }
-  if (query.status) {
-    andCondition.push({
-      status: query.status
-    });
-  }
-  const payment = await prisma.payment.findMany({
-    where: {
-      AND: andCondition
-    },
-    take: limit,
-    skip: (page - 1) * limit,
-    orderBy: {
-      [sort]: order
-    },
-    omit: {
-      getwayResponse: true
-    }
-  });
-  const total = await prisma.payment.count({
-    where: {
-      AND: andCondition
-    }
-  });
-  const meta = {
-    total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit)
-  };
-  return {
-    payment,
-    meta
-  };
-};
-var getAllPayments = async (query) => {
+var getPaymentInfo = async (query, user) => {
   const sort = query.sortBy ? query.sortBy : "createdAt";
   const order = query.sortOrder ? query.sortOrder : "desc";
   const page = Number(query.page || 1);
   const limit = Number(query.limit || 9);
   const andCondition = [];
+  if (user.role === UserRole.CUSTOMER) {
+    const isCustomer = await prisma.customerProfile.findUnique({
+      where: {
+        userId: user.userId
+      }
+    });
+    if (!isCustomer) {
+      throw new AppError(httpStatus22.NOT_FOUND, "customer not found");
+    }
+    andCondition.push({
+      workOrder: {
+        customer: {
+          userId: user.userId
+        }
+      }
+    });
+  } else if (user.role === UserRole.TECHNICIAN) {
+    const isTech = await prisma.technicianProfile.findUnique({
+      where: {
+        userId: user.userId
+      }
+    });
+    if (!isTech) {
+      throw new AppError(httpStatus22.NOT_FOUND, "technician not found");
+    }
+    andCondition.push({
+      workOrder: {
+        technician: {
+          userId: user.userId
+        }
+      }
+    });
+  } else if (user.role === UserRole.MANAGER) {
+    const isManager = await prisma.managerProfile.findUnique({
+      where: {
+        userId: user.userId
+      }
+    });
+    if (!isManager) {
+      throw new AppError(httpStatus22.NOT_FOUND, "manager not found");
+    }
+    andCondition.push({
+      workOrder: {
+        manager: {
+          userId: user.userId
+        }
+      }
+    });
+  } else if (user.role !== UserRole.ADMIN && user.role !== UserRole.SUPER_ADMIN) {
+    throw new AppError(
+      httpStatus22.FORBIDDEN,
+      "Forbidden. You don't have permission to access payments."
+    );
+  }
   if (query.search) {
     andCondition.push({
       OR: [
+        {
+          workOrder: {
+            service: {
+              category: {
+                name: {
+                  contains: query.search,
+                  mode: "insensitive"
+                }
+              }
+            }
+          }
+        },
+        {
+          workOrder: {
+            customer: {
+              user: {
+                name: {
+                  contains: query.search,
+                  mode: "insensitive"
+                }
+              }
+            }
+          }
+        },
         {
           workOrder: {
             technician: {
@@ -4910,18 +5745,6 @@ var getAllPayments = async (query) => {
         {
           workOrder: {
             manager: {
-              user: {
-                name: {
-                  contains: query.search,
-                  mode: "insensitive"
-                }
-              }
-            }
-          }
-        },
-        {
-          workOrder: {
-            customer: {
               user: {
                 name: {
                   contains: query.search,
@@ -4944,6 +5767,18 @@ var getAllPayments = async (query) => {
       workOrderId: query.workOrderId
     });
   }
+  if (query.serviceId) {
+    andCondition.push({
+      workOrder: {
+        serviceId: query.serviceId
+      }
+    });
+  }
+  if (query.trxId) {
+    andCondition.push({
+      transectionId: query.trxId
+    });
+  }
   const payment = await prisma.payment.findMany({
     where: {
       AND: andCondition
@@ -4959,9 +5794,39 @@ var getAllPayments = async (query) => {
     include: {
       workOrder: {
         include: {
-          customer: true,
-          technician: true,
-          manager: true
+          service: {
+            include: {
+              category: true,
+              region: true
+            }
+          },
+          manager: {
+            select: {
+              user: {
+                omit: {
+                  password: true
+                }
+              }
+            }
+          },
+          customer: {
+            select: {
+              user: {
+                omit: {
+                  password: true
+                }
+              }
+            }
+          },
+          technician: {
+            select: {
+              user: {
+                omit: {
+                  password: true
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -4985,20 +5850,17 @@ var getAllPayments = async (query) => {
 var paymentService = {
   createPayment,
   bkashCallback,
-  getMyPayment,
-  getTechnicianPayment,
-  getAllPayments,
-  getManagerPayment
+  getPaymentInfo
 };
 
 // src/app/module/payment/payment.controller.ts
-import httpStatus22 from "http-status";
+import httpStatus23 from "http-status";
 var createpayment = catchAsync(async (req, res) => {
   const body = req.body;
   const user = req.user;
   const result = await paymentService.createPayment(body, user);
   sendResponse(res, {
-    statusCode: httpStatus22.OK,
+    statusCode: httpStatus23.OK,
     success: true,
     message: `payment url created successfully`,
     data: result
@@ -5006,66 +5868,16 @@ var createpayment = catchAsync(async (req, res) => {
 });
 var bkashCallback2 = catchAsync(async (req, res) => {
   const query = req.query;
-  const { result, redirectUrl } = await paymentService.bkashCallback(query);
-  res.redirect(redirectUrl);
+  const { result, redirectUrl: redirectUrl2 } = await paymentService.bkashCallback(query);
+  res.redirect(redirectUrl2);
   console.log("payment result = ", result);
 });
-var getMyPayment2 = catchAsync(async (req, res) => {
+var getPaymentInfo2 = catchAsync(async (req, res) => {
   const user = req.user;
   const query = req.query;
-  const { payment, meta } = await paymentService.getMyPayment(query, user);
-  if (payment.length === 0) {
-    throw new AppError(httpStatus22.NOT_FOUND, "payments not found");
-  }
+  const { payment, meta } = await paymentService.getPaymentInfo(query, user);
   sendResponse(res, {
-    statusCode: httpStatus22.OK,
-    success: true,
-    message: `payment retrive successfully`,
-    data: payment,
-    meta
-  });
-});
-var getTechPayment = catchAsync(async (req, res) => {
-  const user = req.user;
-  const query = req.query;
-  const { payment, meta } = await paymentService.getTechnicianPayment(
-    query,
-    user
-  );
-  if (payment.length === 0) {
-    throw new AppError(httpStatus22.NOT_FOUND, "payments not found");
-  }
-  sendResponse(res, {
-    statusCode: httpStatus22.OK,
-    success: true,
-    message: `payment retrive successfully`,
-    data: payment,
-    meta
-  });
-});
-var getManagerPayment2 = catchAsync(async (req, res) => {
-  const user = req.user;
-  const query = req.query;
-  const { payment, meta } = await paymentService.getManagerPayment(query, user);
-  if (payment.length === 0) {
-    throw new AppError(httpStatus22.NOT_FOUND, "payments not found");
-  }
-  sendResponse(res, {
-    statusCode: httpStatus22.OK,
-    success: true,
-    message: `payment retrive successfully`,
-    data: payment,
-    meta
-  });
-});
-var getAllPayments2 = catchAsync(async (req, res) => {
-  const query = req.query;
-  const { payment, meta } = await paymentService.getAllPayments(query);
-  if (payment.length === 0) {
-    throw new AppError(httpStatus22.NOT_FOUND, "payments not found");
-  }
-  sendResponse(res, {
-    statusCode: httpStatus22.OK,
+    statusCode: httpStatus23.OK,
     success: true,
     message: `payment retrive successfully`,
     data: payment,
@@ -5075,46 +5887,24 @@ var getAllPayments2 = catchAsync(async (req, res) => {
 var paymentController = {
   createpayment,
   bkashCallback: bkashCallback2,
-  getMyPayment: getMyPayment2,
-  getTechPayment,
-  getManagerPayment: getManagerPayment2,
-  getAllPayments: getAllPayments2
+  getPaymentInfo: getPaymentInfo2
 };
 
 // src/app/module/payment/payment.route.ts
 var route9 = Router9();
 route9.post("/create", auth(UserRole.CUSTOMER), paymentController.createpayment);
 route9.get("/service/callback", paymentController.bkashCallback);
-route9.get(
-  "/my-payments",
-  auth(UserRole.CUSTOMER),
-  paymentController.getMyPayment
-);
-route9.get(
-  "/technician-payments",
-  auth(UserRole.TECHNICIAN),
-  paymentController.getTechPayment
-);
-route9.get(
-  "/manager-payments",
-  auth(UserRole.MANAGER),
-  paymentController.getManagerPayment
-);
-route9.get(
-  "/all-payments",
-  auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
-  paymentController.getAllPayments
-);
+route9.get("/payment-info", auth(), paymentController.getPaymentInfo);
 var paymentRouter = route9;
 
 // src/app/module/attachment/attachment.route.ts
 import { Router as Router10 } from "express";
 
 // src/app/module/attachment/attachment.controller.ts
-import httpStatus24 from "http-status";
+import httpStatus25 from "http-status";
 
 // src/app/module/attachment/attachment.service.ts
-import httpStatus23 from "http-status";
+import httpStatus24 from "http-status";
 
 // src/app/lib/cloudinary.ts
 import { v2 as cloudinary } from "cloudinary";
@@ -5144,7 +5934,7 @@ var createAttachment = async (payload, files, user) => {
     }
   });
   if (!isUser) {
-    throw new AppError(httpStatus23.NOT_FOUND, "user not found");
+    throw new AppError(httpStatus24.NOT_FOUND, "user not found");
   }
   const isWrokOrder = await prisma.workOrder.findUnique({
     where: {
@@ -5157,27 +5947,27 @@ var createAttachment = async (payload, files, user) => {
     }
   });
   if (!isWrokOrder) {
-    throw new AppError(httpStatus23.NOT_FOUND, "work order not found");
+    throw new AppError(httpStatus24.NOT_FOUND, "work order not found");
   }
-  if (isWrokOrder.status === "CANCELLED" || isWrokOrder.status === "SCHEDULED") {
+  if (isWrokOrder.status === "CANCELLED") {
     throw new AppError(
-      httpStatus23.BAD_REQUEST,
+      httpStatus24.BAD_REQUEST,
       `you can not attached files from ${isWrokOrder.status} status`
     );
   }
   if (user.role === "CUSTOMER") {
     if (isWrokOrder.customerId !== isUser.customer?.id) {
-      throw new AppError(httpStatus23.UNAUTHORIZED, "you can not attach files");
+      throw new AppError(httpStatus24.UNAUTHORIZED, "you can not attach files");
     }
   }
   if (user.role === "MANAGER") {
     if (isWrokOrder.managerId !== isUser.manager?.id) {
-      throw new AppError(httpStatus23.UNAUTHORIZED, "you can not attach files");
+      throw new AppError(httpStatus24.UNAUTHORIZED, "you can not attach files");
     }
   }
   if (user.role === "TECHNICIAN") {
     if (isWrokOrder.technicianId !== isUser.technician?.id) {
-      throw new AppError(httpStatus23.UNAUTHORIZED, "you can not attach files");
+      throw new AppError(httpStatus24.UNAUTHORIZED, "you can not attach files");
     }
   }
   const filesRes = await Promise.all(
@@ -5195,7 +5985,7 @@ var createAttachment = async (payload, files, user) => {
             if (!result) {
               return reject(
                 new AppError(
-                  httpStatus23.BAD_GATEWAY,
+                  httpStatus24.BAD_GATEWAY,
                   "No result returned from cloudinary"
                 )
               );
@@ -5220,371 +6010,95 @@ var createAttachment = async (payload, files, user) => {
   });
   return createAttach2;
 };
-var getMyAttach = async (query, user) => {
-  const sort = query.sortBy ? query.sortBy : "createdAt";
-  const order = query.sortOrder ? query.sortOrder : "desc";
-  const page = Number(query.page || 1);
-  const limit = Number(query.limit || 20);
-  const isCustomer = await prisma.customerProfile.findUnique({
-    where: {
-      userId: user.userId
-    }
-  });
-  if (!isCustomer) {
-    throw new AppError(httpStatus23.NOT_FOUND, "customer not found");
-  }
-  const andConditions = [
-    {
-      workOrder: {
-        customerId: isCustomer.id
-      }
-    }
-  ];
-  if (query.search) {
-    andConditions.push({
-      OR: [
-        {
-          workOrder: {
-            manager: {
-              user: {
-                name: {
-                  contains: query.search,
-                  mode: "insensitive"
-                }
-              }
-            }
-          }
-        },
-        {
-          workOrder: {
-            technician: {
-              user: {
-                name: {
-                  contains: query.search,
-                  mode: "insensitive"
-                }
-              }
-            }
-          }
-        }
-      ]
-    });
-  }
-  if (query.region) {
-    const region = query.region;
-    const arr = region.split(",").map((item) => item.trim());
-    andConditions.push({
-      workOrder: {
-        region: {
-          area: { in: arr }
-        }
-      }
-    });
-  }
-  if (query.isDelete) {
-    andConditions.push({
-      isDelete: query.isDelete
-    });
-  }
-  const attachments = await prisma.attachment.findMany({
-    where: {
-      AND: andConditions
-    },
-    take: limit,
-    skip: (page - 1) * limit,
-    orderBy: {
-      [sort]: order
-    },
-    include: {
-      workOrder: true
-    }
-  });
-  const total = await prisma.attachment.count({
-    where: {
-      AND: andConditions
-    }
-  });
-  const meta = {
-    total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit)
-  };
-  return {
-    attachments,
-    meta
-  };
-};
-var getManager = async (query, user) => {
-  const sort = query.sortBy ? query.sortBy : "createdAt";
-  const order = query.sortOrder ? query.sortOrder : "desc";
-  const page = Number(query.page || 1);
-  const limit = Number(query.limit || 20);
-  const isManger = await prisma.managerProfile.findUnique({
-    where: {
-      userId: user.userId
-    }
-  });
-  if (!isManger) {
-    throw new AppError(httpStatus23.NOT_FOUND, "manager not found");
-  }
-  const andConditions = [
-    {
-      workOrder: {
-        managerId: isManger.id
-      }
-    }
-  ];
-  if (query.search) {
-    andConditions.push({
-      OR: [
-        {
-          workOrder: {
-            customer: {
-              user: {
-                name: {
-                  contains: query.search,
-                  mode: "insensitive"
-                }
-              }
-            }
-          }
-        },
-        {
-          workOrder: {
-            technician: {
-              user: {
-                name: {
-                  contains: query.search,
-                  mode: "insensitive"
-                }
-              }
-            }
-          }
-        }
-      ]
-    });
-  }
-  if (query.isDelete) {
-    andConditions.push({
-      isDelete: query.isDelete
-    });
-  }
-  const attachments = await prisma.attachment.findMany({
-    where: {
-      AND: andConditions
-    },
-    take: limit,
-    skip: (page - 1) * limit,
-    orderBy: {
-      [sort]: order
-    },
-    include: {
-      workOrder: true
-    }
-  });
-  const total = await prisma.attachment.count({
-    where: {
-      AND: andConditions
-    }
-  });
-  const meta = {
-    total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit)
-  };
-  return {
-    attachments,
-    meta
-  };
-};
-var getTechnicianAttach = async (query, user) => {
-  const sort = query.sortBy ? query.sortBy : "createdAt";
-  const order = query.sortOrder ? query.sortOrder : "desc";
-  const page = Number(query.page || 1);
-  const limit = Number(query.limit || 20);
-  const isTech = await prisma.technicianProfile.findUnique({
-    where: {
-      userId: user.userId
-    }
-  });
-  if (!isTech) {
-    throw new AppError(httpStatus23.NOT_FOUND, "technician not found");
-  }
-  const andConditions = [
-    {
-      workOrder: {
-        technicianId: isTech.id
-      }
-    }
-  ];
-  if (query.search) {
-    andConditions.push({
-      OR: [
-        {
-          workOrder: {
-            manager: {
-              user: {
-                name: {
-                  contains: query.search,
-                  mode: "insensitive"
-                }
-              }
-            }
-          }
-        },
-        {
-          workOrder: {
-            customer: {
-              user: {
-                name: {
-                  contains: query.search,
-                  mode: "insensitive"
-                }
-              }
-            }
-          }
-        }
-      ]
-    });
-  }
-  if (query.region) {
-    const region = query.region;
-    const arr = region.split(",").map((item) => item.trim());
-    andConditions.push({
-      workOrder: {
-        region: {
-          area: { in: arr }
-        }
-      }
-    });
-  }
-  if (query.isDelete) {
-    andConditions.push({
-      isDelete: query.isDelete
-    });
-  }
-  const attachments = await prisma.attachment.findMany({
-    where: {
-      AND: andConditions
-    },
-    take: limit,
-    skip: (page - 1) * limit,
-    orderBy: {
-      [sort]: order
-    },
-    include: {
-      workOrder: true
-    }
-  });
-  const total = await prisma.attachment.count({
-    where: {
-      AND: andConditions
-    }
-  });
-  const meta = {
-    total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit)
-  };
-  return {
-    attachments,
-    meta
-  };
-};
-var getAllAttach = async (query) => {
+var getAttachments = async (query, user) => {
   const sort = query.sortBy ? query.sortBy : "createdAt";
   const order = query.sortOrder ? query.sortOrder : "desc";
   const page = Number(query.page || 1);
   const limit = Number(query.limit || 20);
   const andConditions = [];
-  if (query.search) {
-    andConditions.push({
-      OR: [
-        {
-          workOrder: {
-            manager: {
-              user: {
-                name: {
-                  contains: query.search,
-                  mode: "insensitive"
-                }
-              }
-            }
-          }
+  const PARTIES = ["customer", "manager", "technician"];
+  switch (user.role) {
+    case "CUSTOMER": {
+      const profile = await prisma.customerProfile.findUnique({
+        where: {
+          userId: user.userId
         },
-        {
-          workOrder: {
-            technician: {
-              user: {
-                name: {
-                  contains: query.search,
-                  mode: "insensitive"
-                }
-              }
-            }
-          }
-        },
-        {
-          workOrder: {
-            customer: {
-              user: {
-                name: {
-                  contains: query.search,
-                  mode: "insensitive"
-                }
-              }
-            }
-          }
+        select: {
+          id: true
         }
-      ]
+      });
+      if (!profile) {
+        throw new AppError(httpStatus24.NOT_FOUND, "customer not found");
+      }
+      andConditions.push({ workOrder: { customerId: profile.id } });
+      break;
+    }
+    case "MANAGER": {
+      const profile = await prisma.managerProfile.findUnique({
+        where: { userId: user.userId },
+        select: { id: true }
+      });
+      if (!profile) throw new AppError(httpStatus24.NOT_FOUND, "manager not found");
+      andConditions.push({ workOrder: { managerId: profile.id } });
+      break;
+    }
+    case "TECHNICIAN": {
+      const profile = await prisma.technicianProfile.findUnique({
+        where: { userId: user.userId },
+        select: { id: true }
+      });
+      if (!profile) throw new AppError(httpStatus24.NOT_FOUND, "technician not found");
+      andConditions.push({ workOrder: { technicianId: profile.id } });
+      break;
+    }
+    case "ADMIN":
+    case "SUPER_ADMIN":
+      break;
+    default:
+      throw new AppError(httpStatus24.FORBIDDEN, "you are not allowed to view attachments");
+  }
+  if (query.search) {
+    const partiesToSearch = PARTIES.filter((p) => p.toUpperCase() !== user.role);
+    andConditions.push({
+      OR: partiesToSearch.map(
+        (party) => ({
+          workOrder: {
+            [party]: {
+              user: {
+                name: { contains: query.search, mode: "insensitive" }
+              }
+            }
+          }
+        })
+      )
     });
   }
   if (query.region) {
-    const region = query.region;
-    const arr = region.split(",").map((item) => item.trim());
-    andConditions.push({
-      workOrder: {
-        region: {
-          area: { in: arr }
-        }
-      }
-    });
+    const areas = query.region.split(",").map((item) => item.trim());
+    andConditions.push({ workOrder: { region: { area: { in: areas } } } });
   }
-  if (query.isDelete) {
-    andConditions.push({
-      isDelete: query.isDelete
-    });
+  if (query.isDelete !== void 0) {
+    andConditions.push({ isDelete: String(query.isDelete) === "true" });
   }
-  const attachments = await prisma.attachment.findMany({
-    where: {
-      AND: andConditions
-    },
-    take: limit,
-    skip: (page - 1) * limit,
-    orderBy: {
-      [sort]: order
-    },
-    include: {
-      workOrder: true
-    }
-  });
-  const total = await prisma.attachment.count({
-    where: {
-      AND: andConditions
-    }
-  });
-  const meta = {
-    total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit)
-  };
+  const where = { AND: andConditions };
+  const [attachments, total] = await Promise.all([
+    prisma.attachment.findMany({
+      where,
+      take: limit,
+      skip: (page - 1) * limit,
+      orderBy: { [sort]: order },
+      include: { workOrder: true }
+    }),
+    prisma.attachment.count({ where })
+  ]);
   return {
     attachments,
-    meta
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    }
   };
 };
 var udpateAttach = async (payload, id, user) => {
@@ -5599,7 +6113,7 @@ var udpateAttach = async (payload, id, user) => {
     }
   });
   if (!isUser) {
-    throw new AppError(httpStatus23.NOT_FOUND, "user not found");
+    throw new AppError(httpStatus24.NOT_FOUND, "user not found");
   }
   const attachment = await prisma.attachment.findUnique({
     where: {
@@ -5614,12 +6128,12 @@ var udpateAttach = async (payload, id, user) => {
     }
   });
   if (!attachment) {
-    throw new AppError(httpStatus23.NOT_FOUND, "Attachment not found");
+    throw new AppError(httpStatus24.NOT_FOUND, "Attachment not found");
   }
   if (user.role === "CUSTOMER") {
     if (attachment.workOrder.customerId !== isUser.customer?.id) {
       throw new AppError(
-        httpStatus23.UNAUTHORIZED,
+        httpStatus24.UNAUTHORIZED,
         "you can not attach files unauthorized"
       );
     }
@@ -5627,7 +6141,7 @@ var udpateAttach = async (payload, id, user) => {
   if (user.role === "MANAGER") {
     if (attachment.workOrder.managerId !== isUser.manager?.id) {
       throw new AppError(
-        httpStatus23.UNAUTHORIZED,
+        httpStatus24.UNAUTHORIZED,
         "you can not attach files unauthorized"
       );
     }
@@ -5635,7 +6149,7 @@ var udpateAttach = async (payload, id, user) => {
   if (user.role === "TECHNICIAN") {
     if (attachment.workOrder.technicianId !== isUser.technician?.id) {
       throw new AppError(
-        httpStatus23.UNAUTHORIZED,
+        httpStatus24.UNAUTHORIZED,
         "you can not attach files unauthorized"
       );
     }
@@ -5662,7 +6176,7 @@ var deleteAttach = async (id, user) => {
     }
   });
   if (!isUser) {
-    throw new AppError(httpStatus23.NOT_FOUND, "user not found");
+    throw new AppError(httpStatus24.NOT_FOUND, "user not found");
   }
   const attachment = await prisma.attachment.findUnique({
     where: {
@@ -5677,45 +6191,34 @@ var deleteAttach = async (id, user) => {
     }
   });
   if (!attachment) {
-    throw new AppError(httpStatus23.NOT_FOUND, "Attachment not found");
-  }
-  if (attachment.isDelete) {
-    throw new AppError(httpStatus23.BAD_REQUEST, "attachment already deleted");
+    throw new AppError(httpStatus24.NOT_FOUND, "Attachment not found");
   }
   if (user.role === "CUSTOMER") {
     if (attachment.workOrder.customerId !== isUser.customer?.id) {
-      throw new AppError(httpStatus23.UNAUTHORIZED, "you can not attach files");
+      throw new AppError(httpStatus24.UNAUTHORIZED, "you can not attach files");
     }
   }
   if (user.role === "MANAGER") {
     if (attachment.workOrder.managerId !== isUser.manager?.id) {
-      throw new AppError(httpStatus23.UNAUTHORIZED, "you can not attach files");
+      throw new AppError(httpStatus24.UNAUTHORIZED, "you can not attach files");
     }
   }
   if (user.role === "TECHNICIAN") {
     if (attachment.workOrder.technicianId !== isUser.technician?.id) {
-      throw new AppError(httpStatus23.UNAUTHORIZED, "you can not attach files");
+      throw new AppError(httpStatus24.UNAUTHORIZED, "you can not attach files");
     }
   }
-  const deleted = await prisma.attachment.update({
+  await prisma.attachment.delete({
     where: {
       id: attachment.id
-    },
-    data: {
-      isDelete: true,
-      deletedAt: /* @__PURE__ */ new Date()
     }
   });
-  return deleted;
 };
 var attachmentService = {
   createAttachment,
-  getMyAttach,
-  getTechnicianAttach,
-  getManager,
-  getAllAttach,
   udpateAttach,
-  deleteAttach
+  deleteAttach,
+  getAttachments
 };
 
 // src/app/module/attachment/attachment.controller.ts
@@ -5723,10 +6226,10 @@ var createAttach = catchAsync(async (req, res) => {
   const files = req.files;
   const attachment = files?.["attachment"] || [];
   if (attachment.length === 0) {
-    throw new AppError(httpStatus24.BAD_REQUEST, "minimum one file need");
+    throw new AppError(httpStatus25.BAD_REQUEST, "minimum one file need");
   }
   if (!req.body.data) {
-    throw new AppError(httpStatus24.BAD_REQUEST, "form data not found");
+    throw new AppError(httpStatus25.BAD_REQUEST, "form data not found");
   }
   const data = JSON.parse(req.body.data);
   const user = req.user;
@@ -5736,93 +6239,20 @@ var createAttach = catchAsync(async (req, res) => {
     user
   );
   sendResponse(res, {
-    statusCode: httpStatus24.CREATED,
+    statusCode: httpStatus25.CREATED,
     success: true,
     message: `attachment created successfully`,
     data: result
   });
 });
-var getMyAttach2 = catchAsync(async (req, res) => {
-  const query = req.query;
+var getAttatchments = catchAsync(async (req, res) => {
   const user = req.user;
-  const { attachments, meta } = await attachmentService.getMyAttach(
-    query,
-    user
-  );
-  if (attachments.length === 0) {
-    return sendResponse(res, {
-      statusCode: httpStatus24.NOT_FOUND,
-      success: false,
-      message: `You have no attach files`,
-      data: null
-    });
-  }
-  sendResponse(res, {
-    statusCode: httpStatus24.OK,
-    success: true,
-    message: `all attachments retrived successfully`,
-    data: attachments,
-    meta
-  });
-});
-var getAttachTech = catchAsync(async (req, res) => {
   const query = req.query;
-  const user = req.user;
-  const { attachments, meta } = await attachmentService.getTechnicianAttach(
-    query,
-    user
-  );
-  if (attachments.length === 0) {
-    return sendResponse(res, {
-      statusCode: httpStatus24.NOT_FOUND,
-      success: false,
-      message: `You have no attach files`,
-      data: null
-    });
-  }
+  const { attachments, meta } = await attachmentService.getAttachments(query, user);
   sendResponse(res, {
-    statusCode: httpStatus24.OK,
+    statusCode: httpStatus25.OK,
     success: true,
-    message: `all attachments retrived successfully`,
-    data: attachments,
-    meta
-  });
-});
-var getAttachManager = catchAsync(async (req, res) => {
-  const query = req.query;
-  const user = req.user;
-  const { attachments, meta } = await attachmentService.getManager(query, user);
-  if (attachments.length === 0) {
-    return sendResponse(res, {
-      statusCode: httpStatus24.NOT_FOUND,
-      success: false,
-      message: `You have no attach files`,
-      data: null
-    });
-  }
-  sendResponse(res, {
-    statusCode: httpStatus24.OK,
-    success: true,
-    message: `all attachments retrived successfully`,
-    data: attachments,
-    meta
-  });
-});
-var getAllTech = catchAsync(async (req, res) => {
-  const query = req.query;
-  const { attachments, meta } = await attachmentService.getAllAttach(query);
-  if (attachments.length === 0) {
-    return sendResponse(res, {
-      statusCode: httpStatus24.NOT_FOUND,
-      success: false,
-      message: `attachment not found`,
-      data: null
-    });
-  }
-  sendResponse(res, {
-    statusCode: httpStatus24.OK,
-    success: true,
-    message: `all attachments retrived successfully`,
+    message: `attachment updated successfully`,
     data: attachments,
     meta
   });
@@ -5833,7 +6263,7 @@ var updateAttach = catchAsync(async (req, res) => {
   const user = req.user;
   const result = await attachmentService.udpateAttach(body, id, user);
   sendResponse(res, {
-    statusCode: httpStatus24.OK,
+    statusCode: httpStatus25.OK,
     success: true,
     message: `attachment updated successfully`,
     data: result
@@ -5842,20 +6272,17 @@ var updateAttach = catchAsync(async (req, res) => {
 var deletedAttach = catchAsync(async (req, res) => {
   const id = req.params.attachmentId;
   const user = req.user;
-  const result = await attachmentService.deleteAttach(id, user);
+  await attachmentService.deleteAttach(id, user);
   sendResponse(res, {
-    statusCode: httpStatus24.OK,
+    statusCode: httpStatus25.OK,
     success: true,
-    message: `soft deleted successfully`,
+    message: `attatchemnt deleted successfully`,
     data: null
   });
 });
 var attachmentController = {
   createAttach,
-  getMyAttach: getMyAttach2,
-  getAttachTech,
-  getAttachManager,
-  getAllTech,
+  getAttatchments,
   updateAttach,
   deletedAttach
 };
@@ -5870,28 +6297,13 @@ route10.post(
       maxCount: 10
     }
   ]),
-  auth(UserRole.CUSTOMER, UserRole.MANAGER, UserRole.TECHNICIAN),
+  auth(UserRole.CUSTOMER, UserRole.TECHNICIAN),
   attachmentController.createAttach
 );
 route10.get(
-  "/my-attachments",
-  auth(UserRole.CUSTOMER),
-  attachmentController.getMyAttach
-);
-route10.get(
-  "/technician-attachments",
-  auth(UserRole.TECHNICIAN),
-  attachmentController.getAttachTech
-);
-route10.get(
-  "/manager-attachments",
-  auth(UserRole.MANAGER),
-  attachmentController.getAttachManager
-);
-route10.get(
-  "/all-attachments",
-  auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
-  attachmentController.getAllTech
+  "/",
+  auth(),
+  attachmentController.getAttatchments
 );
 route10.patch(
   "/update/:attachmentId",
@@ -5904,7 +6316,7 @@ route10.patch(
   ),
   attachmentController.updateAttach
 );
-route10.patch(
+route10.delete(
   "/delete/:attachmentId",
   auth(
     UserRole.ADMIN,
@@ -5921,7 +6333,7 @@ var attachmentRouter = route10;
 import { Router as Router11 } from "express";
 
 // src/app/module/report/report.service.ts
-import httpStatus25 from "http-status";
+import httpStatus26 from "http-status";
 var createReport = async (payload, report, user) => {
   const isTech = await prisma.technicianProfile.findUnique({
     where: {
@@ -5932,7 +6344,7 @@ var createReport = async (payload, report, user) => {
     }
   });
   if (!isTech) {
-    throw new AppError(httpStatus25.NOT_FOUND, "technician not found");
+    throw new AppError(httpStatus26.NOT_FOUND, "technician not found");
   }
   const isWrokOrder = await prisma.workOrder.findUnique({
     where: {
@@ -5944,11 +6356,11 @@ var createReport = async (payload, report, user) => {
     }
   });
   if (!isWrokOrder) {
-    throw new AppError(httpStatus25.NOT_FOUND, "work order not found");
+    throw new AppError(httpStatus26.NOT_FOUND, "work order not found");
   }
   if (isWrokOrder.status !== "COMPLETED" || isWrokOrder.service.status !== "COMPLETED") {
     throw new AppError(
-      httpStatus25.BAD_REQUEST,
+      httpStatus26.BAD_REQUEST,
       `you can't attach summary report before completed work`
     );
   }
@@ -5965,7 +6377,7 @@ var createReport = async (payload, report, user) => {
         if (!result) {
           return reject(
             new AppError(
-              httpStatus25.BAD_GATEWAY,
+              httpStatus26.BAD_GATEWAY,
               "No result returned from cloudinary"
             )
           );
@@ -5997,7 +6409,7 @@ var getMyReport = async (query, user) => {
     }
   });
   if (!isTech) {
-    throw new AppError(httpStatus25.NOT_FOUND, "technician not found");
+    throw new AppError(httpStatus26.NOT_FOUND, "technician not found");
   }
   const andConditions = [
     {
@@ -6184,7 +6596,7 @@ var updateReport = async (payload, report, id, user) => {
     }
   });
   if (!isUser) {
-    throw new AppError(httpStatus25.NOT_FOUND, "user not found");
+    throw new AppError(httpStatus26.NOT_FOUND, "user not found");
   }
   const isReport = await prisma.serviceReport.findUnique({
     where: {
@@ -6195,14 +6607,14 @@ var updateReport = async (payload, report, id, user) => {
     }
   });
   if (!isReport) {
-    throw new AppError(httpStatus25.NOT_FOUND, "service report not found");
+    throw new AppError(httpStatus26.NOT_FOUND, "service report not found");
   }
   if (isReport.isDelete) {
-    throw new AppError(httpStatus25.BAD_REQUEST, "service report deleted");
+    throw new AppError(httpStatus26.BAD_REQUEST, "service report deleted");
   }
   if (user.role === "TECHNICIAN") {
     if (isReport.workOrder.technicianId !== isUser.technician?.id) {
-      throw new AppError(httpStatus25.UNAUTHORIZED, "you can not update");
+      throw new AppError(httpStatus26.UNAUTHORIZED, "you can not update");
     }
   }
   const reportRes = report ? await new Promise((resolve, reject) => {
@@ -6218,7 +6630,7 @@ var updateReport = async (payload, report, id, user) => {
         if (!result) {
           return reject(
             new AppError(
-              httpStatus25.BAD_GATEWAY,
+              httpStatus26.BAD_GATEWAY,
               "No result returned from cloudinary"
             )
           );
@@ -6254,7 +6666,7 @@ var deleteReport = async (id, user) => {
     }
   });
   if (!isUser) {
-    throw new AppError(httpStatus25.NOT_FOUND, "user not found");
+    throw new AppError(httpStatus26.NOT_FOUND, "user not found");
   }
   const isReport = await prisma.serviceReport.findUnique({
     where: {
@@ -6265,30 +6677,20 @@ var deleteReport = async (id, user) => {
     }
   });
   if (!isReport) {
-    throw new AppError(httpStatus25.NOT_FOUND, "service report not found");
-  }
-  if (isReport.isDelete) {
-    throw new AppError(
-      httpStatus25.BAD_REQUEST,
-      "service report already deleted deleted"
-    );
+    throw new AppError(httpStatus26.NOT_FOUND, "service report not found");
   }
   if (user.role === "TECHNICIAN") {
     if (isReport.workOrder.technicianId !== isUser.technician?.id) {
-      throw new AppError(httpStatus25.UNAUTHORIZED, "you can not delete");
+      throw new AppError(httpStatus26.UNAUTHORIZED, "you can not delete");
     }
   }
-  await prisma.serviceReport.update({
-    where: {
-      id: isReport.id
-    },
-    data: {
-      isDelete: true,
-      deletedAt: /* @__PURE__ */ new Date()
-    }
-  });
   await Cloudinary.cloudinary.uploader.destroy(isReport.reportPublicId);
   console.log("report deleted from cloudinary");
+  await prisma.serviceReport.delete({
+    where: {
+      id: isReport.id
+    }
+  });
 };
 var reportService = {
   createReport,
@@ -6299,11 +6701,11 @@ var reportService = {
 };
 
 // src/app/module/report/report.controller.ts
-import httpStatus26 from "http-status";
+import httpStatus27 from "http-status";
 var attachReport = catchAsync(async (req, res) => {
   const report = req.file;
   if (!report) {
-    throw new AppError(httpStatus26.BAD_REQUEST, "report must be added");
+    throw new AppError(httpStatus27.BAD_REQUEST, "report must be added");
   }
   let data = null;
   if (req.body.data) {
@@ -6312,7 +6714,7 @@ var attachReport = catchAsync(async (req, res) => {
   const user = req.user;
   const result = await reportService.createReport(data, report, user);
   sendResponse(res, {
-    statusCode: httpStatus26.CREATED,
+    statusCode: httpStatus27.CREATED,
     success: true,
     message: `report attached successfully`,
     data: result
@@ -6322,16 +6724,8 @@ var getMyReport2 = catchAsync(async (req, res) => {
   const query = req.query;
   const user = req.user;
   const { reports, meta } = await reportService.getMyReport(query, user);
-  if (reports.length === 0) {
-    return sendResponse(res, {
-      statusCode: httpStatus26.NOT_FOUND,
-      success: false,
-      message: `You have no report`,
-      data: null
-    });
-  }
   sendResponse(res, {
-    statusCode: httpStatus26.OK,
+    statusCode: httpStatus27.OK,
     success: true,
     message: `all reports retrived successfully`,
     data: reports,
@@ -6341,16 +6735,8 @@ var getMyReport2 = catchAsync(async (req, res) => {
 var getAllReport2 = catchAsync(async (req, res) => {
   const query = req.query;
   const { reports, meta } = await reportService.getAllReport(query);
-  if (reports.length === 0) {
-    return sendResponse(res, {
-      statusCode: httpStatus26.NOT_FOUND,
-      success: false,
-      message: `service report not found`,
-      data: null
-    });
-  }
   sendResponse(res, {
-    statusCode: httpStatus26.OK,
+    statusCode: httpStatus27.OK,
     success: true,
     message: `all reports retrived successfully`,
     data: reports,
@@ -6367,7 +6753,7 @@ var updateReport2 = catchAsync(async (req, res) => {
   const id = req.params.reportId;
   const result = await reportService.updateReport(data, report, id, user);
   sendResponse(res, {
-    statusCode: httpStatus26.CREATED,
+    statusCode: httpStatus27.CREATED,
     success: true,
     message: `report updated successfully`,
     data: result
@@ -6378,7 +6764,7 @@ var deleteReport2 = catchAsync(async (req, res) => {
   const id = req.params.reportId;
   await reportService.deleteReport(id, user);
   sendResponse(res, {
-    statusCode: httpStatus26.CREATED,
+    statusCode: httpStatus27.CREATED,
     success: true,
     message: `report deleted successfully`,
     data: null
@@ -6416,7 +6802,7 @@ route11.patch(
   auth(UserRole.TECHNICIAN),
   reportController.updateReport
 );
-route11.patch(
+route11.delete(
   "/delete/:reportId",
   auth(UserRole.TECHNICIAN, UserRole.SUPER_ADMIN, UserRole.ADMIN),
   reportController.deleteReport
@@ -6427,7 +6813,7 @@ var reportRouter = route11;
 import { Router as Router12 } from "express";
 
 // src/app/module/feedback/feedback.service.ts
-import httpStatus27 from "http-status";
+import httpStatus28 from "http-status";
 var createFeedback = async (payload, user) => {
   const isCustomer = await prisma.customerProfile.findUnique({
     where: {
@@ -6438,7 +6824,7 @@ var createFeedback = async (payload, user) => {
     }
   });
   if (!isCustomer) {
-    throw new AppError(httpStatus27.NOT_FOUND, "customer not found");
+    throw new AppError(httpStatus28.NOT_FOUND, "customer not found");
   }
   if (isCustomer.user.status === "BLOCKED") {
     throw new Error("You are bloked! Please unblock first then give review");
@@ -6456,19 +6842,19 @@ var createFeedback = async (payload, user) => {
     }
   });
   if (!workOrder) {
-    throw new AppError(httpStatus27.NOT_FOUND, "work order not found");
+    throw new AppError(httpStatus28.NOT_FOUND, "work order not found");
   }
   if (workOrder.status !== "COMPLETED" || workOrder.service.status !== "COMPLETED") {
     throw new AppError(
-      httpStatus27.BAD_REQUEST,
+      httpStatus28.BAD_REQUEST,
       "without complete you can not crate review"
     );
   }
   if (workOrder.customerId !== isCustomer.id) {
-    throw new AppError(httpStatus27.UNAUTHORIZED, "You are not authorized to review");
+    throw new AppError(httpStatus28.UNAUTHORIZED, "You are not authorized to review");
   }
   if (workOrder.payment?.status !== "PAID") {
-    throw new AppError(httpStatus27.BAD_REQUEST, "you can not feedback before payment");
+    throw new AppError(httpStatus28.BAD_REQUEST, "you can not feedback before payment");
   }
   const existingFeedback = await prisma.feedback.findFirst({
     where: {
@@ -6494,7 +6880,7 @@ var createFeedback = async (payload, user) => {
       });
       const technicianId = createFeedback3.workOrder.technician?.id;
       if (!technicianId) {
-        throw new AppError(httpStatus27.BAD_REQUEST, "technician not found");
+        throw new AppError(httpStatus28.BAD_REQUEST, "technician not found");
       }
       const result = await tx.feedback.aggregate({
         _avg: {
@@ -6536,7 +6922,7 @@ var getById = async (id, user) => {
     }
   });
   if (!isUser) {
-    throw new AppError(httpStatus27.NOT_FOUND, "user not found");
+    throw new AppError(httpStatus28.NOT_FOUND, "user not found");
   }
   const result = await prisma.feedback.findUnique({
     where: {
@@ -6547,21 +6933,21 @@ var getById = async (id, user) => {
     }
   });
   if (!result) {
-    throw new AppError(httpStatus27.NOT_FOUND, "feedback not found");
+    throw new AppError(httpStatus28.NOT_FOUND, "feedback not found");
   }
   if (user.role === "TECHNICIAN") {
     if (result.workOrder.technicianId !== isUser.technician?.id) {
-      throw new AppError(httpStatus27.UNAUTHORIZED, "unauthorized");
+      throw new AppError(httpStatus28.UNAUTHORIZED, "unauthorized");
     }
   }
   if (user.role === "MANAGER") {
     if (result.workOrder.managerId !== isUser.manager?.id) {
-      throw new AppError(httpStatus27.UNAUTHORIZED, "unauthorized");
+      throw new AppError(httpStatus28.UNAUTHORIZED, "unauthorized");
     }
   }
   if (user.role === "CUSTOMER") {
     if (result.workOrder.customerId !== isUser.customer?.id) {
-      throw new AppError(httpStatus27.UNAUTHORIZED, "unauthorized");
+      throw new AppError(httpStatus28.UNAUTHORIZED, "unauthorized");
     }
   }
   return result;
@@ -6570,7 +6956,7 @@ var getAllFeedbacks = async (query) => {
   const sort = query.sortBy ? query.sortBy : "createdAt";
   const order = query.sortOrder ? query.sortOrder : "desc";
   const page = Number(query.page || 1);
-  const limit = Number(query.limit || 9);
+  const limit = Number(query.limit || 20);
   const andConditions = [];
   if (query.technicianId) {
     andConditions.push({
@@ -6611,7 +6997,15 @@ var getAllFeedbacks = async (query) => {
       [sort]: order
     },
     include: {
-      workOrder: true
+      workOrder: {
+        include: {
+          service: {
+            include: {
+              category: true
+            }
+          }
+        }
+      }
     }
   });
   const total = await prisma.feedback.count({
@@ -6640,7 +7034,7 @@ var updateFeedback = async (payload, id, user) => {
     }
   });
   if (!isCustomer) {
-    throw new AppError(httpStatus27.NOT_FOUND, "user not found");
+    throw new AppError(httpStatus28.NOT_FOUND, "user not found");
   }
   const feedback = await prisma.feedback.findUnique({
     where: {
@@ -6651,7 +7045,7 @@ var updateFeedback = async (payload, id, user) => {
     }
   });
   if (!feedback) {
-    throw new AppError(httpStatus27.NOT_FOUND, "feedback not found");
+    throw new AppError(httpStatus28.NOT_FOUND, "feedback not found");
   }
   const transactionRes = await prisma.$transaction(
     async (tx) => {
@@ -6707,7 +7101,7 @@ var deleteFeedback = async (id, user) => {
     }
   });
   if (!isCustomer) {
-    throw new AppError(httpStatus27.NOT_FOUND, "user not found");
+    throw new AppError(httpStatus28.NOT_FOUND, "user not found");
   }
   const feedback = await prisma.feedback.findUnique({
     where: {
@@ -6718,7 +7112,7 @@ var deleteFeedback = async (id, user) => {
     }
   });
   if (!feedback) {
-    throw new AppError(httpStatus27.NOT_FOUND, "feedback not found");
+    throw new AppError(httpStatus28.NOT_FOUND, "feedback not found");
   }
   const result = await prisma.$transaction(async (tx) => {
     const deletedFeedback = await tx.feedback.delete({
@@ -6762,13 +7156,13 @@ var feedbackService = {
 };
 
 // src/app/module/feedback/feedbck.controller.ts
-import httpStatus28 from "http-status";
+import httpStatus29 from "http-status";
 var createFeedback2 = catchAsync(async (req, res) => {
   const body = req.body;
   const user = req.user;
   const result = await feedbackService.createFeedback(body, user);
   sendResponse(res, {
-    statusCode: httpStatus28.CREATED,
+    statusCode: httpStatus29.CREATED,
     success: true,
     message: `feedback created successfully`,
     data: result
@@ -6779,7 +7173,7 @@ var getById2 = catchAsync(async (req, res) => {
   const user = req.user;
   const result = await feedbackService.getById(id, user);
   sendResponse(res, {
-    statusCode: httpStatus28.OK,
+    statusCode: httpStatus29.OK,
     success: true,
     message: `feedback retrived successfully`,
     data: result
@@ -6788,16 +7182,8 @@ var getById2 = catchAsync(async (req, res) => {
 var getAllFeedbacks2 = catchAsync(async (req, res) => {
   const query = req.query;
   const { allFeedback, meta } = await feedbackService.getAllFeedbacks(query);
-  if (allFeedback.length === 0) {
-    return sendResponse(res, {
-      statusCode: httpStatus28.NOT_FOUND,
-      success: false,
-      message: `feedbacks not found`,
-      data: null
-    });
-  }
   sendResponse(res, {
-    statusCode: httpStatus28.OK,
+    statusCode: httpStatus29.OK,
     success: true,
     message: `feedbacks retrived successfully`,
     data: allFeedback,
@@ -6810,7 +7196,7 @@ var updateFeedback2 = catchAsync(async (req, res) => {
   const user = req.user;
   const result = await feedbackService.updateFeedback(body, id, user);
   sendResponse(res, {
-    statusCode: httpStatus28.OK,
+    statusCode: httpStatus29.OK,
     success: true,
     message: `feedback updated successfully`,
     data: result
@@ -6821,7 +7207,7 @@ var deleteFeedback2 = catchAsync(async (req, res) => {
   const user = req.user;
   const result = await feedbackService.deleteFeedback(id, user);
   sendResponse(res, {
-    statusCode: httpStatus28.OK,
+    statusCode: httpStatus29.OK,
     success: true,
     message: `feedback deleted successfully`,
     data: result
@@ -6838,6 +7224,7 @@ var feedbackController = {
 // src/app/module/feedback/feedback.route.ts
 var route12 = Router12();
 route12.post("/", auth(UserRole.CUSTOMER), feedbackController.createFeedback);
+route12.get("/all-feedback", feedbackController.getAllFeedbacks);
 route12.get(
   "/:feedbackId",
   auth(
@@ -6849,7 +7236,6 @@ route12.get(
   ),
   feedbackController.getById
 );
-route12.get("/all-feedback", feedbackController.getAllFeedbacks);
 route12.patch(
   "/update/:feedbackId",
   auth(UserRole.CUSTOMER),
@@ -6866,7 +7252,7 @@ var feedbackRouter = route12;
 import { Router as Router13 } from "express";
 
 // src/app/module/user/user.service.ts
-import httpStatus29 from "http-status";
+import httpStatus30 from "http-status";
 var profileImageUpload = async (image, user) => {
   const isUser = await prisma.user.findUnique({
     where: {
@@ -6874,7 +7260,7 @@ var profileImageUpload = async (image, user) => {
     }
   });
   if (!isUser) {
-    throw new AppError(httpStatus29.NOT_FOUND, "user not found");
+    throw new AppError(httpStatus30.NOT_FOUND, "user not found");
   }
   const cloudinaryRes = await new Promise(
     (resolve, reject) => {
@@ -6890,7 +7276,7 @@ var profileImageUpload = async (image, user) => {
           if (!result) {
             return reject(
               new AppError(
-                httpStatus29.BAD_GATEWAY,
+                httpStatus30.BAD_GATEWAY,
                 "No result returned from cloudinary"
               )
             );
@@ -6933,21 +7319,118 @@ var updateCustomer = async (payload, user) => {
   });
   return res;
 };
+var getAllUsers = async (query) => {
+  const sort = query.sortBy ? query.sortBy : "createdAt";
+  const order = query.sortOrder ? query.sortOrder : "desc";
+  const page = Number(query.page || 1);
+  const limit = Number(query.limit || 20);
+  const andConditions = [
+    {
+      role: {
+        in: ["CUSTOMER", "TECHNICIAN", "MANAGER"]
+      }
+    }
+  ];
+  if (query.search) {
+    andConditions.push({
+      OR: [
+        {
+          name: {
+            contains: query.search,
+            mode: "insensitive"
+          }
+        },
+        {
+          email: {
+            contains: query.search,
+            mode: "insensitive"
+          }
+        }
+      ]
+    });
+  }
+  if (query.status) {
+    andConditions.push({
+      status: query.status
+    });
+  }
+  if (query.role) {
+    andConditions.push({
+      role: query.role
+    });
+  }
+  if (query.isDeleted) {
+    andConditions.push({
+      isDeleted: Boolean(query.isDeleted)
+    });
+  }
+  if (query.isEmailVerified) {
+    andConditions.push({
+      emailVerified: Boolean(query.isEmailVerified)
+    });
+  }
+  const users = await prisma.user.findMany({
+    where: {
+      AND: andConditions
+    },
+    omit: {
+      password: true
+    },
+    take: limit,
+    skip: (page - 1) * limit,
+    orderBy: {
+      [sort]: order
+    }
+  });
+  const total = await prisma.user.count({
+    where: {
+      AND: andConditions
+    }
+  });
+  const meta = {
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit)
+  };
+  return {
+    users,
+    meta
+  };
+};
+var statusUpdate7 = async (payload, userId) => {
+  const isUser = await prisma.user.findUnique({
+    where: { id: userId }
+  });
+  if (!isUser) {
+    throw new AppError(httpStatus30.NOT_FOUND, "user not found");
+  }
+  await prisma.user.update({
+    where: {
+      id: userId
+    },
+    data: {
+      status: payload.status
+    }
+  });
+};
 var userService = {
   profileImageUpload,
-  updateCustomer
+  updateCustomer,
+  getAllUsers,
+  statusUpdate: statusUpdate7
 };
 
 // src/app/module/user/user.controller.ts
-import httpStatus30 from "http-status";
+import httpStatus31 from "http-status";
 var profileImageUpload2 = catchAsync(async (req, res) => {
   if (!req.file) {
-    throw new AppError(httpStatus30.BAD_REQUEST, "No file uploaded");
+    throw new AppError(httpStatus31.BAD_REQUEST, "No file uploaded");
   }
   const user = req.user;
   const result = await userService.profileImageUpload(req.file, user);
   sendResponse(res, {
-    statusCode: httpStatus30.OK,
+    statusCode: httpStatus31.OK,
     success: true,
     message: `profile updated successfully`,
     data: result
@@ -6958,15 +7441,39 @@ var udpateCustomer = catchAsync(async (req, res) => {
   const user = req.user;
   const result = await userService.updateCustomer(body, user);
   sendResponse(res, {
-    statusCode: httpStatus30.OK,
+    statusCode: httpStatus31.OK,
     success: true,
     message: `customer profile updated successfully`,
     data: result
   });
 });
+var getAllUsers2 = catchAsync(async (req, res) => {
+  const query = req.query;
+  const { users, meta } = await userService.getAllUsers(query);
+  sendResponse(res, {
+    statusCode: httpStatus31.OK,
+    success: true,
+    message: `users retrive successfully`,
+    data: users,
+    meta
+  });
+});
+var statusUpdate8 = catchAsync(async (req, res) => {
+  const data = req.body;
+  const userId = req.params.userId;
+  await userService.statusUpdate(data, userId);
+  sendResponse(res, {
+    statusCode: httpStatus31.OK,
+    success: true,
+    message: `users status updated successfully`,
+    data: null
+  });
+});
 var userController = {
   profileImageUpload: profileImageUpload2,
-  udpateCustomer
+  udpateCustomer,
+  getAllUsers: getAllUsers2,
+  statusUpdate: statusUpdate8
 };
 
 // src/app/module/user/user.validation.ts
@@ -6974,6 +7481,9 @@ import z6 from "zod";
 var CustomerUpdateZodSchema = z6.object({
   phone: z6.string().optional(),
   address: z6.object({}).passthrough().optional()
+});
+var StatusUpdateZodSchema = z6.object({
+  status: z6.enum(["ACTIVE", "BLOCKED", "DELETED"], "status must be one of ACTIVE, BLOCKED, DELETED")
 });
 
 // src/app/module/user/user.route.ts
@@ -6996,13 +7506,24 @@ route13.patch(
   auth(UserRole.CUSTOMER),
   userController.udpateCustomer
 );
+route13.get(
+  "/all-users",
+  auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+  userController.getAllUsers
+);
+route13.patch(
+  "/status-update/:userId",
+  zodValidation(StatusUpdateZodSchema),
+  auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+  userController.statusUpdate
+);
 var userRouter = route13;
 
 // src/app/module/analytics/analytics.route.ts
 import { Router as Router14 } from "express";
 
 // src/app/module/analytics/analytics.controller.ts
-import httpStatus31 from "http-status";
+import httpStatus32 from "http-status";
 
 // src/app/module/analytics/analytics.service.ts
 var getCurrentMonthRange = () => {
@@ -7064,6 +7585,11 @@ var getAdminAnalytics = async () => {
     }
   });
   const totalWorkOrders = await prisma.workOrder.count();
+  const totalStartedWorkOrders = await prisma.workOrder.count({
+    where: {
+      status: WorkOrderStatus.STARTED
+    }
+  });
   const totalRevenue = await prisma.payment.aggregate({
     where: {
       status: PaymentStatus.PAID
@@ -7097,6 +7623,7 @@ var getAdminAnalytics = async () => {
     pendingServices,
     rejectedServices,
     totalWorkOrders,
+    totalStartedWorkOrders,
     totalRevenue: totalRevenue._sum.amount?.toString() ?? "0",
     totalRefunded: totalRefunded._sum.amount?.toString() ?? "0",
     currentMonthRevenue: currentMonthRevenue._sum.amount?.toString() ?? "0"
@@ -7111,9 +7638,9 @@ var getCustomerAnalytics = async (userId) => {
     return {
       totalServices: 0,
       cancelledServices: 0,
+      rejectedServices: 0,
       pendingServices: 0,
       completedServices: 0,
-      completedWorkOrders: 0,
       totalSpend: "0",
       totalRefund: "0"
     };
@@ -7135,6 +7662,13 @@ var getCustomerAnalytics = async (userId) => {
       isDeleted: false
     }
   });
+  const rejectedServices = await prisma.service.count({
+    where: {
+      customerId: customer.id,
+      status: ServiceStatus.REJECTED,
+      isDeleted: false
+    }
+  });
   const completedServices = await prisma.service.count({
     where: {
       customerId: customer.id,
@@ -7146,6 +7680,12 @@ var getCustomerAnalytics = async (userId) => {
     where: {
       customerId: customer.id,
       status: WorkOrderStatus.COMPLETED
+    }
+  });
+  const totalStartedWorkOrders = await prisma.workOrder.count({
+    where: {
+      customerId: customer.id,
+      status: WorkOrderStatus.STARTED
     }
   });
   const totalSpend = await prisma.payment.aggregate({
@@ -7166,8 +7706,10 @@ var getCustomerAnalytics = async (userId) => {
     totalServices,
     cancelledServices,
     pendingServices,
+    rejectedServices,
     completedServices,
     completedWorkOrders,
+    totalStartedWorkOrders,
     totalSpend: totalSpend._sum.amount?.toString() ?? "0",
     totalRefund: totalRefund._sum.amount?.toString() ?? "0"
   };
@@ -7187,6 +7729,7 @@ var getTechnicianAnalytics = async (userId) => {
       startedWorkOrders: 0,
       totalEarnings: "0",
       totalRefunded: "0",
+      currentMonthRevenue: "0",
       coverRegions: 0,
       completeJobs: 0,
       avgRating: 0
@@ -7221,6 +7764,17 @@ var getTechnicianAnalytics = async (userId) => {
     },
     _sum: { amount: true }
   });
+  const currentMonthRevenue = await prisma.payment.aggregate({
+    where: {
+      workOrder: { technicianId },
+      status: PaymentStatus.PAID,
+      paidAt: {
+        gte: getCurrentMonthRange().startOfMonth,
+        lte: getCurrentMonthRange().endOfMonth
+      }
+    },
+    _sum: { amount: true }
+  });
   const completeJobs = await prisma.workOrder.count({
     where: { technicianId, status: WorkOrderStatus.COMPLETED }
   });
@@ -7229,6 +7783,7 @@ var getTechnicianAnalytics = async (userId) => {
     startedWorkOrders,
     totalEarnings: totalEarnings._sum.amount?.toString() ?? "0",
     totalRefunded: totalRefunded._sum.amount?.toString() ?? "0",
+    currentMonthRevenue: currentMonthRevenue._sum.amount?.toString() ?? "0",
     coverRegions: technicianProfile?.regions.length ?? 0,
     completeJobs,
     avgRating: technicianProfile?.rating ?? 0
@@ -7245,11 +7800,12 @@ var getManagerAnalytics = async (userId) => {
   if (!manager) {
     return {
       coverRegions: 0,
-      approvedServices: 0,
+      assignedServices: 0,
       rejectedServices: 0,
       completedWorkByTechnicians: 0,
       totalEarnings: "0",
-      totalRefunded: "0"
+      totalRefunded: "0",
+      currentMonthRevenue: "0"
     };
   }
   const regionIds = manager.region.map((r) => r.id);
@@ -7257,10 +7813,10 @@ var getManagerAnalytics = async (userId) => {
     (region) => region.area.toUpperCase() === "ALL"
   );
   const serviceRegionFilter = managesAllRegions ? {} : { regionId: { in: regionIds } };
-  const approvedServices = await prisma.service.count({
+  const assignedServices = await prisma.service.count({
     where: {
       ...serviceRegionFilter,
-      status: ServiceStatus.APPROVED,
+      status: ServiceStatus.ASSIGNED,
       isDeleted: false
     }
   });
@@ -7286,6 +7842,19 @@ var getManagerAnalytics = async (userId) => {
     },
     _sum: { amount: true }
   });
+  const currentMonthRevenue = await prisma.payment.aggregate({
+    where: {
+      workOrder: {
+        managerId: manager.id
+      },
+      status: PaymentStatus.PAID,
+      paidAt: {
+        gte: getCurrentMonthRange().startOfMonth,
+        lte: getCurrentMonthRange().endOfMonth
+      }
+    },
+    _sum: { amount: true }
+  });
   const totalRefunded = await prisma.payment.aggregate({
     where: {
       workOrder: { managerId: manager.id },
@@ -7295,11 +7864,12 @@ var getManagerAnalytics = async (userId) => {
   });
   return {
     coverRegions: regionIds.length,
-    approvedServices,
+    assignedServices,
     rejectedServices,
     completedWorkByTechnicians,
     totalEarnings: totalEarnings._sum.amount?.toString() ?? "0",
-    totalRefunded: totalRefunded._sum.amount?.toString() ?? "0"
+    totalRefunded: totalRefunded._sum.amount?.toString() ?? "0",
+    currentMonthRevenue: currentMonthRevenue._sum.amount?.toString() ?? "0"
   };
 };
 var analyticsService = {
@@ -7313,7 +7883,7 @@ var analyticsService = {
 var getAdminStats = catchAsync(async (req, res) => {
   const result = await analyticsService.getAdminAnalytics();
   sendResponse(res, {
-    statusCode: httpStatus31.OK,
+    statusCode: httpStatus32.OK,
     success: true,
     message: "Admin analytics retrieved successfully",
     data: result
@@ -7323,7 +7893,7 @@ var getCustomerStats = catchAsync(async (req, res) => {
   const id = req.user?.userId;
   const result = await analyticsService.getCustomerAnalytics(id);
   sendResponse(res, {
-    statusCode: httpStatus31.OK,
+    statusCode: httpStatus32.OK,
     success: true,
     message: "Customer analytics retrieved successfully",
     data: result
@@ -7333,7 +7903,7 @@ var getTechnicianStats = catchAsync(async (req, res) => {
   const id = req.user?.userId;
   const result = await analyticsService.getTechnicianAnalytics(id);
   sendResponse(res, {
-    statusCode: httpStatus31.OK,
+    statusCode: httpStatus32.OK,
     success: true,
     message: "Technician analytics retrieved successfully",
     data: result
@@ -7343,7 +7913,7 @@ var getManagerStats = catchAsync(async (req, res) => {
   const id = req.user?.userId;
   const result = await analyticsService.getManagerAnalytics(id);
   sendResponse(res, {
-    statusCode: httpStatus31.OK,
+    statusCode: httpStatus32.OK,
     success: true,
     message: "Manager analytics retrieved successfully",
     data: result
@@ -7384,7 +7954,7 @@ var analyticsRoutes = router;
 import { Router as Router15 } from "express";
 
 // src/app/module/schedule/schedule.service.ts
-import httpStatus32 from "http-status";
+import httpStatus33 from "http-status";
 var getAllSchedule = async (query) => {
   const sort = query.sortBy ? query.sortBy : "createdAt";
   const order = query.sortOrder ? query.sortOrder : "desc";
@@ -7440,7 +8010,7 @@ var getScheduleTech = async (query, user) => {
     }
   });
   if (!technician) {
-    throw new AppError(httpStatus32.NOT_FOUND, "technician not found");
+    throw new AppError(httpStatus33.NOT_FOUND, "technician not found");
   }
   const andConditions = [
     {
@@ -7497,7 +8067,7 @@ var singleSchedule = async (id, user) => {
     }
   });
   if (!isUser) {
-    throw new AppError(httpStatus32.NOT_FOUND, "user nto found");
+    throw new AppError(httpStatus33.NOT_FOUND, "user nto found");
   }
   const schedule = await prisma.schedule.findUnique({
     where: {
@@ -7515,21 +8085,21 @@ var singleSchedule = async (id, user) => {
     }
   });
   if (!schedule) {
-    throw new AppError(httpStatus32.NOT_FOUND, "schedule not found");
+    throw new AppError(httpStatus33.NOT_FOUND, "schedule not found");
   }
   if (user.role === "CUSTOMER") {
     if (schedule.workOrder.customer.id !== isUser.customer?.id) {
-      throw new AppError(httpStatus32.UNAUTHORIZED, "unauthorized access");
+      throw new AppError(httpStatus33.UNAUTHORIZED, "unauthorized access");
     }
   }
   if (user.role === "MANAGER") {
     if (schedule.workOrder.manager.id !== isUser.manager?.id) {
-      throw new AppError(httpStatus32.UNAUTHORIZED, "unauthorized access");
+      throw new AppError(httpStatus33.UNAUTHORIZED, "unauthorized access");
     }
   }
   if (user.role === "TECHNICIAN") {
     if (schedule.workOrder.technician?.id !== isUser.technician?.id) {
-      throw new AppError(httpStatus32.UNAUTHORIZED, "unauthorized access");
+      throw new AppError(httpStatus33.UNAUTHORIZED, "unauthorized access");
     }
   }
   return schedule;
@@ -7541,20 +8111,20 @@ var scheduleService = {
 };
 
 // src/app/module/schedule/schedule.controller.ts
-import httpStatus33 from "http-status";
+import httpStatus34 from "http-status";
 var getAllSchedule2 = catchAsync(async (req, res) => {
   const query = req.query;
   const { schedules, meta } = await scheduleService.getAllSchedule(query);
   if (schedules.length === 0) {
     return sendResponse(res, {
-      statusCode: httpStatus33.NOT_FOUND,
+      statusCode: httpStatus34.NOT_FOUND,
       success: false,
       message: `scheule not found`,
       data: null
     });
   }
   sendResponse(res, {
-    statusCode: httpStatus33.OK,
+    statusCode: httpStatus34.OK,
     success: true,
     message: `all scheudle retrived successfully`,
     data: schedules,
@@ -7570,14 +8140,14 @@ var getSchedulesTech = catchAsync(async (req, res) => {
   );
   if (schedules.length === 0) {
     return sendResponse(res, {
-      statusCode: httpStatus33.NOT_FOUND,
+      statusCode: httpStatus34.NOT_FOUND,
       success: false,
       message: `schedule not found`,
       data: null
     });
   }
   sendResponse(res, {
-    statusCode: httpStatus33.OK,
+    statusCode: httpStatus34.OK,
     success: true,
     message: `schudel retrived successfully`,
     data: schedules,
@@ -7589,7 +8159,7 @@ var singleSchedule2 = catchAsync(async (req, res) => {
   const id = req.params.scheduleId;
   const result = await scheduleService.singleSchedule(id, user);
   sendResponse(res, {
-    statusCode: httpStatus33.OK,
+    statusCode: httpStatus34.OK,
     success: true,
     message: `scheule retrived successfully`,
     data: result
@@ -7655,7 +8225,7 @@ app.get("/bkash-test", async (req, res) => {
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/region", regionRouter);
 app.use("/api/v1/manager", managerRouter);
-app.use("/api/v1/category", categoryRotuer);
+app.use("/api/v1/category", categoryRouter);
 app.use("/api/v1/service", serviceRouter);
 app.use("/api/v1/skill", skillRoute);
 app.use("/api/v1/technician", technicianRoutes);
@@ -7673,11 +8243,12 @@ var app_default = app;
 
 // src/app/utils/seed.ts
 import bcrypt3 from "bcryptjs";
-import httpStatus34 from "http-status";
+import httpStatus35 from "http-status";
 var seedSuperAdmin = async () => {
   try {
     const existSuperAdmin = await prisma.user.findFirst({
-      where: { role: "SUPER_ADMIN" }
+      where: { role: "SUPER_ADMIN" },
+      omit: { password: true }
     });
     if (existSuperAdmin) {
       console.log("super admin already exists");
@@ -7688,7 +8259,7 @@ var seedSuperAdmin = async () => {
     const password = env_default.super_admin_password;
     if (!name || !email || !password) {
       throw new AppError(
-        httpStatus34.INTERNAL_SERVER_ERROR,
+        httpStatus35.INTERNAL_SERVER_ERROR,
         "no super admin name, email, password"
       );
     }
@@ -7704,7 +8275,8 @@ var seedSuperAdmin = async () => {
         emailVerified: true,
         needPasswordChange: false,
         role: UserRole.SUPER_ADMIN
-      }
+      },
+      omit: { password: true }
     });
     console.log("super admin created", superAdmi);
   } catch (error) {
@@ -7721,12 +8293,13 @@ var seedTesterAdmin = async () => {
     const password = env_default.tester_admin_password;
     if (!name || !email || !password) {
       throw new AppError(
-        httpStatus34.INTERNAL_SERVER_ERROR,
+        httpStatus35.INTERNAL_SERVER_ERROR,
         "no tester admin name, email, password"
       );
     }
     const existTesterAdmin = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
+      omit: { password: true }
     });
     if (existTesterAdmin) {
       console.log("tester admin already exists");
@@ -7744,7 +8317,8 @@ var seedTesterAdmin = async () => {
         emailVerified: true,
         needPasswordChange: false,
         role: UserRole.ADMIN
-      }
+      },
+      omit: { password: true }
     });
     console.log("tester admin created", testerAdmin);
   } catch (error) {
@@ -7761,12 +8335,13 @@ var seedTesterManager = async () => {
     const password = env_default.tester_manager_password;
     if (!name || !email || !password) {
       throw new AppError(
-        httpStatus34.INTERNAL_SERVER_ERROR,
+        httpStatus35.INTERNAL_SERVER_ERROR,
         "no tester manager name, email, password"
       );
     }
     const existTesterManager = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
+      omit: { password: true }
     });
     if (existTesterManager) {
       console.log("tester manager already exists");
@@ -7800,7 +8375,8 @@ var seedTesterManager = async () => {
             }
           }
         }
-      }
+      },
+      omit: { password: true }
     });
     console.log("tester manager created", testerManager);
   } catch (error) {

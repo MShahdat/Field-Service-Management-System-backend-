@@ -5,6 +5,7 @@ interface Address {
 }
 
 export interface IServicePayload {
+	title: string;
 	description: string;
 	servicingDate: string;
 	priority: Priority;
@@ -12,11 +13,11 @@ export interface IServicePayload {
 	categoryId: string;
 	regionId: string;
 	preferredStartTime?: string;
-	preferredEndTime?: string;
 }
 
 
 export interface IUpdateServicePayload {
+	title: string;
 	description?: string;
 	servicingDate?: string;
 	priority?: Priority;
@@ -24,16 +25,14 @@ export interface IUpdateServicePayload {
 	categoryId?: string;
 	regionId?: string;
 	preferredStartTime?: string;
-	preferredEndTime?: string;
 }
 
 
-type Status = "REJECTED" | "APPROVED";
+type Status = "REJECTED" | "ASSIGNED";
 
 export interface IReviewPayload {
 	serviceId: string;
-	status: Status;
-	rejectionReason?: string;
+
 }
 
 export interface IEligibleTechnician {
@@ -58,4 +57,6 @@ export interface IAssignTechnician {
 	workOrderId: string;
 	technicianId: string;
 	amount: number;
+	status: Status;
+	rejectionReason?: string;
 }

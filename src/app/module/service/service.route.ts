@@ -48,7 +48,7 @@ route.get(
 	serviceController.getSingleService,
 );
 
-route.post("/review", auth(UserRole.MANAGER), serviceController.reviewService);
+// route.post("/review", auth(UserRole.MANAGER), serviceController.reviewService);
 
 route.post(
 	"/assign-technician",

@@ -21,8 +21,8 @@ model WorkOrder {
   serviceId String  @unique
   service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-  managerId String
-  manager   ManagerProfile @relation(fields: [managerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  managerId String?
+  manager   ManagerProfile? @relation(fields: [managerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   attachment    Attachment[]
   serviceReport ServiceReport?

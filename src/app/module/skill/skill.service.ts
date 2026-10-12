@@ -362,6 +362,8 @@ const deleteSkill = async (skillId: string) => {
 	};
 }
 
+
+
 export const skillService = {
 	createSkill,
 	getAllSkill,

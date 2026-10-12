@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
 import { IUpdateTechnician } from "./technician.interface";
 import httpStatus from "http-status";
+import { formatTimeToHHmm } from "../../utils/utility";
 
 //& COMPLETE PROFILE
 const completeProfile = async (
@@ -66,7 +67,7 @@ const completeProfile = async (
 				mergedSkills = [...new Set([...existingIds, ...skills])];
 			}
 
-			const update = await tx.technicianProfile.update({
+			await tx.technicianProfile.update({
 				where: { id: isTechnician.id },
 				data: {
 					...(phone !== undefined && { phone }),
@@ -176,11 +177,11 @@ const completeProfile = async (
 
 			const isProfileCompleted = Boolean(
 				tech.phone &&
-					tech.address &&
-					tech.nid &&
-					tech.skills.length > 0 &&
-					tech.availability.length > 0 &&
-					tech.regions.length > 0,
+				tech.address &&
+				tech.nid &&
+				tech.skills.length > 0 &&
+				tech.availability.length > 0 &&
+				tech.regions.length > 0,
 			);
 
 			await tx.technicianProfile.update({
@@ -192,24 +193,20 @@ const completeProfile = async (
 				},
 			});
 
-			return { ...tech, isProfileCompleted };
+			return {
+				...tech,
+				availability: tech.availability.map((slot) => ({
+					...slot,
+					startTime: formatTimeToHHmm(slot.startTime),
+					endTime: formatTimeToHHmm(slot.endTime),
+				})),
+				isProfileCompleted,
+			};
 		},
-		{ maxWait: 10000, timeout: 15000 },
+		{ maxWait: 30000, timeout: 50000 },
 	);
 
 	return transactionResult;
-	// Before returning fullProfile to the client:
-	// const formattedAvailability = fullProfile?.availability.map((slot) => ({
-	// 	...slot,
-	// 	startTime: slot.startTime
-	// 		? new Date(slot.startTime).toISOString().substring(11, 16)
-	// 		: null,
-	// 	endTime: slot.endTime
-	// 		? new Date(slot.endTime).toISOString().substring(11, 16)
-	// 		: null,
-	// }));
-
-	// return { ...fullProfile, availability: formattedAvailability };
 };
 
 export const technicianService = {

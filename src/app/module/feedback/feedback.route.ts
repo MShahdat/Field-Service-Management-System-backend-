@@ -7,6 +7,10 @@ const route = Router();
 
 route.post("/", auth(UserRole.CUSTOMER), feedbackController.createFeedback);
 
+
+route.get("/all-feedback", feedbackController.getAllFeedbacks);
+
+
 route.get(
 	"/:feedbackId",
 	auth(
@@ -18,8 +22,6 @@ route.get(
 	),
 	feedbackController.getById,
 );
-
-route.get("/all-feedback", feedbackController.getAllFeedbacks);
 
 route.patch(
 	"/update/:feedbackId",

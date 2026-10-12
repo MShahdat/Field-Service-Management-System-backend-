@@ -26,10 +26,6 @@ const getAllSkill = catchAsync(async (req: Request, res: Response) => {
 
 	const { skill, meta } = await skillService.getAllSkill(query);
 
-	if (skill.length === 0) {
-		throw new AppError(httpStatus.NOT_FOUND, "skill not found");
-	}
-
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
@@ -45,9 +41,6 @@ const getSkills = catchAsync(async (req: Request, res: Response) => {
 
 	const { skill, meta } = await skillService.getSkills(query);
 
-	if (skill.length === 0) {
-		throw new AppError(httpStatus.NOT_FOUND, "skill not found");
-	}
 
 	sendResponse(res, {
 		statusCode: httpStatus.OK,

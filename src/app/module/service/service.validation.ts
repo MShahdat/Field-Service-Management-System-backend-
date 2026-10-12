@@ -4,6 +4,7 @@ import { ServiceStatus } from "../../../../generated/prisma/enums";
 const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export const serviceZodSchema = z.object({
+	title: z.string().min(5),
 	description: z.string().min(5),
 	servicingDate: z.coerce.date(),
 	address: z.object({}).passthrough(),
@@ -37,6 +38,7 @@ export const assignTechnicianZodSchema = z.object({
 
 
 export const serviceUpdateZodSchema = z.object({
+	title: z.string().min(5).optional(),
 	description: z.string().min(5).optional(),
 	servicingDate: z.coerce.date().optional(),
 	address: z.object({}).passthrough().optional(),

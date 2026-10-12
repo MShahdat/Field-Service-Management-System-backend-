@@ -16,9 +16,8 @@ const getMyWorkOrders = catchAsync(async (req: Request, res: Response) => {
 		user,
 	);
 
-	if (workOrders.length === 0) {
-		throw new AppError(httpStatus.NOT_FOUND, "my work order not found");
-	}
+
+
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
@@ -38,13 +37,30 @@ const getNewWorkOrders = catchAsync(async (req: Request, res: Response) => {
 		user,
 	);
 
-	if (workOrders.length === 0) {
-		throw new AppError(httpStatus.NOT_FOUND, "new incomming order not found");
-	}
+
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
 		message: "work order retrive successfully",
+		data: workOrders,
+		meta,
+	});
+});
+
+//& GET TODAY'S WORKORDERS
+const getTodaysWorkOrders = catchAsync(async (req: Request, res: Response) => {
+	const user = req.user as IRequestUser;
+	const query = req.query;
+
+	const { workOrders, meta } = await workOrderService.getTodaysWorkOrders(
+		query,
+		user,
+	);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "today's work orders retrieve successfully",
 		data: workOrders,
 		meta,
 	});
@@ -66,8 +82,28 @@ const updateStatus = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+
+
+//& GET SINGLE ORDER BY ID
+const getWorkOrder = catchAsync(async (req: Request, res: Response) => {
+	const user = req.user as IRequestUser;
+
+	const id = req.params.workOrderId as string
+
+	const result = await workOrderService.getWrokOrder(id, user)
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "work order retrive successfully",
+		data: result,
+	});
+});
+
 export const workOrderController = {
 	getMyWorkOrders,
 	getNewWorkOrders,
+	getTodaysWorkOrders,
 	updateStatus,
+	getWorkOrder
 };

@@ -41,7 +41,44 @@ const udpateCustomer = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+
+//& GET ALL USERS (ADMIN)
+const getAllUsers = catchAsync(async (req: Request, res: Response) => {
+	const query = req.query;
+
+	const { users, meta } = await userService.getAllUsers(query);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: `users retrive successfully`,
+		data: users,
+		meta,
+	});
+});
+
+
+//& STATUS UPDATE
+const statusUpdate = catchAsync(async (req: Request, res: Response) => {
+
+	const data = req.body
+	const userId = req.params.userId as string
+
+	await userService.statusUpdate(data, userId)
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: `users status updated successfully`,
+		data: null
+	});
+});
+
+
 export const userController = {
 	profileImageUpload,
 	udpateCustomer,
+	getAllUsers,
+	statusUpdate,
+
 };

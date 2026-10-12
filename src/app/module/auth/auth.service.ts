@@ -20,6 +20,7 @@ import { UserStatus } from "../../../../generated/prisma/enums";
 import { jwtUtils } from "../../utils/jwt";
 import { JwtPayload, SignOptions } from "jsonwebtoken";
 import { IRequestUser } from "../../interface";
+import { formatTimeToHHmm } from "../../utils/utility";
 
 const roleProfileMap: Record<RegisterRole, "customer" | "technician"> = {
 	CUSTOMER: "customer",
@@ -200,25 +201,25 @@ const loginUser = async (payload: ILoginUserPayload) => {
 	const { password } = payload;
 	const email = payload.email.trim().toLowerCase();
 
-	const user = await prisma.user.findUnique({
+	const isUser = await prisma.user.findUnique({
 		where: { email },
 	});
 
-	if (!user) {
+	if (!isUser) {
 		throw new AppError(httpStatus.NOT_FOUND, "User not found");
 	}
 
-	if (user.status === "BLOCKED") {
+	if (isUser.status === "BLOCKED") {
 		throw new AppError(httpStatus.FORBIDDEN, "User is blocked");
 	}
 
-	if (user.isDeleted || user.status === "DELETED") {
+	if (isUser.isDeleted || isUser.status === "DELETED") {
 		throw new AppError(httpStatus.FORBIDDEN, "User is deleted");
 	}
 
 	const isPasswordMatched = await bcrypt.compare(
 		password,
-		user.password as string,
+		isUser.password as string,
 	);
 
 	if (!isPasswordMatched) {
@@ -226,10 +227,10 @@ const loginUser = async (payload: ILoginUserPayload) => {
 	}
 
 	const jwtPayload = {
-		userId: user.id,
-		name: user.name,
-		email: user.email,
-		role: user.role,
+		userId: isUser.id,
+		name: isUser.name,
+		email: isUser.email,
+		role: isUser.role,
 	};
 
 	const accessToken = jwtUtils.createToken(
@@ -244,7 +245,11 @@ const loginUser = async (payload: ILoginUserPayload) => {
 		config.jwt_refresh_expires_in as SignOptions,
 	);
 
+
+	const { password: pass, ...user } = isUser
+
 	return {
+		user,
 		accessToken,
 		refreshToken,
 	};
@@ -252,15 +257,31 @@ const loginUser = async (payload: ILoginUserPayload) => {
 
 //& GET ME
 const getMe = async (user: IRequestUser) => {
-	const dynamicInclude: Record<string, boolean> = {};
-
+	const dynamicInclude: Record<string, any> = {};
 	const userRoleLower = user.role?.toLowerCase();
 
-	if (
-		userRoleLower &&
-		["customer", "technician", "manager"].includes(userRoleLower)
-	) {
-		dynamicInclude[userRoleLower] = true;
+	if (userRoleLower && ["customer", "technician", "manager"].includes(userRoleLower)) {
+		if (userRoleLower === "manager") {
+			dynamicInclude["manager"] = {
+				include: {
+					region: true,
+				},
+			};
+		} else if (userRoleLower === "technician") {
+			dynamicInclude["technician"] = {
+				include: {
+					regions: true,
+					availability: true,
+					skills: {
+						include: {
+							category: true
+						}
+					}
+				},
+			};
+		} else {
+			dynamicInclude[userRoleLower] = true;
+		}
 	}
 
 	const isUserExists = await prisma.user.findUnique({
@@ -277,8 +298,18 @@ const getMe = async (user: IRequestUser) => {
 		throw new AppError(httpStatus.NOT_FOUND, "User not found");
 	}
 
+	const technician = (isUserExists as any).technician;
+	if (technician?.availability) {
+		technician.availability = technician.availability.map((slot: any) => ({
+			...slot,
+			startTime: formatTimeToHHmm(slot.startTime),
+			endTime: formatTimeToHHmm(slot.endTime),
+		}));
+	}
+
 	return isUserExists;
 };
+
 
 //& CREATE ACCESS TOKEN
 const refreshToken = async (token: string) => {

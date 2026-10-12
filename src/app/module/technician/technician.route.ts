@@ -7,11 +7,15 @@ import { technicianController } from "./technician.controller";
 
 const route = Router();
 
-route.patch(
+route.put(
 	"/me/profile",
 	zodValidation(completeProfileZodSchema),
 	auth(UserRole.TECHNICIAN),
 	technicianController.completeProfile,
 );
+
+
+
+
 
 export const technicianRoutes = route;

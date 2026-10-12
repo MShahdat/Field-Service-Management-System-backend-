@@ -41,14 +41,6 @@ const getAllFeedbacks = catchAsync(async (req: Request, res: Response) => {
 
 	const { allFeedback, meta } = await feedbackService.getAllFeedbacks(query);
 
-	if (allFeedback.length === 0) {
-		return sendResponse(res, {
-			statusCode: httpStatus.NOT_FOUND,
-			success: false,
-			message: `feedbacks not found`,
-			data: null,
-		});
-	}
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,

@@ -351,29 +351,29 @@ const updateReport = async (
 
 	const reportRes = report
 		? await new Promise<UploadApiResponse>((resolve, reject) => {
-				Cloudinary.cloudinary.uploader
-					.upload_stream(
-						{
-							folder: "Field-Service-Management/Service/Report",
-							resource_type: "auto",
-						},
-						async (error, result) => {
-							if (error) {
-								return reject(error);
-							}
-							if (!result) {
-								return reject(
-									new AppError(
-										httpStatus.BAD_GATEWAY,
-										"No result returned from cloudinary",
-									),
-								);
-							}
-							return resolve(result);
-						},
-					)
-					.end(report?.buffer);
-			})
+			Cloudinary.cloudinary.uploader
+				.upload_stream(
+					{
+						folder: "Field-Service-Management/Service/Report",
+						resource_type: "auto",
+					},
+					async (error, result) => {
+						if (error) {
+							return reject(error);
+						}
+						if (!result) {
+							return reject(
+								new AppError(
+									httpStatus.BAD_GATEWAY,
+									"No result returned from cloudinary",
+								),
+							);
+						}
+						return resolve(result);
+					},
+				)
+				.end(report?.buffer);
+		})
 		: null;
 
 	const udpatedReport = await prisma.serviceReport.update({
@@ -396,7 +396,8 @@ const updateReport = async (
 	return udpatedReport;
 };
 
-//& SOFT DELETE SERVICE REPORT
+
+//& DELETE SERVICE REPORT
 const deleteReport = async (id: string, user: IRequestUser) => {
 	const isUser = await prisma.user.findUnique({
 		where: {
@@ -424,12 +425,6 @@ const deleteReport = async (id: string, user: IRequestUser) => {
 		throw new AppError(httpStatus.NOT_FOUND, "service report not found");
 	}
 
-	if (isReport.isDelete) {
-		throw new AppError(
-			httpStatus.BAD_REQUEST,
-			"service report already deleted deleted",
-		);
-	}
 
 	if (user.role === "TECHNICIAN") {
 		if (isReport.workOrder.technicianId !== isUser.technician?.id) {
@@ -437,18 +432,15 @@ const deleteReport = async (id: string, user: IRequestUser) => {
 		}
 	}
 
-	await prisma.serviceReport.update({
-		where: {
-			id: isReport.id,
-		},
-		data: {
-			isDelete: true,
-			deletedAt: new Date(),
-		},
-	});
-
 	await Cloudinary.cloudinary.uploader.destroy(isReport.reportPublicId);
 	console.log("report deleted from cloudinary");
+
+	await prisma.serviceReport.delete({
+		where: {
+			id: isReport.id,
+		}
+	});
+
 };
 
 export const reportService = {

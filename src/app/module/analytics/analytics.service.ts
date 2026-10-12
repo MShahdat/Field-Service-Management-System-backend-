@@ -71,6 +71,12 @@ const getAdminAnalytics = async () => {
 
 	const totalWorkOrders = await prisma.workOrder.count();
 
+	const totalStartedWorkOrders = await prisma.workOrder.count({
+		where: {
+			status: WorkOrderStatus.STARTED,
+		},
+	});
+
 	const totalRevenue = await prisma.payment.aggregate({
 		where: {
 			status: PaymentStatus.PAID,
@@ -105,6 +111,7 @@ const getAdminAnalytics = async () => {
 		pendingServices,
 		rejectedServices,
 		totalWorkOrders,
+		totalStartedWorkOrders,
 		totalRevenue: totalRevenue._sum.amount?.toString() ?? "0",
 		totalRefunded: totalRefunded._sum.amount?.toString() ?? "0",
 		currentMonthRevenue: currentMonthRevenue._sum.amount?.toString() ?? "0",
@@ -122,9 +129,9 @@ const getCustomerAnalytics = async (userId: string) => {
 		return {
 			totalServices: 0,
 			cancelledServices: 0,
+			rejectedServices: 0,
 			pendingServices: 0,
 			completedServices: 0,
-			completedWorkOrders: 0,
 			totalSpend: "0",
 			totalRefund: "0",
 		};
@@ -147,6 +154,16 @@ const getCustomerAnalytics = async (userId: string) => {
 			isDeleted: false,
 		},
 	});
+
+
+	const rejectedServices = await prisma.service.count({
+		where: {
+			customerId: customer.id,
+			status: ServiceStatus.REJECTED,
+			isDeleted: false,
+		},
+	});
+
 	const completedServices = await prisma.service.count({
 		where: {
 			customerId: customer.id,
@@ -159,6 +176,14 @@ const getCustomerAnalytics = async (userId: string) => {
 		where: {
 			customerId: customer.id,
 			status: WorkOrderStatus.COMPLETED,
+		},
+	});
+
+
+	const totalStartedWorkOrders = await prisma.workOrder.count({
+		where: {
+			customerId: customer.id,
+			status: WorkOrderStatus.STARTED,
 		},
 	});
 
@@ -181,8 +206,10 @@ const getCustomerAnalytics = async (userId: string) => {
 		totalServices,
 		cancelledServices,
 		pendingServices,
+		rejectedServices,
 		completedServices,
 		completedWorkOrders,
+		totalStartedWorkOrders,
 		totalSpend: totalSpend._sum.amount?.toString() ?? "0",
 		totalRefund: totalRefund._sum.amount?.toString() ?? "0",
 	};
@@ -206,6 +233,7 @@ const getTechnicianAnalytics = async (userId: string) => {
 			startedWorkOrders: 0,
 			totalEarnings: "0",
 			totalRefunded: "0",
+			currentMonthRevenue: "0",
 			coverRegions: 0,
 			completeJobs: 0,
 			avgRating: 0,
@@ -236,6 +264,8 @@ const getTechnicianAnalytics = async (userId: string) => {
 		},
 		_sum: { amount: true },
 	});
+
+
 	const totalRefunded = await prisma.payment.aggregate({
 		where: {
 			workOrder: { technicianId },
@@ -243,6 +273,20 @@ const getTechnicianAnalytics = async (userId: string) => {
 		},
 		_sum: { amount: true },
 	});
+
+
+	const currentMonthRevenue = await prisma.payment.aggregate({
+		where: {
+			workOrder: { technicianId },
+			status: PaymentStatus.PAID,
+			paidAt: {
+				gte: getCurrentMonthRange().startOfMonth,
+				lte: getCurrentMonthRange().endOfMonth,
+			},
+		},
+		_sum: { amount: true },
+	});
+
 
 	const completeJobs = await prisma.workOrder.count({
 		where: { technicianId, status: WorkOrderStatus.COMPLETED },
@@ -253,11 +297,14 @@ const getTechnicianAnalytics = async (userId: string) => {
 		startedWorkOrders,
 		totalEarnings: totalEarnings._sum.amount?.toString() ?? "0",
 		totalRefunded: totalRefunded._sum.amount?.toString() ?? "0",
+		currentMonthRevenue: currentMonthRevenue._sum.amount?.toString() ?? "0",
 		coverRegions: technicianProfile?.regions.length ?? 0,
 		completeJobs,
 		avgRating: technicianProfile?.rating ?? 0,
 	};
 };
+
+
 
 //& MANAGER ANALYTICS
 const getManagerAnalytics = async (userId: string) => {
@@ -272,11 +319,12 @@ const getManagerAnalytics = async (userId: string) => {
 	if (!manager) {
 		return {
 			coverRegions: 0,
-			approvedServices: 0,
+			assignedServices: 0,
 			rejectedServices: 0,
 			completedWorkByTechnicians: 0,
 			totalEarnings: "0",
 			totalRefunded: "0",
+			currentMonthRevenue: "0",
 		};
 	}
 
@@ -288,10 +336,10 @@ const getManagerAnalytics = async (userId: string) => {
 		? {}
 		: { regionId: { in: regionIds } };
 
-	const approvedServices = await prisma.service.count({
+	const assignedServices = await prisma.service.count({
 		where: {
 			...serviceRegionFilter,
-			status: ServiceStatus.APPROVED,
+			status: ServiceStatus.ASSIGNED,
 			isDeleted: false,
 		},
 	});
@@ -319,6 +367,22 @@ const getManagerAnalytics = async (userId: string) => {
 		},
 		_sum: { amount: true },
 	});
+
+
+	const currentMonthRevenue = await prisma.payment.aggregate({
+		where: {
+			workOrder: {
+				managerId: manager.id,
+			},
+			status: PaymentStatus.PAID,
+			paidAt: {
+				gte: getCurrentMonthRange().startOfMonth,
+				lte: getCurrentMonthRange().endOfMonth,
+			},
+		},
+		_sum: { amount: true },
+	});
+
 	const totalRefunded = await prisma.payment.aggregate({
 		where: {
 			workOrder: { managerId: manager.id },
@@ -329,11 +393,12 @@ const getManagerAnalytics = async (userId: string) => {
 
 	return {
 		coverRegions: regionIds.length,
-		approvedServices,
+		assignedServices,
 		rejectedServices,
 		completedWorkByTechnicians,
 		totalEarnings: totalEarnings._sum.amount?.toString() ?? "0",
 		totalRefunded: totalRefunded._sum.amount?.toString() ?? "0",
+		currentMonthRevenue: currentMonthRevenue._sum.amount?.toString() ?? "0",
 	};
 };
 
