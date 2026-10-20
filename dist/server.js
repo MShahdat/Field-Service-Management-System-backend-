@@ -1743,6 +1743,11 @@ var getRegions = async (query) => {
   const andCondition = [
     {
       isActive: true
+    },
+    {
+      area: {
+        notIn: ["All"]
+      }
     }
   ];
   if (query.search) {
@@ -1782,6 +1787,42 @@ var getRegions = async (query) => {
     area,
     meta
   };
+};
+var getSingleRegion = async (id) => {
+  const isRegion = await prisma.region.findUnique({
+    where: { id },
+    include: {
+      manager: {
+        where: {
+          verificationStatus: "APPROVED"
+        },
+        include: {
+          user: {
+            omit: {
+              password: true
+            }
+          }
+        }
+      },
+      technicians: {
+        where: {
+          isDeleted: false,
+          isProfileCompleted: true
+        },
+        include: {
+          user: {
+            omit: {
+              password: true
+            }
+          }
+        }
+      }
+    }
+  });
+  if (!isRegion) {
+    throw new AppError(httpStatus7.NOT_FOUND, "region not found");
+  }
+  return isRegion;
 };
 var updateRegion = async (payload, regionId, user) => {
   const isUser = await prisma.user.findUnique({
@@ -1842,6 +1883,7 @@ var regionService = {
   getAllRegion,
   getRegions,
   updateRegion,
+  getSingleRegion,
   statusUpdate
 };
 
@@ -1881,6 +1923,16 @@ var getRegions2 = catchAsync(async (req, res) => {
     meta
   });
 });
+var getSingleRegion2 = catchAsync(async (req, res) => {
+  const id = req.params.regionId;
+  const result = await regionService.getSingleRegion(id);
+  sendResponse(res, {
+    statusCode: httpStatus8.OK,
+    success: true,
+    message: "region retrieved successfully",
+    data: result
+  });
+});
 var updateRegion2 = catchAsync(async (req, res) => {
   const id = req.params.regionId;
   const user = req.user;
@@ -1908,7 +1960,8 @@ var regionController = {
   getAllRegion: getAllRegion2,
   getRegions: getRegions2,
   updateRegion: updateRegion2,
-  statusUpdate: statusUpdate2
+  statusUpdate: statusUpdate2,
+  getSingleRegion: getSingleRegion2
 };
 
 // src/app/module/region/region.route.ts
@@ -1922,6 +1975,10 @@ route2.get(
   "/all-region",
   auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
   regionController.getAllRegion
+);
+route2.get(
+  "/:regionId",
+  regionController.getSingleRegion
 );
 route2.get("/", regionController.getRegions);
 route2.put(
@@ -2542,6 +2599,20 @@ var getCategories = async (query) => {
     meta
   };
 };
+var getSingleCategory = async (id) => {
+  const isCategory = await prisma.category.findUnique({
+    where: {
+      id
+    },
+    include: {
+      skill: true
+    }
+  });
+  if (!isCategory) {
+    throw new AppError(httpStatus12.NOT_FOUND, "Category not found");
+  }
+  return isCategory;
+};
 var udpateCategory = async (payload, id) => {
   const isCategory = await prisma.category.findUnique({
     where: { id }
@@ -2591,7 +2662,8 @@ var categoryService = {
   getAllCategory,
   getCategories,
   udpateCategory,
-  statusUpdate: statusUpdate3
+  statusUpdate: statusUpdate3,
+  getSingleCategory
 };
 
 // src/app/module/category/category.controller.ts
@@ -2640,6 +2712,16 @@ var udpateCategory2 = catchAsync(async (req, res) => {
     data: result
   });
 });
+var getSingleCategory2 = catchAsync(async (req, res) => {
+  const id = req.params.categoryId;
+  const result = await categoryService.getSingleCategory(id);
+  sendResponse(res, {
+    statusCode: httpStatus13.OK,
+    success: true,
+    message: `category retrive successfully`,
+    data: result
+  });
+});
 var statusUpdate4 = catchAsync(async (req, res) => {
   const id = req.params.categoryId;
   const result = await categoryService.statusUpdate(id);
@@ -2655,7 +2737,8 @@ var categoryController = {
   getAllCategory: getAllCategory2,
   getCategories: getCategories2,
   udpateCategory: udpateCategory2,
-  statusUpdate: statusUpdate4
+  statusUpdate: statusUpdate4,
+  getSingleCategory: getSingleCategory2
 };
 
 // src/app/module/category/category.route.ts
@@ -2670,6 +2753,10 @@ route4.get(
   "/all-category",
   auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
   categoryController.getAllCategory
+);
+route4.get(
+  "/:categoryId",
+  categoryController.getSingleCategory
 );
 route4.put(
   "/:categoryId",
@@ -2954,6 +3041,16 @@ var getMyServices = async (query, user) => {
       priority: query.priority
     });
   }
+  if (query.today === "true" || query.today === true) {
+    const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(/* @__PURE__ */ new Date());
+    const { start, end } = utcDayRange(/* @__PURE__ */ new Date(`${todayKey}T00:00:00.000Z`));
+    andCondition.push({
+      servicingDate: {
+        gte: start,
+        lte: end
+      }
+    });
+  }
   const services = await prisma.service.findMany({
     where: {
       AND: andCondition
@@ -3046,6 +3143,16 @@ var getALLServices = async (query, user) => {
       priority: query.priority
     });
   }
+  if (query.today === "true" || query.today === true) {
+    const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(/* @__PURE__ */ new Date());
+    const { start, end } = utcDayRange(/* @__PURE__ */ new Date(`${todayKey}T00:00:00.000Z`));
+    andCondition.push({
+      servicingDate: {
+        gte: start,
+        lte: end
+      }
+    });
+  }
   const services = await prisma.service.findMany({
     where: {
       AND: andCondition
@@ -3091,19 +3198,29 @@ var getMyRegionServices = async (query, user) => {
       userId: user.userId
     },
     include: {
-      region: true
+      region: {
+        select: {
+          id: true,
+          area: true
+        }
+      }
     }
   });
   if (!isManager) {
     throw new AppError(httpStatus14.NOT_FOUND, "manager not found");
   }
   const managerRegionIds = isManager.region.map((r) => r.id);
+  const managesAllRegions = isManager.region.some((r) => r.area.toUpperCase() === "ALL");
   const allowStatus = ["APPROVED", "ASSIGNED", "COMPLETED", "IN_PROGRESS", "PENDING"];
   const andCondition = [
-    { regionId: { in: managerRegionIds } },
     { status: { in: allowStatus } },
     { isDeleted: false }
   ];
+  if (!managesAllRegions) {
+    andCondition.push({
+      regionId: { in: managerRegionIds }
+    });
+  }
   if (query.status) {
     andCondition.push({
       status: query.status
@@ -3112,6 +3229,16 @@ var getMyRegionServices = async (query, user) => {
   if (query.priority) {
     andCondition.push({
       priority: query.priority
+    });
+  }
+  if (query.today === "true" || query.today === true) {
+    const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(/* @__PURE__ */ new Date());
+    const { start, end } = utcDayRange(/* @__PURE__ */ new Date(`${todayKey}T00:00:00.000Z`));
+    andCondition.push({
+      servicingDate: {
+        gte: start,
+        lte: end
+      }
     });
   }
   const services = await prisma.service.findMany({
@@ -3164,8 +3291,7 @@ var getSingleService = async (serviceId, user) => {
       id: user.userId
     },
     include: {
-      customer: true,
-      manager: true
+      customer: true
     }
   });
   if (!isUser) {
@@ -3425,19 +3551,36 @@ var assignTechnician = async (payload, user) => {
     }
   }
   if (status === "REJECTED") {
-    const service = await prisma.service.update({
-      where: {
-        id: isWorkOrder.service.id
+    const transactionRes = await prisma.$transaction(
+      async (tx) => {
+        const service = await tx.service.update({
+          where: {
+            id: isWorkOrder.service.id
+          },
+          data: {
+            rejectionReason,
+            assignedAt: /* @__PURE__ */ new Date(),
+            status,
+            reviewedAt: /* @__PURE__ */ new Date(),
+            reviewedBy: user.userId
+          }
+        });
+        await tx.workOrder.update({
+          where: {
+            id: isWorkOrder.id
+          },
+          data: {
+            status: WorkOrderStatus.CANCELLED
+          }
+        });
+        return service;
       },
-      data: {
-        rejectionReason,
-        assignedAt: /* @__PURE__ */ new Date(),
-        status,
-        reviewedAt: /* @__PURE__ */ new Date(),
-        reviewedBy: user.userId
+      {
+        maxWait: 1e4,
+        timeout: 15e3
       }
-    });
-    return service;
+    );
+    return transactionRes;
   }
   const isTechnician = await prisma.technicianProfile.findUnique({
     where: {
@@ -3673,19 +3816,35 @@ var softDelete = async (id, user) => {
   if (isService.status === "APPROVED" || isService.status === "IN_PROGRESS" || isService.status === "ASSIGNED") {
     throw new AppError(httpStatus14.BAD_REQUEST, "service cannot be deleted");
   }
-  await prisma.service.update({
-    where: {
-      id
+  const transactionRes = await prisma.$transaction(
+    async (tx) => {
+      await tx.service.update({
+        where: {
+          id
+        },
+        data: {
+          isDeleted: true,
+          isDeletedAt: /* @__PURE__ */ new Date(),
+          status: "CANCELLED"
+        },
+        include: {
+          customer: true
+        }
+      });
+      await tx.workOrder.update({
+        where: {
+          serviceId: id
+        },
+        data: {
+          status: WorkOrderStatus.CANCELLED
+        }
+      });
     },
-    data: {
-      isDeleted: true,
-      isDeletedAt: /* @__PURE__ */ new Date(),
-      status: "CANCELLED"
-    },
-    include: {
-      customer: true
+    {
+      maxWait: 1e4,
+      timeout: 15e3
     }
-  });
+  );
 };
 var serviceService = {
   createService,
@@ -4592,8 +4751,210 @@ var completeProfile = async (payload, user) => {
   );
   return transactionResult;
 };
+var parseCsv = (v) => {
+  if (!v) return [];
+  const raw3 = Array.isArray(v) ? v.join(",") : String(v);
+  return raw3.split(",").map((s) => s.trim()).filter(Boolean);
+};
+var getAllTech = async (query) => {
+  const sort = query.sortBy ? query.sortBy : "createdAt";
+  const order = query.sortOrder ? query.sortOrder : "desc";
+  const page = Number(query.page || 1);
+  const limit = Number(query.limit || 20);
+  const andConditions = [
+    {
+      isDeleted: false
+    },
+    {
+      user: {
+        emailVerified: true,
+        status: UserStatus.ACTIVE,
+        isDeleted: false
+      }
+    },
+    {
+      isProfileCompleted: true
+    }
+  ];
+  if (query.search) {
+    andConditions.push({
+      OR: [
+        {
+          user: {
+            name: {
+              contains: query.search,
+              mode: "insensitive"
+            }
+          }
+        },
+        {
+          user: {
+            email: {
+              contains: query.search,
+              mode: "insensitive"
+            }
+          }
+        }
+      ]
+    });
+  }
+  if (query.status) {
+    andConditions.push({
+      status: query.status
+    });
+  }
+  if (query.minJobsCompleted || query.maxJobsCompleted) {
+    andConditions.push({
+      jobsCompleted: {
+        ...query.minJobsCompleted && { gte: Number(query.minJobsCompleted) },
+        ...query.maxJobsCompleted && { lte: Number(query.maxJobsCompleted) }
+      }
+    });
+  }
+  if (query.minRating || query.maxRating) {
+    andConditions.push({
+      rating: {
+        ...query.minRating && { gte: Number(query.minRating) },
+        ...query.maxRating && { lte: Number(query.maxRating) }
+      }
+    });
+  }
+  const skillNames = parseCsv(query.skills ?? query.skill);
+  if (skillNames.length > 0) {
+    andConditions.push({
+      skills: {
+        some: {
+          name: { in: skillNames, mode: "insensitive" },
+          isActive: true
+        }
+      }
+    });
+  }
+  const regionNames = parseCsv(query.regions ?? query.region);
+  if (regionNames.length > 0) {
+    andConditions.push({
+      regions: {
+        some: {
+          area: { in: regionNames, mode: "insensitive" },
+          isActive: true
+        }
+      }
+    });
+  }
+  const dowList = parseCsv(query.dayOfWeek ?? query.dayofweek ?? query.dow).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6);
+  if (dowList.length > 0) {
+    andConditions.push({
+      availability: {
+        some: {
+          isActive: true,
+          type: { not: "BLOCKED" },
+          dayOfWeek: { in: dowList }
+        }
+      }
+    });
+  }
+  const technicians = await prisma.technicianProfile.findMany({
+    where: {
+      AND: andConditions
+    },
+    take: limit,
+    skip: (page - 1) * limit,
+    orderBy: {
+      [sort]: order
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          profileImg: true
+        }
+      },
+      skills: { select: { id: true, name: true } },
+      regions: { select: { id: true, area: true } },
+      availability: {
+        where: { isActive: true },
+        select: {
+          id: true,
+          type: true,
+          dayOfWeek: true,
+          startTime: true,
+          endTime: true
+        }
+      }
+    }
+  });
+  const total = await prisma.technicianProfile.count({
+    where: {
+      AND: andConditions
+    }
+  });
+  const meta = {
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit)
+  };
+  return {
+    technicians: technicians.map((tech) => ({
+      ...tech,
+      availability: tech.availability.map((slot) => ({
+        ...slot,
+        startTime: formatTimeToHHmm(slot.startTime),
+        endTime: formatTimeToHHmm(slot.endTime)
+      }))
+    })),
+    meta
+  };
+};
+var getTechById = async (technicianId) => {
+  const technician = await prisma.technicianProfile.findUnique({
+    where: {
+      id: technicianId,
+      isDeleted: false,
+      isProfileCompleted: true,
+      user: {
+        emailVerified: true,
+        status: UserStatus.ACTIVE,
+        isDeleted: false
+      }
+    },
+    include: {
+      user: {
+        omit: { password: true }
+      },
+      skills: { select: { id: true, name: true, icon: true } },
+      regions: { select: { id: true, area: true } },
+      availability: {
+        where: { isActive: true },
+        select: {
+          id: true,
+          type: true,
+          dayOfWeek: true,
+          date: true,
+          startTime: true,
+          endTime: true
+        }
+      }
+    }
+  });
+  if (!technician) {
+    throw new AppError(httpStatus18.NOT_FOUND, "technician not found");
+  }
+  return {
+    ...technician,
+    availability: technician.availability.map((slot) => ({
+      ...slot,
+      startTime: formatTimeToHHmm(slot.startTime),
+      endTime: formatTimeToHHmm(slot.endTime)
+    }))
+  };
+};
 var technicianService = {
-  completeProfile
+  completeProfile,
+  getAllTech,
+  getTechById
 };
 
 // src/app/module/technician/technician.controller.ts
@@ -4613,8 +4974,31 @@ var completeProfile2 = catchAsync(async (req, res) => {
     data: result
   });
 });
+var getAllTech2 = catchAsync(async (req, res) => {
+  const query = req.query;
+  const { technicians, meta } = await technicianService.getAllTech(query);
+  sendResponse(res, {
+    statusCode: httpStatus19.OK,
+    success: true,
+    message: `technicians retrive successfully`,
+    data: technicians,
+    meta
+  });
+});
+var getTechById2 = catchAsync(async (req, res) => {
+  const { technicianId } = req.params;
+  const result = await technicianService.getTechById(technicianId);
+  sendResponse(res, {
+    statusCode: httpStatus19.OK,
+    success: true,
+    message: `technician retrive successfully`,
+    data: result
+  });
+});
 var technicianController = {
-  completeProfile: completeProfile2
+  completeProfile: completeProfile2,
+  getAllTech: getAllTech2,
+  getTechById: getTechById2
 };
 
 // src/app/module/technician/technician.route.ts
@@ -4624,6 +5008,14 @@ route7.put(
   zodValidation(completeProfileZodSchema),
   auth(UserRole.TECHNICIAN),
   technicianController.completeProfile
+);
+route7.get(
+  "/all-technicians",
+  technicianController.getAllTech
+);
+route7.get(
+  "/:technicianId",
+  technicianController.getTechById
 );
 var technicianRoutes = route7;
 
@@ -4670,12 +5062,24 @@ var getMyWrokOrders = async (query, user) => {
       },
       manager: {
         select: {
-          id: true
+          id: true,
+          region: {
+            select: {
+              id: true,
+              area: true
+            }
+          }
         }
       },
       technician: {
         select: {
-          id: true
+          id: true,
+          regions: {
+            select: {
+              id: true,
+              area: true
+            }
+          }
         }
       }
     }
@@ -4684,32 +5088,57 @@ var getMyWrokOrders = async (query, user) => {
     throw new AppError(httpStatus20.NOT_FOUND, "user not found");
   }
   let ownerCondition;
+  let cancelledCondition = {};
   switch (user.role) {
     case UserRole.ADMIN:
     case UserRole.SUPER_ADMIN:
       ownerCondition = {};
+      cancelledCondition = {
+        status: {
+          in: ["SCHEDULED", "EN_ROUTE", "STARTED", "COMPLETED"]
+        }
+      };
       break;
-    case UserRole.MANAGER:
+    case UserRole.MANAGER: {
       if (!isUser.manager?.id) {
         throw new AppError(httpStatus20.NOT_FOUND, "Manager profile not found");
       }
-      ownerCondition = { managerId: isUser.manager.id };
+      const managerRegions = isUser.manager.region ?? [];
+      const managesAllRegions = managerRegions.some(
+        (region) => region.area.toUpperCase() === "ALL"
+      );
+      ownerCondition = managesAllRegions ? {} : { regionId: { in: managerRegions.map((region) => region.id) } };
+      cancelledCondition = {
+        status: {
+          in: ["SCHEDULED", "EN_ROUTE", "STARTED", "COMPLETED"]
+        }
+      };
       break;
+    }
     case UserRole.CUSTOMER:
       if (!isUser.customer?.id) {
         throw new AppError(httpStatus20.NOT_FOUND, "Customer profile not found");
       }
       ownerCondition = { customerId: isUser.customer.id };
       break;
-    case UserRole.TECHNICIAN:
+    case UserRole.TECHNICIAN: {
       if (!isUser.technician?.id) {
         throw new AppError(
           httpStatus20.NOT_FOUND,
           "Technician profile not found"
         );
       }
-      ownerCondition = { technicianId: isUser.technician.id };
+      const technicianRegions = isUser.technician.regions ?? [];
+      ownerCondition = {
+        regionId: { in: technicianRegions.map((region) => region.id) }
+      };
+      cancelledCondition = {
+        status: {
+          in: ["SCHEDULED", "EN_ROUTE", "STARTED", "COMPLETED"]
+        }
+      };
       break;
+    }
     default:
       throw new AppError(
         httpStatus20.FORBIDDEN,
@@ -4718,6 +5147,7 @@ var getMyWrokOrders = async (query, user) => {
   }
   const andCondition = [
     ownerCondition,
+    cancelledCondition,
     {
       service: {
         isDeleted: false
@@ -4752,6 +5182,16 @@ var getMyWrokOrders = async (query, user) => {
   if (query.status) {
     andCondition.push({
       status: query.status
+    });
+  }
+  if (query.today === "true" || query.today === true) {
+    const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(/* @__PURE__ */ new Date());
+    const { start, end } = utcDayRange(/* @__PURE__ */ new Date(`${todayKey}T00:00:00.000Z`));
+    andCondition.push({
+      servicingDate: {
+        gte: start,
+        lte: end
+      }
     });
   }
   const workOrders = await prisma.workOrder.findMany({
@@ -4836,12 +5276,24 @@ var getWrokOrder = async (id, user) => {
       },
       manager: {
         select: {
-          id: true
+          id: true,
+          region: {
+            select: {
+              id: true,
+              area: true
+            }
+          }
         }
       },
       technician: {
         select: {
-          id: true
+          id: true,
+          regions: {
+            select: {
+              id: true,
+              area: true
+            }
+          }
         }
       }
     }
@@ -4851,15 +5303,21 @@ var getWrokOrder = async (id, user) => {
   }
   let workOrderWhereCondition;
   switch (user.role) {
-    case UserRole.MANAGER:
+    case UserRole.ADMIN:
+    case UserRole.SUPER_ADMIN:
+      workOrderWhereCondition = { id };
+      break;
+    case UserRole.MANAGER: {
       if (!isUser.manager?.id) {
         throw new AppError(httpStatus20.NOT_FOUND, "Manager profile not found");
       }
-      workOrderWhereCondition = {
-        id,
-        managerId: isUser.manager.id
-      };
+      const managerRegions = isUser.manager.region ?? [];
+      const managesAllRegions = managerRegions.some(
+        (region) => region.area.toUpperCase() === "ALL"
+      );
+      workOrderWhereCondition = managesAllRegions ? { id } : { id, regionId: { in: managerRegions.map((region) => region.id) } };
       break;
+    }
     case UserRole.CUSTOMER:
       if (!isUser.customer?.id) {
         throw new AppError(httpStatus20.NOT_FOUND, "Customer profile not found");
@@ -4869,18 +5327,20 @@ var getWrokOrder = async (id, user) => {
         customerId: isUser.customer.id
       };
       break;
-    case UserRole.TECHNICIAN:
+    case UserRole.TECHNICIAN: {
       if (!isUser.technician?.id) {
         throw new AppError(
           httpStatus20.NOT_FOUND,
           "Technician profile not found"
         );
       }
+      const technicianRegions = isUser.technician.regions ?? [];
       workOrderWhereCondition = {
         id,
-        technicianId: isUser.technician.id
+        regionId: { in: technicianRegions.map((region) => region.id) }
       };
       break;
+    }
     default:
       throw new AppError(
         httpStatus20.FORBIDDEN,
@@ -5111,183 +5571,11 @@ var udpateStatus = async (payload, user) => {
   );
   return formatWorkOrder(transactionResult);
 };
-var getTodaysWorkOrders = async (query, user) => {
-  const sort = query.sortBy ? query.sortBy : "createdAt";
-  const order = query.sortOrder ? query.sortOrder : "desc";
-  const page = Number(query.page || 1);
-  const limit = Number(query.limit || 9);
-  const isUser = await prisma.user.findUnique({
-    where: {
-      id: user.userId
-    },
-    include: {
-      customer: {
-        select: {
-          id: true
-        }
-      },
-      manager: {
-        select: {
-          id: true
-        }
-      },
-      technician: {
-        select: {
-          id: true
-        }
-      }
-    }
-  });
-  if (!isUser) {
-    throw new AppError(httpStatus20.NOT_FOUND, "user not found");
-  }
-  let ownerCondition;
-  switch (user.role) {
-    case UserRole.ADMIN:
-    case UserRole.SUPER_ADMIN:
-      ownerCondition = {};
-      break;
-    case UserRole.MANAGER:
-      if (!isUser.manager?.id) {
-        throw new AppError(httpStatus20.NOT_FOUND, "Manager profile not found");
-      }
-      ownerCondition = { managerId: isUser.manager.id };
-      break;
-    case UserRole.CUSTOMER:
-      if (!isUser.customer?.id) {
-        throw new AppError(httpStatus20.NOT_FOUND, "Customer profile not found");
-      }
-      ownerCondition = { customerId: isUser.customer.id };
-      break;
-    case UserRole.TECHNICIAN:
-      if (!isUser.technician?.id) {
-        throw new AppError(
-          httpStatus20.NOT_FOUND,
-          "Technician profile not found"
-        );
-      }
-      ownerCondition = { technicianId: isUser.technician.id };
-      break;
-    default:
-      throw new AppError(
-        httpStatus20.FORBIDDEN,
-        "This user role cannot access work orders"
-      );
-  }
-  const startOfDay = /* @__PURE__ */ new Date();
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = /* @__PURE__ */ new Date();
-  endOfDay.setHours(23, 59, 59, 999);
-  const andCondition = [
-    ownerCondition,
-    {
-      servicingDate: {
-        gte: startOfDay,
-        lte: endOfDay
-      }
-    }
-  ];
-  if (query.search) {
-    andCondition.push({
-      OR: [
-        {
-          service: {
-            title: {
-              contains: query.search,
-              mode: "insensitive"
-            }
-          }
-        },
-        {
-          service: {
-            category: {
-              name: {
-                contains: query.search,
-                mode: "insensitive"
-              }
-            }
-          }
-        }
-      ]
-    });
-  }
-  if (query.status) {
-    andCondition.push({
-      status: query.status
-    });
-  }
-  const workOrders = await prisma.workOrder.findMany({
-    where: {
-      AND: andCondition
-    },
-    take: limit,
-    skip: (page - 1) * limit,
-    orderBy: {
-      [sort]: order
-    },
-    include: {
-      customer: {
-        include: {
-          user: {
-            omit: {
-              password: true
-            }
-          }
-        }
-      },
-      manager: {
-        include: {
-          user: {
-            omit: {
-              password: true
-            }
-          }
-        }
-      },
-      technician: {
-        include: {
-          user: {
-            omit: {
-              password: true
-            }
-          }
-        }
-      },
-      schedule: true,
-      payment: {
-        omit: {
-          getwayResponse: true
-        }
-      },
-      service: {
-        include: {
-          category: true
-        }
-      }
-    }
-  });
-  const total = await prisma.workOrder.count({
-    where: {
-      AND: andCondition
-    }
-  });
-  const meta = {
-    total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit)
-  };
-  return {
-    workOrders: workOrders.map(formatWorkOrder),
-    meta
-  };
-};
 var workOrderService = {
   getMyWrokOrders,
   getNewWrokOrders,
   udpateStatus,
-  getWrokOrder,
-  getTodaysWorkOrders
+  getWrokOrder
 };
 
 // src/app/module/workOrder/workOrder.controller.ts
@@ -5321,21 +5609,6 @@ var getNewWorkOrders = catchAsync(async (req, res) => {
     meta
   });
 });
-var getTodaysWorkOrders2 = catchAsync(async (req, res) => {
-  const user = req.user;
-  const query = req.query;
-  const { workOrders, meta } = await workOrderService.getTodaysWorkOrders(
-    query,
-    user
-  );
-  sendResponse(res, {
-    statusCode: httpStatus21.OK,
-    success: true,
-    message: "today's work orders retrieve successfully",
-    data: workOrders,
-    meta
-  });
-});
 var updateStatus = catchAsync(async (req, res) => {
   const user = req.user;
   const body = req.body;
@@ -5361,7 +5634,6 @@ var getWorkOrder = catchAsync(async (req, res) => {
 var workOrderController = {
   getMyWorkOrders,
   getNewWorkOrders,
-  getTodaysWorkOrders: getTodaysWorkOrders2,
   updateStatus,
   getWorkOrder
 };
@@ -5370,19 +5642,14 @@ var workOrderController = {
 var route8 = Router8();
 route8.get(
   "/my-workorder",
-  auth(UserRole.TECHNICIAN, UserRole.CUSTOMER, UserRole.MANAGER),
-  workOrderController.getMyWorkOrders
-);
-route8.get(
-  "/today",
   auth(
     UserRole.ADMIN,
     UserRole.SUPER_ADMIN,
+    UserRole.TECHNICIAN,
     UserRole.CUSTOMER,
-    UserRole.MANAGER,
-    UserRole.TECHNICIAN
+    UserRole.MANAGER
   ),
-  workOrderController.getTodaysWorkOrders
+  workOrderController.getMyWorkOrders
 );
 route8.get(
   "/new-workorder",
@@ -5521,7 +5788,7 @@ var bkashCallback = async (query) => {
           }
         });
         return {
-          redirectUrl: `${env_default.frontend_url}/dashboard/my-service?status=${status}`
+          redirectUrl: `${env_default.frontend_url}?status=${status}`
         };
       }
       if (status === "success") {
@@ -5630,7 +5897,7 @@ var bkashCallback = async (query) => {
         });
         return {
           result,
-          redirectUrl: `${env_default.frontend_url}/dashboard/my-workorder?status=success`
+          redirectUrl: `${env_default.frontend_url}/customer-dashboard/payment/my-payment?status=success`
         };
       } else {
         throw new AppError(httpStatus22.BAD_REQUEST, "bkash callback error!");
@@ -7590,6 +7857,26 @@ var getAdminAnalytics = async () => {
       status: WorkOrderStatus.STARTED
     }
   });
+  const totalScheduleWorkOrders = await prisma.workOrder.count({
+    where: {
+      status: WorkOrderStatus.SCHEDULED
+    }
+  });
+  const totalEnrouteWorkOrders = await prisma.workOrder.count({
+    where: {
+      status: WorkOrderStatus.EN_ROUTE
+    }
+  });
+  const totalCompletedWorkOrders = await prisma.workOrder.count({
+    where: {
+      status: WorkOrderStatus.COMPLETED
+    }
+  });
+  const totalCancelledWorkOrders = await prisma.workOrder.count({
+    where: {
+      status: WorkOrderStatus.CANCELLED
+    }
+  });
   const totalRevenue = await prisma.payment.aggregate({
     where: {
       status: PaymentStatus.PAID
@@ -7624,6 +7911,10 @@ var getAdminAnalytics = async () => {
     rejectedServices,
     totalWorkOrders,
     totalStartedWorkOrders,
+    totalScheduleWorkOrders,
+    totalEnrouteWorkOrders,
+    totalCompletedWorkOrders,
+    totalCancelledWorkOrders,
     totalRevenue: totalRevenue._sum.amount?.toString() ?? "0",
     totalRefunded: totalRefunded._sum.amount?.toString() ?? "0",
     currentMonthRevenue: currentMonthRevenue._sum.amount?.toString() ?? "0"
@@ -7727,6 +8018,7 @@ var getTechnicianAnalytics = async (userId) => {
     return {
       completedWorkOrders: 0,
       startedWorkOrders: 0,
+      enrouteWorkOrders: 0,
       totalEarnings: "0",
       totalRefunded: "0",
       currentMonthRevenue: "0",
@@ -7748,6 +8040,12 @@ var getTechnicianAnalytics = async (userId) => {
       status: {
         in: [WorkOrderStatus.EN_ROUTE, WorkOrderStatus.STARTED]
       }
+    }
+  });
+  const enrouteWorkOrders = await prisma.workOrder.count({
+    where: {
+      technicianId,
+      status: WorkOrderStatus.EN_ROUTE
     }
   });
   const totalEarnings = await prisma.payment.aggregate({
@@ -7781,6 +8079,7 @@ var getTechnicianAnalytics = async (userId) => {
   return {
     completedWorkOrders,
     startedWorkOrders,
+    enrouteWorkOrders,
     totalEarnings: totalEarnings._sum.amount?.toString() ?? "0",
     totalRefunded: totalRefunded._sum.amount?.toString() ?? "0",
     currentMonthRevenue: currentMonthRevenue._sum.amount?.toString() ?? "0",
@@ -7803,6 +8102,8 @@ var getManagerAnalytics = async (userId) => {
       assignedServices: 0,
       rejectedServices: 0,
       completedWorkByTechnicians: 0,
+      totalStartedWorkOrders: 0,
+      totalEnrouteWorkOrders: 0,
       totalEarnings: "0",
       totalRefunded: "0",
       currentMonthRevenue: "0"
@@ -7831,6 +8132,18 @@ var getManagerAnalytics = async (userId) => {
     where: {
       managerId: manager.id,
       status: WorkOrderStatus.COMPLETED
+    }
+  });
+  const totalStartedWorkOrders = await prisma.workOrder.count({
+    where: {
+      managerId: manager.id,
+      status: WorkOrderStatus.STARTED
+    }
+  });
+  const totalEnrouteWorkOrders = await prisma.workOrder.count({
+    where: {
+      managerId: manager.id,
+      status: WorkOrderStatus.EN_ROUTE
     }
   });
   const totalEarnings = await prisma.payment.aggregate({
@@ -7867,16 +8180,62 @@ var getManagerAnalytics = async (userId) => {
     assignedServices,
     rejectedServices,
     completedWorkByTechnicians,
+    totalStartedWorkOrders,
+    totalEnrouteWorkOrders,
     totalEarnings: totalEarnings._sum.amount?.toString() ?? "0",
     totalRefunded: totalRefunded._sum.amount?.toString() ?? "0",
     currentMonthRevenue: currentMonthRevenue._sum.amount?.toString() ?? "0"
+  };
+};
+var getPublicAnalytics = async () => {
+  const totalCompletedServices = await prisma.service.count({
+    where: {
+      isDeleted: false,
+      status: ServiceStatus.COMPLETED
+    }
+  });
+  const totalTechnician = await prisma.user.count({
+    where: {
+      role: UserRole.TECHNICIAN,
+      isDeleted: false,
+      technician: {
+        isProfileCompleted: true,
+        isDeleted: false
+      }
+    }
+  });
+  const totalCategory = await prisma.category.count({
+    where: {
+      isActive: true
+    }
+  });
+  const totalRegion = await prisma.region.count({
+    where: {
+      area: {
+        not: "ALL"
+      },
+      isActive: true
+    }
+  });
+  const totalAvgRating = await prisma.feedback.aggregate({
+    _avg: {
+      rating: true
+    }
+  });
+  return {
+    totalCompletedServices,
+    totalTechnician,
+    totalCategory,
+    totalRegion,
+    totalAvgRating: totalAvgRating._avg.rating ?? 0
   };
 };
 var analyticsService = {
   getAdminAnalytics,
   getCustomerAnalytics,
   getManagerAnalytics,
-  getTechnicianAnalytics
+  getTechnicianAnalytics,
+  getPublicAnalytics
 };
 
 // src/app/module/analytics/analytics.controller.ts
@@ -7919,11 +8278,21 @@ var getManagerStats = catchAsync(async (req, res) => {
     data: result
   });
 });
+var getPublicStats = catchAsync(async (req, res) => {
+  const result = await analyticsService.getPublicAnalytics();
+  sendResponse(res, {
+    statusCode: httpStatus32.OK,
+    success: true,
+    message: "Public analytics retrieved successfully",
+    data: result
+  });
+});
 var analyticsController = {
   getAdminStats,
   getCustomerStats,
   getTechnicianStats,
-  getManagerStats
+  getManagerStats,
+  getPublicStats
 };
 
 // src/app/module/analytics/analytics.route.ts
@@ -7947,6 +8316,10 @@ router.get(
   "/manager",
   auth(UserRole.MANAGER),
   analyticsController.getManagerStats
+);
+router.get(
+  "/public",
+  analyticsController.getPublicStats
 );
 var analyticsRoutes = router;
 

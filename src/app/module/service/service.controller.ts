@@ -109,20 +109,6 @@ const getSingleService = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
-// //& REVIEW SERVICE (MANAGER)
-// const reviewService = catchAsync(async (req: Request, res: Response) => {
-// 	const user = req.user as IRequestUser;
-// 	const body = req.body;
-
-// 	const result = await serviceService.reviewService(body, user);
-
-// 	sendResponse(res, {
-// 		statusCode: httpStatus.OK,
-// 		success: true,
-// 		message: "service reviewed successfully",
-// 		data: result,
-// 	});
-// });
 
 //& ELIGIBLE TECHNICIAN (MANAGER)
 const getEligibleTechnicians = catchAsync(

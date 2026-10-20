@@ -47,25 +47,6 @@ const getNewWorkOrders = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
-//& GET TODAY'S WORKORDERS
-const getTodaysWorkOrders = catchAsync(async (req: Request, res: Response) => {
-	const user = req.user as IRequestUser;
-	const query = req.query;
-
-	const { workOrders, meta } = await workOrderService.getTodaysWorkOrders(
-		query,
-		user,
-	);
-
-	sendResponse(res, {
-		statusCode: httpStatus.OK,
-		success: true,
-		message: "today's work orders retrieve successfully",
-		data: workOrders,
-		meta,
-	});
-});
-
 //& GET UPDATE STATUS
 const updateStatus = catchAsync(async (req: Request, res: Response) => {
 	const user = req.user as IRequestUser;
@@ -103,7 +84,6 @@ const getWorkOrder = catchAsync(async (req: Request, res: Response) => {
 export const workOrderController = {
 	getMyWorkOrders,
 	getNewWorkOrders,
-	getTodaysWorkOrders,
 	updateStatus,
 	getWorkOrder
 };

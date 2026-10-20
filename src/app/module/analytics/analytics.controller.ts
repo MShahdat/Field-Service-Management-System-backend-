@@ -59,9 +59,22 @@ const getManagerStats = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+
+const getPublicStats = catchAsync(async (req: Request, res: Response) => {
+	const result = await analyticsService.getPublicAnalytics();
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Public analytics retrieved successfully",
+		data: result,
+	});
+});
+
 export const analyticsController = {
 	getAdminStats,
 	getCustomerStats,
 	getTechnicianStats,
 	getManagerStats,
+	getPublicStats
 };

@@ -1,9 +1,11 @@
-import { IRequestUser } from "../../interface";
+import { IQuery, IRequestUser } from "../../interface";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
 import { IUpdateTechnician } from "./technician.interface";
 import httpStatus from "http-status";
 import { formatTimeToHHmm } from "../../utils/utility";
+import { TechnicianProfileWhereInput, UserWhereInput } from "../../../../generated/prisma/models";
+import { UserRole, UserStatus } from "../../../../generated/prisma/enums";
 
 //& COMPLETE PROFILE
 const completeProfile = async (
@@ -209,6 +211,242 @@ const completeProfile = async (
 	return transactionResult;
 };
 
+
+//& Helper: parse comma-separated query param into clean string array
+const parseCsv = (v: unknown): string[] => {
+	if (!v) return [];
+	const raw = Array.isArray(v) ? v.join(",") : String(v);
+	return raw
+		.split(",")
+		.map((s) => s.trim())
+		.filter(Boolean);
+};
+
+//& GET ALL TECHNICIAN (PUBLIC)
+const getAllTech = async (query: IQuery) => {
+	const sort = query.sortBy ? query.sortBy : "createdAt";
+	const order = query.sortOrder ? query.sortOrder : "desc";
+	const page = Number(query.page || 1);
+	const limit = Number(query.limit || 20);
+
+	const andConditions: TechnicianProfileWhereInput[] = [
+		{
+			isDeleted: false
+		},
+		{
+			user: {
+				emailVerified: true,
+				status: UserStatus.ACTIVE,
+				isDeleted: false,
+			}
+		},
+		{
+			isProfileCompleted: true
+		}
+	];
+
+	if (query.search) {
+		andConditions.push({
+			OR: [
+				{
+					user: {
+						name: {
+							contains: query.search,
+							mode: "insensitive",
+						},
+					}
+				},
+				{
+					user: {
+						email: {
+							contains: query.search,
+							mode: 'insensitive'
+						}
+					}
+				},
+			],
+		});
+	}
+
+	if (query.status) {
+		andConditions.push({
+			status: query.status
+		})
+	}
+
+
+	if (query.minJobsCompleted || query.maxJobsCompleted) {
+		andConditions.push({
+			jobsCompleted: {
+				...(query.minJobsCompleted && { gte: Number(query.minJobsCompleted) }),
+				...(query.maxJobsCompleted && { lte: Number(query.maxJobsCompleted) }),
+			},
+		});
+	}
+
+
+	if (query.minRating || query.maxRating) {
+		andConditions.push({
+			rating: {
+				...(query.minRating && { gte: Number(query.minRating) }),
+				...(query.maxRating && { lte: Number(query.maxRating) }),
+			},
+		});
+	}
+
+
+	const skillNames = parseCsv(query.skills ?? query.skill);
+	if (skillNames.length > 0) {
+		andConditions.push({
+			skills: {
+				some: {
+					name: { in: skillNames, mode: "insensitive" },
+					isActive: true,
+				},
+			},
+		});
+	}
+
+
+	const regionNames = parseCsv(query.regions ?? query.region);
+	if (regionNames.length > 0) {
+		andConditions.push({
+			regions: {
+				some: {
+					area: { in: regionNames, mode: "insensitive" },
+					isActive: true,
+				},
+			},
+		});
+	}
+
+
+	const dowList = parseCsv(query.dayOfWeek ?? query.dayofweek ?? query.dow)
+		.map(Number)
+		.filter((n) => Number.isInteger(n) && n >= 0 && n <= 6);
+
+	if (dowList.length > 0) {
+		andConditions.push({
+			availability: {
+				some: {
+					isActive: true,
+					type: { not: "BLOCKED" },
+					dayOfWeek: { in: dowList },
+				},
+			},
+		});
+	}
+
+	const technicians = await prisma.technicianProfile.findMany({
+		where: {
+			AND: andConditions,
+		},
+		take: limit,
+		skip: (page - 1) * limit,
+		orderBy: {
+			[sort]: order,
+		},
+		include: {
+			user: {
+				select: {
+					id: true,
+					name: true,
+					email: true,
+					profileImg: true
+				}
+			},
+			skills: { select: { id: true, name: true } },
+			regions: { select: { id: true, area: true } },
+			availability: {
+				where: { isActive: true },
+				select: {
+					id: true,
+					type: true,
+					dayOfWeek: true,
+					startTime: true,
+					endTime: true,
+				},
+			},
+		},
+	});
+
+	const total = await prisma.technicianProfile.count({
+		where: {
+			AND: andConditions,
+		},
+	});
+
+	const meta = {
+		total,
+		page,
+		limit,
+		totalPages: Math.ceil(total / limit),
+	};
+
+	return {
+		technicians: technicians.map((tech) => ({
+			...tech,
+			availability: tech.availability.map((slot) => ({
+				...slot,
+				startTime: formatTimeToHHmm(slot.startTime),
+				endTime: formatTimeToHHmm(slot.endTime),
+			})),
+		})),
+		meta,
+	};
+};
+
+
+//& GET SINGLE TECHNICIAN BY ID (PUBLIC)
+const getTechById = async (technicianId: string) => {
+	const technician = await prisma.technicianProfile.findUnique({
+		where: {
+			id: technicianId,
+			isDeleted: false,
+			isProfileCompleted: true,
+			user: {
+				emailVerified: true,
+				status: UserStatus.ACTIVE,
+				isDeleted: false,
+			},
+		},
+		include: {
+			user: {
+				omit: { password: true },
+			},
+			skills: { select: { id: true, name: true, icon: true } },
+			regions: { select: { id: true, area: true } },
+			availability: {
+				where: { isActive: true },
+				select: {
+					id: true,
+					type: true,
+					dayOfWeek: true,
+					date: true,
+					startTime: true,
+					endTime: true,
+				},
+			},
+		},
+	});
+
+	if (!technician) {
+		throw new AppError(httpStatus.NOT_FOUND, "technician not found");
+	}
+
+	return {
+		...technician,
+		availability: technician.availability.map((slot) => ({
+			...slot,
+			startTime: formatTimeToHHmm(slot.startTime),
+			endTime: formatTimeToHHmm(slot.endTime),
+		})),
+	};
+};
+
+
 export const technicianService = {
 	completeProfile,
+	getAllTech,
+	getTechById
 };

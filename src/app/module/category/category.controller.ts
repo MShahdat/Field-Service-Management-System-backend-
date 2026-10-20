@@ -66,6 +66,20 @@ const udpateCategory = catchAsync(async (req: Request, res: Response) => {
 });
 
 
+//& single category
+const getSingleCategory = catchAsync(async (req: Request, res: Response) => {
+	const id = req.params.categoryId;
+
+	const result = await categoryService.getSingleCategory(id as string)
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: `category retrive successfully`,
+		data: result,
+	});
+});
+
 //& STATUS UPDATE (ADMIN)
 const statusUpdate = catchAsync(async (req: Request, res: Response) => {
 	const id = req.params.categoryId;
@@ -88,4 +102,5 @@ export const categoryController = {
 	getCategories,
 	udpateCategory,
 	statusUpdate,
+	getSingleCategory
 };

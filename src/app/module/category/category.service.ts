@@ -170,6 +170,26 @@ const getCategories = async (query: IQuery) => {
 	};
 };
 
+
+//& GET SINGLE CATEGORY
+const getSingleCategory = async (id: string) => {
+
+	const isCategory = await prisma.category.findUnique({
+		where: {
+			id
+		},
+		include: {
+			skill: true
+		}
+	})
+
+	if (!isCategory) {
+		throw new AppError(httpStatus.NOT_FOUND, 'Category not found')
+	}
+
+	return isCategory
+}
+
 //& UPDATE CATEGORY (ADMIN)
 const udpateCategory = async (payload: IUpdateCategoryPayload, id: string) => {
 	const isCategory = await prisma.category.findUnique({
@@ -232,4 +252,5 @@ export const categoryService = {
 	getCategories,
 	udpateCategory,
 	statusUpdate,
+	getSingleCategory
 };

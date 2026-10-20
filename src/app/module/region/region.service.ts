@@ -117,6 +117,11 @@ const getRegions = async (query: IQuery) => {
 		{
 			isActive: true,
 		},
+		{
+			area: {
+				notIn: ["All"]
+			}
+		}
 	];
 
 	if (query.search) {
@@ -162,6 +167,48 @@ const getRegions = async (query: IQuery) => {
 	};
 };
 
+
+//& GET SINGLE REGION
+const getSingleRegion = async (id: string) => {
+
+	const isRegion = await prisma.region.findUnique({
+		where: { id },
+		include: {
+			manager: {
+				where: {
+					verificationStatus: "APPROVED"
+				},
+				include: {
+					user: {
+						omit: {
+							password: true
+						}
+					}
+				}
+			},
+			technicians: {
+				where: {
+					isDeleted: false,
+					isProfileCompleted: true
+				},
+				include: {
+					user: {
+						omit: {
+							password: true
+						}
+					}
+				}
+			},
+		}
+	})
+
+	if (!isRegion) {
+		throw new AppError(httpStatus.NOT_FOUND, 'region not found')
+	}
+
+	return isRegion;
+}
+
 //& UPDATE REGION (ADMIN)
 const updateRegion = async (
 	payload: IUpdateRegionPayload,
@@ -201,7 +248,6 @@ const updateRegion = async (
 };
 
 
-
 //& UPDATE REGION STATUS (ADMIN)
 const statusUpdate = async (regionId: string) => {
 	const isRegion = await prisma.region.findUnique({
@@ -239,5 +285,6 @@ export const regionService = {
 	getAllRegion,
 	getRegions,
 	updateRegion,
+	getSingleRegion,
 	statusUpdate,
 };

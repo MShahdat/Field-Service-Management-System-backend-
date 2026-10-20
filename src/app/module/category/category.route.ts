@@ -18,6 +18,11 @@ route.get(
 	categoryController.getAllCategory,
 );
 
+route.get(
+	"/:categoryId",
+	categoryController.getSingleCategory
+)
+
 route.put(
 	"/:categoryId",
 	auth(UserRole.ADMIN, UserRole.SUPER_ADMIN),

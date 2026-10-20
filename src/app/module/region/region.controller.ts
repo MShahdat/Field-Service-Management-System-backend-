@@ -52,6 +52,22 @@ const getRegions = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+
+//& GET Single REGION (PUBLIC)
+const getSingleRegion = catchAsync(async (req: Request, res: Response) => {
+	const id = req.params.regionId as string
+
+	const result = await regionService.getSingleRegion(id);
+
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "region retrieved successfully",
+		data: result,
+	});
+});
+
 //& UPDATE REGION (ADMIN)
 const updateRegion = catchAsync(async (req: Request, res: Response) => {
 	const id = req.params.regionId;
@@ -90,4 +106,5 @@ export const regionController = {
 	getRegions,
 	updateRegion,
 	statusUpdate,
+	getSingleRegion
 };

@@ -1,6 +1,7 @@
 import {
 	PaymentStatus,
 	ServiceStatus,
+	UserRole,
 	WorkOrderStatus,
 } from "../../../../generated/prisma/enums";
 import { prisma } from "../../lib/prisma";
@@ -77,6 +78,33 @@ const getAdminAnalytics = async () => {
 		},
 	});
 
+	const totalScheduleWorkOrders = await prisma.workOrder.count({
+		where: {
+			status: WorkOrderStatus.SCHEDULED
+		}
+	})
+
+
+	const totalEnrouteWorkOrders = await prisma.workOrder.count({
+		where: {
+			status: WorkOrderStatus.EN_ROUTE
+		}
+	})
+
+
+	const totalCompletedWorkOrders = await prisma.workOrder.count({
+		where: {
+			status: WorkOrderStatus.COMPLETED
+		}
+	})
+
+	const totalCancelledWorkOrders = await prisma.workOrder.count({
+		where: {
+			status: WorkOrderStatus.CANCELLED
+		}
+	})
+
+
 	const totalRevenue = await prisma.payment.aggregate({
 		where: {
 			status: PaymentStatus.PAID,
@@ -112,6 +140,10 @@ const getAdminAnalytics = async () => {
 		rejectedServices,
 		totalWorkOrders,
 		totalStartedWorkOrders,
+		totalScheduleWorkOrders,
+		totalEnrouteWorkOrders,
+		totalCompletedWorkOrders,
+		totalCancelledWorkOrders,
 		totalRevenue: totalRevenue._sum.amount?.toString() ?? "0",
 		totalRefunded: totalRefunded._sum.amount?.toString() ?? "0",
 		currentMonthRevenue: currentMonthRevenue._sum.amount?.toString() ?? "0",
@@ -216,7 +248,6 @@ const getCustomerAnalytics = async (userId: string) => {
 };
 
 //& TECHNICIAN ANALYTICS
-
 const getTechnicianAnalytics = async (userId: string) => {
 	const technicianProfile = await prisma.technicianProfile.findUnique({
 		where: { userId },
@@ -231,6 +262,7 @@ const getTechnicianAnalytics = async (userId: string) => {
 		return {
 			completedWorkOrders: 0,
 			startedWorkOrders: 0,
+			enrouteWorkOrders: 0,
 			totalEarnings: "0",
 			totalRefunded: "0",
 			currentMonthRevenue: "0",
@@ -254,6 +286,13 @@ const getTechnicianAnalytics = async (userId: string) => {
 			status: {
 				in: [WorkOrderStatus.EN_ROUTE, WorkOrderStatus.STARTED],
 			},
+		},
+	});
+
+	const enrouteWorkOrders = await prisma.workOrder.count({
+		where: {
+			technicianId,
+			status: WorkOrderStatus.EN_ROUTE,
 		},
 	});
 
@@ -295,6 +334,7 @@ const getTechnicianAnalytics = async (userId: string) => {
 	return {
 		completedWorkOrders,
 		startedWorkOrders,
+		enrouteWorkOrders,
 		totalEarnings: totalEarnings._sum.amount?.toString() ?? "0",
 		totalRefunded: totalRefunded._sum.amount?.toString() ?? "0",
 		currentMonthRevenue: currentMonthRevenue._sum.amount?.toString() ?? "0",
@@ -303,7 +343,6 @@ const getTechnicianAnalytics = async (userId: string) => {
 		avgRating: technicianProfile?.rating ?? 0,
 	};
 };
-
 
 
 //& MANAGER ANALYTICS
@@ -322,6 +361,8 @@ const getManagerAnalytics = async (userId: string) => {
 			assignedServices: 0,
 			rejectedServices: 0,
 			completedWorkByTechnicians: 0,
+			totalStartedWorkOrders: 0,
+			totalEnrouteWorkOrders: 0,
 			totalEarnings: "0",
 			totalRefunded: "0",
 			currentMonthRevenue: "0",
@@ -355,6 +396,20 @@ const getManagerAnalytics = async (userId: string) => {
 		where: {
 			managerId: manager.id,
 			status: WorkOrderStatus.COMPLETED,
+		},
+	});
+
+	const totalStartedWorkOrders = await prisma.workOrder.count({
+		where: {
+			managerId: manager.id,
+			status: WorkOrderStatus.STARTED,
+		},
+	});
+
+	const totalEnrouteWorkOrders = await prisma.workOrder.count({
+		where: {
+			managerId: manager.id,
+			status: WorkOrderStatus.EN_ROUTE,
 		},
 	});
 
@@ -396,15 +451,81 @@ const getManagerAnalytics = async (userId: string) => {
 		assignedServices,
 		rejectedServices,
 		completedWorkByTechnicians,
+		totalStartedWorkOrders,
+		totalEnrouteWorkOrders,
 		totalEarnings: totalEarnings._sum.amount?.toString() ?? "0",
 		totalRefunded: totalRefunded._sum.amount?.toString() ?? "0",
 		currentMonthRevenue: currentMonthRevenue._sum.amount?.toString() ?? "0",
 	};
 };
 
+
+
+//& PUBLIC ANALYTICS
+const getPublicAnalytics = async () => {
+	const totalCompletedServices = await prisma.service.count({
+		where: {
+			isDeleted: false,
+			status: ServiceStatus.COMPLETED
+		},
+	});
+
+	const totalTechnician = await prisma.user.count({
+		where: {
+			role: UserRole.TECHNICIAN,
+			isDeleted: false,
+			technician: {
+				isProfileCompleted: true,
+				isDeleted: false
+			}
+		}
+	})
+
+
+	const totalCategory = await prisma.category.count({
+		where: {
+			isActive: true
+		}
+	})
+
+
+	const totalRegion = await prisma.region.count({
+		where: {
+			area: {
+				not: "ALL"
+			},
+			isActive: true
+		}
+	})
+
+
+	const totalAvgRating = await prisma.feedback.aggregate({
+		_avg: {
+			rating: true
+		}
+	})
+
+
+	return {
+		totalCompletedServices,
+		totalTechnician,
+		totalCategory,
+		totalRegion,
+		totalAvgRating: totalAvgRating._avg.rating ?? 0,
+	}
+};
+
+
+
+
+
+
+
+
 export const analyticsService = {
 	getAdminAnalytics,
 	getCustomerAnalytics,
 	getManagerAnalytics,
 	getTechnicianAnalytics,
+	getPublicAnalytics,
 };

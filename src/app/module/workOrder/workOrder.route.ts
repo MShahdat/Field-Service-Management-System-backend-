@@ -7,22 +7,16 @@ const route = Router();
 
 route.get(
 	"/my-workorder",
-	auth(UserRole.TECHNICIAN, UserRole.CUSTOMER, UserRole.MANAGER),
-	workOrderController.getMyWorkOrders,
-);
-
-
-route.get(
-	"/today",
 	auth(
 		UserRole.ADMIN,
 		UserRole.SUPER_ADMIN,
+		UserRole.TECHNICIAN,
 		UserRole.CUSTOMER,
 		UserRole.MANAGER,
-		UserRole.TECHNICIAN,
 	),
-	workOrderController.getTodaysWorkOrders,
+	workOrderController.getMyWorkOrders,
 );
+
 
 route.get(
 	"/new-workorder",

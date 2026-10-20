@@ -15,6 +15,15 @@ route.put(
 );
 
 
+route.get(
+	'/all-technicians',
+	technicianController.getAllTech
+)
+
+route.get(
+	'/:technicianId',
+	technicianController.getTechById
+)
 
 
 

@@ -29,4 +29,10 @@ router.get(
 	analyticsController.getManagerStats,
 );
 
+
+router.get(
+	"/public",
+	analyticsController.getPublicStats,
+);
+
 export const analyticsRoutes = router;

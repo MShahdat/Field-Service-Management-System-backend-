@@ -175,7 +175,7 @@ All endpoints are prefixed with `/api/v1`
 
 | Method | Endpoint | Auth | Body | Description |
 |--------|----------|------|------|-------------|
-| GET | `/my-workorder` | ✅ (TECHNICIAN, CUSTOMER, MANAGER) | - | Get my work orders |
+| GET | `/my-workorder` | ✅ (TECHNICIAN, CUSTOMER, MANAGER) | - | Get my work orders (`?today=true` filters by today's servicing date, plus `?search=`, `?status=`, `?page=`, `?limit=`) |
 | GET | `/new-workorder` | ✅ (TECHNICIAN) | - | Get available work orders |
 | PATCH | `/update` | ✅ (TECHNICIAN) | `{workOrderId, status}` | Update work order status |
 

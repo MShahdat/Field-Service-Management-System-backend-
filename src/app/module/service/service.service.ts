@@ -4,6 +4,7 @@ import {
 	ScheduleStatus,
 	ServiceStatus,
 	UserRole,
+	WorkOrderStatus,
 } from "../../../../generated/prisma/enums";
 import { ServiceWhereInput } from "../../../../generated/prisma/models";
 import { IQuery, IRequestUser } from "../../interface";
@@ -21,6 +22,7 @@ import {
 	getUTCDayOfWeek,
 	parseTimeOnDate,
 	toDateKeyUTC,
+	TZ,
 	utcDayRange,
 } from "../../utils/utility";
 import path from "path";
@@ -251,6 +253,17 @@ const getMyServices = async (query: IQuery, user: IRequestUser) => {
 		});
 	}
 
+	if (query.today === "true" || query.today === true) {
+		const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date());
+		const { start, end } = utcDayRange(new Date(`${todayKey}T00:00:00.000Z`));
+		andCondition.push({
+			servicingDate: {
+				gte: start,
+				lte: end,
+			},
+		});
+	}
+
 	const services = await prisma.service.findMany({
 		where: {
 			AND: andCondition,
@@ -356,6 +369,17 @@ const getALLServices = async (query: IQuery, user: IRequestUser) => {
 		});
 	}
 
+	if (query.today === "true" || query.today === true) {
+		const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date());
+		const { start, end } = utcDayRange(new Date(`${todayKey}T00:00:00.000Z`));
+		andCondition.push({
+			servicingDate: {
+				gte: start,
+				lte: end,
+			},
+		});
+	}
+
 	const services = await prisma.service.findMany({
 		where: {
 			AND: andCondition,
@@ -410,7 +434,12 @@ const getMyRegionServices = async (query: IQuery, user: IRequestUser) => {
 			userId: user.userId
 		},
 		include: {
-			region: true
+			region: {
+				select: {
+					id: true,
+					area: true
+				}
+			}
 		}
 	});
 
@@ -419,13 +448,20 @@ const getMyRegionServices = async (query: IQuery, user: IRequestUser) => {
 	}
 
 	const managerRegionIds = isManager.region.map((r) => r.id);
+	const managesAllRegions = isManager.region.some((r) => r.area.toUpperCase() === "ALL");
+
 	const allowStatus: ServiceStatus[] = ["APPROVED", "ASSIGNED", "COMPLETED", "IN_PROGRESS", "PENDING"];
 
 	const andCondition: ServiceWhereInput[] = [
-		{ regionId: { in: managerRegionIds } },
 		{ status: { in: allowStatus } },
 		{ isDeleted: false }
 	];
+
+	if (!managesAllRegions) {
+		andCondition.push({
+			regionId: { in: managerRegionIds }
+		});
+	}
 
 	if (query.status) {
 		andCondition.push({
@@ -436,6 +472,17 @@ const getMyRegionServices = async (query: IQuery, user: IRequestUser) => {
 	if (query.priority) {
 		andCondition.push({
 			priority: query.priority,
+		});
+	}
+
+	if (query.today === "true" || query.today === true) {
+		const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date());
+		const { start, end } = utcDayRange(new Date(`${todayKey}T00:00:00.000Z`));
+		andCondition.push({
+			servicingDate: {
+				gte: start,
+				lte: end,
+			},
 		});
 	}
 
@@ -498,7 +545,6 @@ const getSingleService = async (serviceId: string, user: IRequestUser) => {
 		},
 		include: {
 			customer: true,
-			manager: true,
 		},
 	});
 
@@ -573,128 +619,6 @@ const getSingleService = async (serviceId: string, user: IRequestUser) => {
 		preferredEndTime: formatTimeToHHmm(isService.preferredEndTime),
 	};
 };
-
-//& REVIAEW (MANAGER)
-
-// const reviewService = async (
-// 	payload: IReviewPayload,
-// 	reviewer: IRequestUser,
-// ) => {
-// 	const { serviceId, status, rejectionReason } = payload;
-
-// 	const isManager = await prisma.managerProfile.findUnique({
-// 		where: {
-// 			userId: reviewer.userId,
-// 		},
-// 		include: {
-// 			region: {
-// 				select: {
-// 					id: true,
-// 					area: true,
-// 				},
-// 			},
-// 		},
-// 	});
-
-// 	if (!isManager) {
-// 		throw new AppError(httpStatus.NOT_FOUND, "Manager not found");
-// 	}
-
-// 	if (isManager.isDeleted) {
-// 		throw new AppError(httpStatus.BAD_REQUEST, "Manager deleted");
-// 	}
-
-// 	if (isManager.verificationStatus !== ManagerVerificationStatus.APPROVED) {
-// 		throw new AppError(httpStatus.BAD_REQUEST, "manager not varified");
-// 	}
-
-// 	console.log("payload ", payload);
-
-// 	const isService = await prisma.service.findUnique({
-// 		where: {
-// 			id: serviceId,
-// 		},
-// 	});
-
-// 	if (!isService) {
-// 		throw new AppError(httpStatus.NOT_FOUND, "service not found");
-// 	}
-
-// 	const canReviewAnyService = isManager.region.some(
-// 		(region) => region.area === "All",
-// 	);
-// 	const canReviewService =
-// 		canReviewAnyService ||
-// 		isManager.region.some((region) => region.id === isService.regionId);
-
-// 	if (!canReviewService) {
-// 		throw new AppError(
-// 			httpStatus.FORBIDDEN,
-// 			"You can only review services in your assigned regions",
-// 		);
-// 	}
-
-// 	if (isService.status !== "PENDING") {
-// 		throw new AppError(
-// 			httpStatus.CONFLICT,
-// 			`you can't update varification status from  '${isService.status.toString()}'.`,
-// 		);
-// 	}
-
-// 	if (status === "REJECTED" && !rejectionReason) {
-// 		throw new AppError(
-// 			httpStatus.BAD_REQUEST,
-// 			"for rejection must need to rejection reason",
-// 		);
-// 	}
-
-// 	const transactionResult = await prisma.$transaction(
-// 		async (tx) => {
-// 			await tx.service.update({
-// 				where: {
-// 					id: isService.id,
-// 				},
-// 				data: {
-// 					status,
-// 					rejectionReason: status === "REJECTED" ? rejectionReason : null,
-// 					reviewedBy: reviewer.userId,
-// 					reviewedAt: new Date(),
-// 				},
-// 			});
-
-// 			if (status === "APPROVED") {
-// 				await tx.workOrder.create({
-// 					data: {
-// 						servicingDate: isService.servicingDate,
-// 						customerId: isService.customerId,
-// 						serviceId: isService.id,
-// 						status: "SCHEDULED",
-// 						regionId: isService.regionId,
-// 						managerId: isManager.id,
-// 					},
-// 				});
-// 			}
-
-// 			const service = await tx.service.findUnique({
-// 				where: {
-// 					id: isService.id,
-// 				},
-// 				include: {
-// 					workOrders: true,
-// 				},
-// 			});
-// 			return service;
-// 		},
-// 		{
-// 			maxWait: 10000,
-// 			timeout: 15000,
-// 		},
-// 	);
-// 	return transactionResult
-// 		? formatServiceDates(transactionResult)
-// 		: transactionResult;
-// };
-
 
 
 //& ELIGIBLE TECHNICIAN
@@ -947,20 +871,39 @@ const assignTechnician = async (
 	}
 
 	if (status === "REJECTED") {
-		const service = await prisma.service.update({
-			where: {
-				id: isWorkOrder.service.id,
-			},
-			data: {
-				rejectionReason,
-				assignedAt: new Date(),
-				status,
-				reviewedAt: new Date(),
-				reviewedBy: user.userId,
-			},
-		});
+		const transactionRes = await prisma.$transaction(
+			async (tx) => {
+				const service = await tx.service.update({
+					where: {
+						id: isWorkOrder.service.id,
+					},
+					data: {
+						rejectionReason,
+						assignedAt: new Date(),
+						status,
+						reviewedAt: new Date(),
+						reviewedBy: user.userId,
+					},
+				});
 
-		return service
+				await tx.workOrder.update({
+					where: {
+						id: isWorkOrder.id
+					},
+					data: {
+						status: WorkOrderStatus.CANCELLED
+					}
+				})
+
+				return service
+			},
+			{
+				maxWait: 10000,
+				timeout: 15000
+			}
+		)
+
+		return transactionRes
 	}
 
 	const isTechnician = await prisma.technicianProfile.findUnique({
@@ -1254,20 +1197,37 @@ const softDelete = async (id: string, user: IRequestUser) => {
 		throw new AppError(httpStatus.BAD_REQUEST, "service cannot be deleted");
 	}
 
-	await prisma.service.update({
-		where: {
-			id,
-		},
-		data: {
-			isDeleted: true,
-			isDeletedAt: new Date(),
-			status: "CANCELLED"
+	const transactionRes = await prisma.$transaction(
+		async (tx) => {
+			await tx.service.update({
+				where: {
+					id,
+				},
+				data: {
+					isDeleted: true,
+					isDeletedAt: new Date(),
+					status: "CANCELLED"
 
+				},
+				include: {
+					customer: true,
+				},
+			});
+
+			await tx.workOrder.update({
+				where: {
+					serviceId: id
+				},
+				data: {
+					status: WorkOrderStatus.CANCELLED
+				}
+			})
 		},
-		include: {
-			customer: true,
-		},
-	});
+		{
+			maxWait: 10000,
+			timeout: 15000
+		}
+	)
 
 };
 
@@ -1283,5 +1243,4 @@ export const serviceService = {
 	updateService,
 	softDelete,
 	getMyRegionServices,
-
 };

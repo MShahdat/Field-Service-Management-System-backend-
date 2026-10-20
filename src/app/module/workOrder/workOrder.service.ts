@@ -5,11 +5,9 @@ import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
 import httpStatus from "http-status";
 import { IUpdateStatusPayload } from "./workOrder.interface";
-import { formatDateTime, formatDateToYYYYMMDD, formatTimeToHHmm } from "../../utils/utility";
+import { formatDateTime, formatDateToYYYYMMDD, formatTimeToHHmm, utcDayRange, TZ } from "../../utils/utility";
 
-// Format nested service (a) + schedule (b) times for all workOrder returns.
-// Mirrors service.service.ts conversion: servicingDate -> YYYY-MM-DD,
-// preferredStart/End + schedule start/end -> HH:mm. Null-safe.
+
 const formatWorkOrder = (wo: any) => ({
 	...wo,
 	servicingDate: formatDateToYYYYMMDD(wo.servicingDate) ?? wo.servicingDate,
@@ -57,11 +55,23 @@ const getMyWrokOrders = async (query: IQuery, user: IRequestUser) => {
 			manager: {
 				select: {
 					id: true,
+					region: {
+						select: {
+							id: true,
+							area: true,
+						},
+					},
 				},
 			},
 			technician: {
 				select: {
 					id: true,
+					regions: {
+						select: {
+							id: true,
+							area: true,
+						},
+					},
 				},
 			},
 		},
@@ -72,33 +82,60 @@ const getMyWrokOrders = async (query: IQuery, user: IRequestUser) => {
 	}
 
 	let ownerCondition: WorkOrderWhereInput;
+	let cancelledCondition: WorkOrderWhereInput = {};
 
 	switch (user.role) {
 		case UserRole.ADMIN:
 		case UserRole.SUPER_ADMIN:
-			ownerCondition = {}
-			break
-		case UserRole.MANAGER:
+			ownerCondition = {};
+			cancelledCondition = {
+				status: {
+					in: ["SCHEDULED", "EN_ROUTE", "STARTED", "COMPLETED"]
+				}
+			}
+			break;
+		case UserRole.MANAGER: {
 			if (!isUser.manager?.id) {
 				throw new AppError(httpStatus.NOT_FOUND, "Manager profile not found");
 			}
-			ownerCondition = { managerId: isUser.manager.id };
+			const managerRegions = isUser.manager.region ?? [];
+			const managesAllRegions = managerRegions.some(
+				(region) => region.area.toUpperCase() === "ALL",
+			);
+			ownerCondition = managesAllRegions
+				? {}
+				: { regionId: { in: managerRegions.map((region) => region.id) } };
+			cancelledCondition = {
+				status: {
+					in: ["SCHEDULED", "EN_ROUTE", "STARTED", "COMPLETED"]
+				}
+			}
 			break;
+		}
 		case UserRole.CUSTOMER:
 			if (!isUser.customer?.id) {
 				throw new AppError(httpStatus.NOT_FOUND, "Customer profile not found");
 			}
 			ownerCondition = { customerId: isUser.customer.id };
 			break;
-		case UserRole.TECHNICIAN:
+		case UserRole.TECHNICIAN: {
 			if (!isUser.technician?.id) {
 				throw new AppError(
 					httpStatus.NOT_FOUND,
 					"Technician profile not found",
 				);
 			}
-			ownerCondition = { technicianId: isUser.technician.id };
+			const technicianRegions = isUser.technician.regions ?? [];
+			ownerCondition = {
+				regionId: { in: technicianRegions.map((region) => region.id) },
+			};
+			cancelledCondition = {
+				status: {
+					in: ["SCHEDULED", "EN_ROUTE", "STARTED", "COMPLETED"]
+				}
+			}
 			break;
+		}
 		default:
 			throw new AppError(
 				httpStatus.FORBIDDEN,
@@ -108,6 +145,7 @@ const getMyWrokOrders = async (query: IQuery, user: IRequestUser) => {
 
 	const andCondition: WorkOrderWhereInput[] = [
 		ownerCondition,
+		cancelledCondition,
 		{
 			service: {
 				isDeleted: false,
@@ -143,9 +181,21 @@ const getMyWrokOrders = async (query: IQuery, user: IRequestUser) => {
 		})
 	}
 
+
 	if (query.status) {
 		andCondition.push({
 			status: query.status,
+		});
+	}
+
+	if (query.today === "true" || query.today === true) {
+		const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date());
+		const { start, end } = utcDayRange(new Date(`${todayKey}T00:00:00.000Z`));
+		andCondition.push({
+			servicingDate: {
+				gte: start,
+				lte: end,
+			},
 		});
 	}
 
@@ -240,11 +290,23 @@ const getWrokOrder = async (id: string, user: IRequestUser) => {
 			manager: {
 				select: {
 					id: true,
+					region: {
+						select: {
+							id: true,
+							area: true,
+						},
+					},
 				},
 			},
 			technician: {
 				select: {
 					id: true,
+					regions: {
+						select: {
+							id: true,
+							area: true,
+						},
+					},
 				},
 			},
 		},
@@ -257,15 +319,23 @@ const getWrokOrder = async (id: string, user: IRequestUser) => {
 	let workOrderWhereCondition: WorkOrderWhereInput;
 
 	switch (user.role) {
-		case UserRole.MANAGER:
+		case UserRole.ADMIN:
+		case UserRole.SUPER_ADMIN:
+			workOrderWhereCondition = { id };
+			break;
+		case UserRole.MANAGER: {
 			if (!isUser.manager?.id) {
 				throw new AppError(httpStatus.NOT_FOUND, "Manager profile not found");
 			}
-			workOrderWhereCondition = {
-				id,
-				managerId: isUser.manager.id,
-			};
+			const managerRegions = isUser.manager.region ?? [];
+			const managesAllRegions = managerRegions.some(
+				(region) => region.area.toUpperCase() === "ALL",
+			);
+			workOrderWhereCondition = managesAllRegions
+				? { id }
+				: { id, regionId: { in: managerRegions.map((region) => region.id) } };
 			break;
+		}
 		case UserRole.CUSTOMER:
 			if (!isUser.customer?.id) {
 				throw new AppError(httpStatus.NOT_FOUND, "Customer profile not found");
@@ -275,18 +345,20 @@ const getWrokOrder = async (id: string, user: IRequestUser) => {
 				customerId: isUser.customer.id,
 			};
 			break;
-		case UserRole.TECHNICIAN:
+		case UserRole.TECHNICIAN: {
 			if (!isUser.technician?.id) {
 				throw new AppError(
 					httpStatus.NOT_FOUND,
 					"Technician profile not found",
 				);
 			}
+			const technicianRegions = isUser.technician.regions ?? [];
 			workOrderWhereCondition = {
 				id,
-				technicianId: isUser.technician.id,
+				regionId: { in: technicianRegions.map((region) => region.id) },
 			};
 			break;
+		}
 		default:
 			throw new AppError(
 				httpStatus.FORBIDDEN,
@@ -556,197 +628,9 @@ const udpateStatus = async (
 	return formatWorkOrder(transactionResult);
 };
 
-//& GET TODAY'S WORKORDERS 
-const getTodaysWorkOrders = async (query: IQuery, user: IRequestUser) => {
-	const sort = query.sortBy ? query.sortBy : "createdAt";
-	const order = query.sortOrder ? query.sortOrder : "desc";
-	const page = Number(query.page || 1);
-	const limit = Number(query.limit || 9);
-
-	const isUser = await prisma.user.findUnique({
-		where: {
-			id: user.userId,
-		},
-		include: {
-			customer: {
-				select: {
-					id: true,
-				},
-			},
-			manager: {
-				select: {
-					id: true,
-				},
-			},
-			technician: {
-				select: {
-					id: true,
-				},
-			},
-		},
-	});
-
-	if (!isUser) {
-		throw new AppError(httpStatus.NOT_FOUND, "user not found");
-	}
-
-	let ownerCondition: WorkOrderWhereInput;
-
-	switch (user.role) {
-		case UserRole.ADMIN:
-		case UserRole.SUPER_ADMIN:
-			ownerCondition = {};
-			break;
-		case UserRole.MANAGER:
-			if (!isUser.manager?.id) {
-				throw new AppError(httpStatus.NOT_FOUND, "Manager profile not found");
-			}
-			ownerCondition = { managerId: isUser.manager.id };
-			break;
-		case UserRole.CUSTOMER:
-			if (!isUser.customer?.id) {
-				throw new AppError(httpStatus.NOT_FOUND, "Customer profile not found");
-			}
-			ownerCondition = { customerId: isUser.customer.id };
-			break;
-		case UserRole.TECHNICIAN:
-			if (!isUser.technician?.id) {
-				throw new AppError(
-					httpStatus.NOT_FOUND,
-					"Technician profile not found",
-				);
-			}
-			ownerCondition = { technicianId: isUser.technician.id };
-			break;
-		default:
-			throw new AppError(
-				httpStatus.FORBIDDEN,
-				"This user role cannot access work orders",
-			);
-	}
-
-	const startOfDay = new Date();
-	startOfDay.setHours(0, 0, 0, 0);
-	const endOfDay = new Date();
-	endOfDay.setHours(23, 59, 59, 999);
-
-	const andCondition: WorkOrderWhereInput[] = [
-		ownerCondition,
-		{
-			servicingDate: {
-				gte: startOfDay,
-				lte: endOfDay,
-			},
-		},
-	];
-
-	if (query.search) {
-		andCondition.push({
-			OR: [
-				{
-					service: {
-						title: {
-							contains: query.search,
-							mode: "insensitive",
-						},
-					},
-				},
-				{
-					service: {
-						category: {
-							name: {
-								contains: query.search,
-								mode: "insensitive",
-							},
-						},
-					},
-				},
-			],
-		});
-	}
-
-	if (query.status) {
-		andCondition.push({
-			status: query.status,
-		});
-	}
-
-	const workOrders = await prisma.workOrder.findMany({
-		where: {
-			AND: andCondition,
-		},
-		take: limit,
-		skip: (page - 1) * limit,
-		orderBy: {
-			[sort]: order,
-		},
-		include: {
-			customer: {
-				include: {
-					user: {
-						omit: {
-							password: true,
-						},
-					},
-				},
-			},
-			manager: {
-				include: {
-					user: {
-						omit: {
-							password: true,
-						},
-					},
-				},
-			},
-			technician: {
-				include: {
-					user: {
-						omit: {
-							password: true,
-						},
-					},
-				},
-			},
-			schedule: true,
-			payment: {
-				omit: {
-					getwayResponse: true,
-				},
-			},
-			service: {
-				include: {
-					category: true,
-				},
-			},
-		},
-	});
-
-	const total = await prisma.workOrder.count({
-		where: {
-			AND: andCondition,
-		},
-	});
-
-	const meta = {
-		total,
-		page,
-		limit,
-		totalPages: Math.ceil(total / limit),
-	};
-
-	return {
-		workOrders: workOrders.map(formatWorkOrder),
-		meta,
-	};
-};
-
-
-
 export const workOrderService = {
 	getMyWrokOrders,
 	getNewWrokOrders,
 	udpateStatus,
 	getWrokOrder,
-	getTodaysWorkOrders,
 };

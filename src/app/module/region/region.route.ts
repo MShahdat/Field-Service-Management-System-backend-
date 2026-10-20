@@ -17,6 +17,11 @@ route.get(
 	regionController.getAllRegion,
 );
 
+route.get(
+	"/:regionId",
+	regionController.getSingleRegion
+)
+
 route.get("/", regionController.getRegions);
 
 route.put(

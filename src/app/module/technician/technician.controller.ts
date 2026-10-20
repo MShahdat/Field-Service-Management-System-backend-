@@ -29,6 +29,39 @@ const completeProfile = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+
+
+const getAllTech = catchAsync(async (req: Request, res: Response) => {
+	const query = req.query;
+
+	const { technicians, meta } = await technicianService.getAllTech(query);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: `technicians retrive successfully`,
+		data: technicians,
+		meta,
+	});
+});
+
+
+const getTechById = catchAsync(async (req: Request, res: Response) => {
+	const { technicianId } = req.params;
+
+	const result = await technicianService.getTechById(technicianId as string);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: `technician retrive successfully`,
+		data: result,
+	});
+});
+
+
 export const technicianController = {
 	completeProfile,
+	getAllTech,
+	getTechById
 };

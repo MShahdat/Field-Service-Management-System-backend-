@@ -154,7 +154,7 @@ const bkashCallback = async (query: Record<string, any>) => {
 					},
 				});
 				return {
-					redirectUrl: `${config.frontend_url}/dashboard/my-service?status=${status}`,
+					redirectUrl: `${config.frontend_url}?status=${status}`,
 				};
 			}
 			if (status === "success") {
@@ -285,7 +285,7 @@ const bkashCallback = async (query: Record<string, any>) => {
 
 				return {
 					result,
-					redirectUrl: `${config.frontend_url}/dashboard/my-workorder?status=success`,
+					redirectUrl: `${config.frontend_url}/customer-dashboard/payment/my-payment?status=success`,
 				};
 			} else {
 				throw new AppError(httpStatus.BAD_REQUEST, "bkash callback error!");
