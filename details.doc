@@ -1,0 +1,1084 @@
+Field Service Management System
+
+System Design and Architecture Document
+
+1. Project Requirements
+
+Project Name
+Field Service Management System
+
+Target Users
+- Customers who need home or business services
+- Technicians who perform field jobs
+- Managers who review requests and assign work
+- Administrators who manage regions, categories, users, and approvals
+- Super Admins who oversee the whole platform
+
+Main Purpose
+The Field Service Management System is designed to streamline the full service lifecycle from customer request submission to technician assignment, work execution, payment settlement, and post-service feedback. The system ensures transparency, proper scheduling, efficient technician allocation, secure payments, and better service quality tracking.
+
+5–8 Core Features
+1. Service Request Management
+   - Customers can submit service requests with category, description, address, preferred date, and region.
+2. Technician Assignment
+   - Managers can review services and assign the most suitable technician based on skill, location, and availability.
+3. Work Order Tracking
+   - Each assigned service becomes a work order with status updates from assigned to in-progress to completed.
+4. Technician Availability and Scheduling
+   - Technicians can update availability and schedule their assigned jobs.
+5. Service Reports and Documentation
+   - Technicians submit job reports, notes, and supporting file attachments after service completion.
+6. Payment Processing
+   - Customers can pay for services using available payment integrations, including bKash.
+7. Feedback and Ratings
+   - Customers can review services and rate technician performance after completion.
+8. Admin and Master Data Management
+   - Admins manage regions, categories, skills, and user approvals.
+
+User Roles
+- SUPER_ADMIN: Full access to system configuration, records, and management controls.
+- ADMIN: Manage categories, regions, user approvals, and platform operations.
+- MANAGER: Reviews service requests, assigns technicians, and tracks work orders in a region.
+- TECHNICIAN: Receives assigned jobs, updates reports, and completes field tasks.
+- CUSTOMER: Submits service requests, tracks progress, pays, and provides reviews.
+
+2. SDA Workflow
+
+General Workflow
+User → Frontend Request → API Route → Middleware/Authentication → Controller → Service / Business Logic → Prisma/Database → API Response → Frontend → User
+
+```mermaid
+flowchart LR
+    U[Customer / Technician / Manager / Admin] --> F[Frontend Dashboard\nNext.js + UI]
+    F --> A[API Request\nPOST /api/v1/service / login / assign / pay]
+
+    subgraph Backend[API / Backend]
+        R[Route Layer\nExpress Router]
+        M[Middleware\nJWT Auth + Role Check + Validation]
+        C[Controller\nHandles HTTP request]
+        S[Service Layer\nBusiness logic and rules]
+        D[Prisma / Database Access]
+    end
+
+    A --> R
+    R --> M
+    M --> C
+    C --> S
+    S --> V[Validate service request\nCheck category, date, region, permission]
+    V --> B[Create / update business data\nService, Work Order, Payment, Feedback]
+    B --> D
+    D --> DB[(PostgreSQL\nPrisma ORM)]
+    DB --> S
+    S --> E[External Services\nCloudinary / bKash / Redis / Email]
+    E --> S
+    S --> RES[API Response\n{ success, statusCode, message, data }]
+    RES --> F
+    F --> U
+```
+
+Example Workflow: Submit Service Request
+```mermaid
+flowchart LR
+    A[Customer logs in] --> B[Open service form in frontend]
+    B --> C[POST /api/v1/service]
+    C --> D[Route receives request]
+    D --> E[Auth + Role Middleware\nverify JWT and CUSTOMER role]
+    E --> F[Controller validates incoming request data]
+    F --> G[Service Layer executes business logic]
+    G --> H[Check category, region, date, and customer permission]
+    H --> I[Create service record]
+    I --> J[Auto-create linked work order]
+    J --> K[Save to PostgreSQL via Prisma]
+    K --> L[Return success response to frontend]
+    L --> M[Dashboard refreshes and shows new service status]
+    M --> N[Manager can view and assign technician]
+```
+
+Brief explanation of the important steps:
+- User sends a request from the frontend when creating a service, login, payment, or feedback action.
+- The request reaches the API route, which directs the traffic to the correct controller.
+- Middleware checks authentication, user role, and validation rules before allowing the action.
+- The controller receives the request and passes it to the service layer, where the main business logic is handled.
+- The service layer validates the business rules, creates or updates records, and interacts with Prisma to save data in PostgreSQL.
+- External services such as Cloudinary, bKash, Redis, or email are called when needed for file upload, payment processing, cache, or notifications.
+- After processing, the backend returns a JSON response with success, status code, message, and data.
+- The frontend receives the response, updates the state, and refreshes the relevant dashboard for the user.
+
+This SDA workflow clearly follows the project structure: Client → API Request → Route → Middleware → Controller → Service → Database / External Services → API Response → Frontend.
+3. Database ERD
+
+Entity Relationship Diagram (dbdiagram.io style)
+```dbml
+Table users {
+  id string [pk]
+  name string
+  email string [unique]
+  password string
+  profileImg string
+  profileImgPublicId string
+  googleId string [unique]
+  facebookId string [unique]
+  authProvider string
+  emailVerified boolean
+  role string
+  status string
+  needPasswordChange boolean
+  isDeleted boolean
+  deletedAt datetime
+  createdAt datetime
+  updatedAt datetime
+}
+
+Table customers {
+  id string [pk]
+  phone string
+  address json
+  isDeleted boolean
+  deletedAt datetime
+  createdAt datetime
+  updatedAt datetime
+  userId string [unique, ref: > users.id]
+}
+
+Table technicians {
+  id string [pk]
+  phone string
+  address json
+  bio string
+  nid string
+  isProfileCompleted boolean
+  isDeleted boolean
+  deletedAt datetime
+  status string
+  rating float
+  jobsCompleted int
+  createdAt datetime
+  updatedAt datetime
+  userId string [unique, ref: > users.id]
+}
+
+Table managerProfiles {
+  id string [pk]
+  phone string
+  address json
+  nid string
+  verificationStatus string
+  rejectionReason string
+  reviewdBy string
+  reviewdAt datetime
+  isDeleted boolean
+  deletedAt datetime
+  createdAt datetime
+  updatedAt datetime
+  userId string [unique, ref: > users.id]
+}
+
+Table regions {
+  id string [pk]
+  area string [unique]
+  description string
+  isActive boolean
+  createdAt datetime
+  updatedAt datetime
+}
+
+Table categories {
+  id string [pk]
+  name string [unique]
+  icon string
+  description string
+  isActive boolean
+  duration int
+  createdAt datetime
+  updatedAt datetime
+}
+
+Table skills {
+  id string [pk]
+  name string [unique]
+  icon string
+  description string
+  isActive boolean
+  isDelete boolean
+  deletedAt datetime
+  createdAt datetime
+  updatedAt datetime
+  categoryId string [ref: > categories.id]
+}
+
+Table services {
+  id string [pk]
+  title string
+  description string
+  priority string
+  status string
+  address json
+  servicingDate date
+  preferredStartTime time
+  preferredEndTime time
+  duration int
+  isDeleted boolean
+  isDeletedAt datetime
+  assignedAt datetime
+  reviewedBy string
+  reviewedAt datetime
+  rejectionReason string
+  createdAt datetime
+  updatedAt datetime
+  customerId string [ref: > customers.id]
+  categoryId string [ref: > categories.id]
+  regionId string [ref: > regions.id]
+}
+
+Table workOrders {
+  id string [pk]
+  servicingDate datetime
+  status string
+  note string
+  createdAt datetime
+  updatedAt datetime
+  regionId string [ref: > regions.id]
+  customerId string [ref: > customers.id]
+  technicianId string [ref: > technicians.id]
+  serviceId string [unique, ref: > services.id]
+  managerId string [ref: > managerProfiles.id]
+}
+
+Table availability {
+  id string [pk]
+  type string
+  dayOfWeek int
+  date date
+  startTime time
+  endTime time
+  isActive boolean
+  createdAt datetime
+  updatedAt datetime
+  technicianId string [ref: > technicians.id]
+}
+
+Table schedules {
+  id string [pk]
+  servicingDate datetime
+  startTime datetime
+  endTime datetime
+  actualStart datetime
+  actualEnd datetime
+  status string
+  isdeleted boolean
+  deletedAt datetime
+  createdAt datetime
+  updatedAt datetime
+  technicianId string [ref: > technicians.id]
+  workOrderId string [unique, ref: > workOrders.id]
+}
+
+Table serviceReports {
+  id string [pk]
+  reportUrl string
+  reportPublicId string
+  description string
+  isDelete boolean
+  deletedAt datetime
+  createdAt datetime
+  updatedAt datetime
+  workOrderId string [unique, ref: > workOrders.id]
+}
+
+Table payments {
+  id string [pk]
+  paymentId string [unique]
+  amount decimal(10,2)
+  method string
+  transectionId string [unique]
+  status string
+  paidAt datetime
+  payerReference string
+  currency string
+  merchantInvoiceNumber string [unique]
+  getwayResponse json
+  refundTrxId string
+  refundAmount decimal(10,2)
+  refundedAt string
+  reason string
+  createdAt datetime
+  updatedAt datetime
+  workOrderId string [unique, ref: > workOrders.id]
+}
+
+Table feedbacks {
+  id string [pk]
+  rating float
+  comment string
+  isDeleted boolean
+  deletedAt datetime
+  createdAt datetime
+  updatedAt datetime
+  workOrderId string [unique, ref: > workOrders.id]
+}
+
+Table attachments {
+  id string [pk]
+  files json
+  description string
+  type string
+  isDelete boolean
+  deletedAt datetime
+  createdAt datetime
+  updatedAt datetime
+  workOrderId string [ref: > workOrders.id]
+}
+
+Table technician_regions {
+  technicianId string [ref: > technicians.id]
+  regionId string [ref: > regions.id]
+  indexes {
+    (technicianId, regionId) [pk]
+  }
+}
+
+Table manager_regions {
+  managerId string [ref: > managerProfiles.id]
+  regionId string [ref: > regions.id]
+  indexes {
+    (managerId, regionId) [pk]
+  }
+}
+```
+
+Important Relationships
+- One User can have exactly one CustomerProfile, one TechnicianProfile, and one ManagerProfile.
+- A CustomerProfile can create many Service records.
+- A Region can be related to many services, many work orders, and many technician/manager profiles through the Prisma relation arrays.
+- One Category can contain many Skills and many Services.
+- One TechnicianProfile can have many Availability records, many Schedules, and many WorkOrder records.
+- One Service is linked to exactly one WorkOrder, and the WorkOrder is created together with the service.
+- A WorkOrder can have one ServiceReport, one Feedback, one Payment, and many Attachments.
+- A WorkOrder belongs to one Region, one CustomerProfile, and optionally one TechnicianProfile and one ManagerProfile.
+- Many technicians can have many skills via the implicit many-to-many relation defined on the TechnicianProfile.skills field.
+- ManagerProfile and TechnicianProfile both maintain region relationships through many-to-many mappings.
+
+4. Backend API Design
+
+Base URL
+/api/v1
+
+Authentication and Authorization
+- Public APIs: No authentication required.
+- Protected APIs: Requires Authorization header with JWT access token.
+- Roles: Some endpoints are restricted to ADMIN, MANAGER, TECHNICIAN, CUSTOMER, or SUPER_ADMIN.
+
+API List
+
+The backend exposes the following API endpoints based on the project’s route definitions.
+
+Auth Module
+1. POST /api/v1/auth/register
+   - Purpose: Register a new customer account and send OTP verification
+   - Auth: No
+   - Role: Public
+2. POST /api/v1/auth/email-verify
+   - Purpose: Verify user email using OTP
+   - Auth: No
+   - Role: Public
+3. POST /api/v1/auth/login
+   - Purpose: Sign in and issue JWT tokens
+   - Auth: No
+   - Role: Public
+4. GET /api/v1/auth/me
+   - Purpose: Get current user profile
+   - Auth: Yes
+   - Role: ADMIN, CUSTOMER, MANAGER, SUPER_ADMIN, TECHNICIAN
+5. POST /api/v1/auth/refresh-token
+   - Purpose: Refresh access token for an authenticated user
+   - Auth: Yes/Refresh token based flow
+   - Role: All authenticated users
+6. POST /api/v1/auth/forgot-password
+   - Purpose: Request password reset OTP
+   - Auth: No
+   - Role: Public
+7. POST /api/v1/auth/reset-password
+   - Purpose: Reset password after verification
+   - Auth: No
+   - Role: Public
+8. GET /api/v1/auth/google
+   - Purpose: Start Google OAuth login flow
+   - Auth: No
+   - Role: Public
+9. GET /api/v1/auth/google/callback
+   - Purpose: Handle Google OAuth callback
+   - Auth: No
+   - Role: Public
+10. GET /api/v1/auth/facebook
+   - Purpose: Start Facebook OAuth login flow
+   - Auth: No
+   - Role: Public
+11. GET /api/v1/auth/facebook/callback
+   - Purpose: Handle Facebook OAuth callback
+   - Auth: No
+   - Role: Public
+12. POST /api/v1/auth/logout
+   - Purpose: Log out the current logged-in user
+   - Auth: Yes
+   - Role: ADMIN, CUSTOMER, MANAGER, SUPER_ADMIN, TECHNICIAN
+
+Region Module
+13. POST /api/v1/region/
+   - Purpose: Create a new region
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+14. GET /api/v1/region/all-region
+   - Purpose: View all regions in admin panel
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+15. GET /api/v1/region/:regionId
+   - Purpose: Get details for one region
+   - Auth: No
+   - Role: Public
+16. GET /api/v1/region/
+   - Purpose: Fetch all public regions
+   - Auth: No
+   - Role: Public
+17. PUT /api/v1/region/:regionId
+   - Purpose: Update region information
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+18. PATCH /api/v1/region/:regionId
+   - Purpose: Toggle or update region status
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+
+Manager Module
+19. POST /api/v1/manager/manager-apply
+   - Purpose: Apply to become a manager
+   - Auth: No
+   - Role: Public
+20. POST /api/v1/manager/email-verify
+   - Purpose: Verify manager email with OTP
+   - Auth: No
+   - Role: Public
+21. POST /api/v1/manager/manager-approved
+   - Purpose: Approve or reject a manager application
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+22. GET /api/v1/manager/all-managers
+   - Purpose: Get all managers
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+
+Category Module
+23. POST /api/v1/category/
+   - Purpose: Create a new service category
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+24. GET /api/v1/category/all
+   - Purpose: List public categories
+   - Auth: No
+   - Role: Public
+25. GET /api/v1/category/all-category
+   - Purpose: Get full category list for admin use
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+26. GET /api/v1/category/:categoryId
+   - Purpose: Fetch a single category
+   - Auth: No
+   - Role: Public
+27. PUT /api/v1/category/:categoryId
+   - Purpose: Update category details
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+28. PATCH /api/v1/category/:categoryId
+   - Purpose: Update category status
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+
+Skill Module
+29. POST /api/v1/skill/
+   - Purpose: Create a technician skill
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+30. GET /api/v1/skill/all
+   - Purpose: Get all public skills
+   - Auth: No
+   - Role: Public
+31. GET /api/v1/skill/all-skill
+   - Purpose: Get all skills for admin management
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+32. PUT /api/v1/skill/:skillId
+   - Purpose: Update a skill
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+33. PATCH /api/v1/skill/:skillId
+   - Purpose: Update skill status
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+34. PATCH /api/v1/skill/delete/:skillId
+   - Purpose: Soft delete a skill
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+
+Service Module
+35. POST /api/v1/service/
+   - Purpose: Create a service request and automatically create a related work order
+   - Auth: Yes
+   - Role: CUSTOMER
+36. PUT /api/v1/service/:serviceId
+   - Purpose: Update a customer service request
+   - Auth: Yes
+   - Role: CUSTOMER
+37. GET /api/v1/service/my-services
+   - Purpose: Get all service requests for the current customer
+   - Auth: Yes
+   - Role: CUSTOMER
+38. GET /api/v1/service/all-services
+   - Purpose: Get all services for admin view
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+39. GET /api/v1/service/my-region
+   - Purpose: Get service requests belonging to the manager’s region
+   - Auth: Yes
+   - Role: MANAGER
+40. GET /api/v1/service/:serviceId
+   - Purpose: Get single service details
+   - Auth: Yes
+   - Role: ADMIN, CUSTOMER, MANAGER, SUPER_ADMIN, TECHNICIAN
+41. POST /api/v1/service/assign-technician
+   - Purpose: Assign a technician to an existing work order and update its status
+   - Auth: Yes
+   - Role: MANAGER
+42. GET /api/v1/service/workOrder/:workOrderId
+   - Purpose: Get eligible technicians for a work order
+   - Auth: Yes
+   - Role: MANAGER
+43. PATCH /api/v1/service/workOrder/technician-assign
+   - Purpose: Assign technician for a work order
+   - Auth: Yes
+   - Role: MANAGER
+44. PATCH /api/v1/service/delete/:serviceId
+   - Purpose: Soft delete a service request
+   - Auth: Yes
+   - Role: CUSTOMER
+
+Technician Module
+45. PUT /api/v1/technician/me/profile
+   - Purpose: Complete technician profile information
+   - Auth: Yes
+   - Role: TECHNICIAN
+46. GET /api/v1/technician/all-technicians
+   - Purpose: List all technicians
+   - Auth: No
+   - Role: Public
+47. GET /api/v1/technician/:technicianId
+   - Purpose: Get technician details by ID
+   - Auth: No
+   - Role: Public
+
+Work Order Module
+48. GET /api/v1/workorder/my-workorder
+   - Purpose: Get work orders assigned to or related to the current user
+   - Auth: Yes
+   - Role: ADMIN, CUSTOMER, MANAGER, SUPER_ADMIN, TECHNICIAN
+49. GET /api/v1/workorder/new-workorder
+   - Purpose: Get newly available work orders for technicians
+   - Auth: Yes
+   - Role: TECHNICIAN
+50. GET /api/v1/workorder/:workOrderId
+   - Purpose: Fetch a single work order
+   - Auth: Yes
+   - Role: ADMIN, CUSTOMER, MANAGER, SUPER_ADMIN, TECHNICIAN
+51. PATCH /api/v1/workorder/update
+   - Purpose: Update work order status
+   - Auth: Yes
+   - Role: TECHNICIAN
+
+Payment Module
+52. POST /api/v1/payment/create
+   - Purpose: Create a payment request for a service
+   - Auth: Yes
+   - Role: CUSTOMER
+53. GET /api/v1/payment/service/callback
+   - Purpose: bKash callback endpoint
+   - Auth: No
+   - Role: Public callback endpoint
+54. GET /api/v1/payment/payment-info
+   - Purpose: Fetch payment information for the current user
+   - Auth: Yes
+   - Role: All authenticated users
+
+Attachment Module
+55. POST /api/v1/attachment/
+   - Purpose: Upload attachments for a service or work order
+   - Auth: Yes
+   - Role: CUSTOMER, TECHNICIAN
+56. GET /api/v1/attachment/
+   - Purpose: Get uploaded attachments
+   - Auth: Yes
+   - Role: All authenticated users
+57. PATCH /api/v1/attachment/update/:attachmentId
+   - Purpose: Update an attachment
+   - Auth: Yes
+   - Role: ADMIN, CUSTOMER, MANAGER, SUPER_ADMIN, TECHNICIAN
+58. DELETE /api/v1/attachment/delete/:attachmentId
+   - Purpose: Delete a file attachment
+   - Auth: Yes
+   - Role: ADMIN, CUSTOMER, MANAGER, SUPER_ADMIN, TECHNICIAN
+
+Service Report Module
+59. POST /api/v1/service-report/
+   - Purpose: Upload a service report by technician
+   - Auth: Yes
+   - Role: TECHNICIAN
+60. GET /api/v1/service-report/my-reports
+   - Purpose: Get technician’s uploaded reports
+   - Auth: Yes
+   - Role: TECHNICIAN
+61. GET /api/v1/service-report/all-reports
+   - Purpose: List all service reports for admin review
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+62. PATCH /api/v1/service-report/update/:reportId
+   - Purpose: Update a report
+   - Auth: Yes
+   - Role: TECHNICIAN
+63. DELETE /api/v1/service-report/delete/:reportId
+   - Purpose: Delete a service report
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN, TECHNICIAN
+
+Feedback Module
+64. POST /api/v1/feedback/
+   - Purpose: Create customer feedback after service completion
+   - Auth: Yes
+   - Role: CUSTOMER
+65. GET /api/v1/feedback/all-feedback
+   - Purpose: Get all feedback records
+   - Auth: No
+   - Role: Public
+66. GET /api/v1/feedback/:feedbackId
+   - Purpose: Get a specific feedback item
+   - Auth: Yes
+   - Role: ADMIN, CUSTOMER, MANAGER, SUPER_ADMIN, TECHNICIAN
+67. PATCH /api/v1/feedback/update/:feedbackId
+   - Purpose: Update feedback content
+   - Auth: Yes
+   - Role: CUSTOMER
+68. DELETE /api/v1/feedback/delete/:feedbackId
+   - Purpose: Delete a feedback entry
+   - Auth: Yes
+   - Role: CUSTOMER
+
+User Module
+69. PATCH /api/v1/user/profile-image
+   - Purpose: Upload or update profile image
+   - Auth: Yes
+   - Role: ADMIN, CUSTOMER, MANAGER, SUPER_ADMIN, TECHNICIAN
+70. PATCH /api/v1/user/customer/update-profile
+   - Purpose: Update customer profile details
+   - Auth: Yes
+   - Role: CUSTOMER
+71. GET /api/v1/user/all-users
+   - Purpose: List all registered users
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+72. PATCH /api/v1/user/status-update/:userId
+   - Purpose: Update a user’s active/inactive status
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+
+Analytics Module
+73. GET /api/v1/analytics/admin
+   - Purpose: Get admin analytics dashboard data
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+74. GET /api/v1/analytics/customer
+   - Purpose: Get customer analytics data
+   - Auth: Yes
+   - Role: CUSTOMER
+75. GET /api/v1/analytics/technician
+   - Purpose: Get technician performance dashboard data
+   - Auth: Yes
+   - Role: TECHNICIAN
+76. GET /api/v1/analytics/manager
+   - Purpose: Get manager dashboard analytics
+   - Auth: Yes
+   - Role: MANAGER
+77. GET /api/v1/analytics/public
+   - Purpose: Fetch public statistics for the platform
+   - Auth: No
+   - Role: Public
+
+Schedule Module
+78. GET /api/v1/schedule/all-schedule
+   - Purpose: Get all schedules for admin view
+   - Auth: Yes
+   - Role: ADMIN, SUPER_ADMIN
+79. GET /api/v1/schedule/my-schedule
+   - Purpose: Get schedules of the current technician
+   - Auth: Yes
+   - Role: TECHNICIAN
+80. GET /api/v1/schedule/:scheduleId
+   - Purpose: Fetch a specific schedule record
+   - Auth: Yes
+   - Role: ADMIN, CUSTOMER, MANAGER, SUPER_ADMIN, TECHNICIAN
+
+5. API Request & Response (10 Important APIs)
+
+The backend wraps every response in: { success, statusCode, message, data, meta? } (meta omitted when not paginated).
+
+1. POST /api/v1/auth/register
+   Purpose: Register a new account and send OTP verification
+   Auth: None | Role: Public
+   Validation: name (min 3), email, role (CUSTOMER | TECHNICIAN), password (8-40 chars, ≥1 uppercase, ≥1 lowercase, ≥1 number, ≥1 special char)
+   Request Body:
+   {
+     "name": "Rahim Uddin",
+     "email": "rahim@example.com",
+     "role": "CUSTOMER",
+     "password": "StrongPass123!"
+   }
+   Successful Response (200):
+   {
+     "success": true,
+     "statusCode": 200,
+     "message": "Register  OTP send successfully",
+     "data": null
+   }
+   Possible Error Response:
+   {
+     "success": false,
+     "statusCode": 409,
+     "message": "User with this email already exists",
+     "data": null
+   }
+
+2. POST /api/v1/auth/login
+   Purpose: Sign in and issue JWT tokens (accessToken + refreshToken set as httpOnly cookies)
+   Auth: None | Role: Public
+   Request Body:
+   {
+     "email": "rahim@example.com",
+     "password": "StrongPass123!"
+   }
+   Successful Response (200):
+   {
+     "success": true,
+     "statusCode": 200,
+     "message": "User logged in successfully",
+     "data": {
+       "user": { "id": "user_123", "name": "Rahim Uddin", "email": "rahim@example.com", "role": "CUSTOMER", ... },
+       "accessToken": "jwt_access_token",
+       "refreshToken": "jwt_refresh_token"
+     }
+   }
+   Possible Error Response:
+   - 401: "Invalid credentials"
+   - 404: "User not found"
+   - 403: "User is blocked" / "User is deleted"
+
+3. GET /api/v1/auth/me
+   Purpose: Get current user profile
+   Auth: Required (Bearer token) | Role: ADMIN, CUSTOMER, MANAGER, SUPER_ADMIN, TECHNICIAN
+   Successful Response (200):
+   {
+     "success": true,
+     "statusCode": 200,
+     "message": "User profile fetched successfully",
+     "data": {
+       "id": "user_123",
+       "name": "Rahim Uddin",
+       "email": "rahim@example.com",
+       "role": "CUSTOMER",
+       "emailVerified": true,
+       "status": "ACTIVE",
+       "customer": { ... }                        // CUSTOMER only
+       // TECHNICIAN: technician { regions, availability[{startTime, endTime (HH:mm)}], skills[{category}] }
+       // MANAGER: manager { region }
+     }
+   }
+   Possible Error Response:
+   {
+     "success": false,
+     "statusCode": 401,
+     "message": "Unauthorized",
+     "data": null
+   }
+
+4. POST /api/v1/service/
+   Purpose: Create a service request and auto-create a linked WorkOrder (status SCHEDULED)
+   Auth: Required (CUSTOMER)
+   Validation: title, description (min 5), servicingDate (not in past), address (object), categoryId, regionId (uuid), priority, optional preferredStartTime/preferredEndTime (HH:mm)
+   Request Body:
+   {
+     "title": "AC Maintenance",
+     "description": "Indoor AC not cooling properly.",
+     "servicingDate": "2026-11-15",
+     "address": { "street": "House 12", "area": "Mirpur", "city": "Dhaka" },
+     "categoryId": "d0f54a0d-3ce2-44c2-bb7a-7f8ac8a7ef99",
+     "priority": "HIGH",
+     "regionId": "84d19316-1f50-4d85-a3d0-b87f4aa1c574",
+     "preferredStartTime": "10:00",
+     "preferredEndTime": "12:00"
+   }
+   Successful Response (200):
+   {
+     "success": true,
+     "statusCode": 200,
+     "message": "service request retrived successfully",
+     "data": {
+       "id": "svc_456",
+       "title": "AC Maintenance",
+       "description": "Indoor AC not cooling properly.",
+       "servicingDate": "2026-11-15",
+       "address": { "street": "House 12", "area": "Mirpur", "city": "Dhaka" },
+       "duration": 120,
+       "categoryId": "d0f54a0d-3ce2-44c2-bb7a-7f8ac8a7ef99",
+       "priority": "HIGH",
+       "regionId": "84d19316-1f50-4d85-a3d0-b87f4aa1c574",
+       "preferredStartTime": "10:00",
+       "preferredEndTime": "12:00",
+       "status": "PENDING",
+       "customerId": "cust_001",
+       "customer": { ... },
+       "workOrders": [{ "id": "wo_123", "servicingDate": "2026-11-15", "status": "SCHEDULED", "customerId": "cust_001", "regionId": "..." }],
+       "createdAt": "...",
+       "updatedAt": "..."
+     }
+   }
+   Possible Error Response:
+   {
+     "success": false,
+     "statusCode": 400,
+     "message": "Validation failed",
+     "data": null
+   }
+
+5. GET /api/v1/service/my-services
+   Purpose: Get all service requests for the current customer
+   Auth: Required (CUSTOMER)
+   Successful Response (201):
+   {
+     "success": true,
+     "statusCode": 201,
+     "message": "service retrive successfully",
+     "data": [
+       {
+         "id": "svc_456",
+         "title": "AC Maintenance",
+         "status": "PENDING",
+         "servicingDate": "2026-11-15",
+         "category": { "id": "...", "name": "..." },
+         "workOrders": [{ "id": "wo_123", "technician": { "user": { ... } } }]
+       }
+     ],
+     "meta": { "total": 1, "page": 1, "limit": 9, "totalPages": 1 }
+   }
+   Possible Error Response:
+   {
+     "success": false,
+     "statusCode": 404,
+     "message": "No service requests found",
+     "data": null
+   }
+
+6. POST /api/v1/service/assign-technician
+   Purpose: Assign a technician to an existing work order and update its status (also creates bKash payment)
+   Auth: Required (MANAGER)
+   Request Body:
+   {
+     "workOrderId": "9f8fa4ee-8e5d-42ed-9e01-6cc0d197d9d7",
+     "technicianId": "ab2357b9-4cc3-4f66-9d84-7e83d19f5e9b",
+     "amount": 5000,
+     "status": "ASSIGNED"
+   }
+   (status: "REJECTED" or "ASSIGNED"; amount required for bKash payment creation)
+   Successful Response (200) — status ASSIGNED:
+   {
+     "success": true,
+     "statusCode": 200,
+     "message": "Technician assigned successfully",
+     "data": {
+       "id": "9f8fa4ee-8e5d-42ed-9e01-6cc0d197d9d7",
+       "servicingDate": "...",
+       "status": "EN_ROUTE",
+       "technicianId": "ab2357b9-4cc3-4f66-9d84-7e83d19f5e9b",
+       "managerId": "...",
+       "serviceId": "svc_456",
+       "service": { "id": "svc_456", "status": "ASSIGNED", "category": {...}, "region": {...} },
+       "customer": { ... },
+       "technician": { "user": { "id": "...", "name": "...", ... } },
+       "schedule": {...},
+       "payment": {...}
+     }
+   }
+   When status is "REJECTED": message "Service rejected successfully", WorkOrder status CANCELLED, returned data is the updated Service.
+   Possible Error Response:
+   {
+     "success": false,
+     "statusCode": 409,
+     "message": "Technician is unavailable for this date",
+     "data": null
+   }
+
+7. GET /api/v1/workorder/:workOrderId
+   Purpose: Fetch a single work order
+   Auth: Required (ADMIN, CUSTOMER, MANAGER, SUPER_ADMIN, TECHNICIAN)
+   Successful Response (200):
+   {
+     "success": true,
+     "statusCode": 200,
+     "message": "work order retrive successfully",
+     "data": {
+       "id": "9f8fa4ee-8e5d-42ed-9e01-6cc0d197d9d7",
+       "servicingDate": "2026-11-15",
+       "status": "EN_ROUTE",
+       "note": null,
+       "serviceId": "svc_456",
+       "customerId": "cust_001",
+       "technicianId": "ab2357b9-4cc3-4f66-9d84-7e83d19f5e9b",
+       "managerId": "...",
+       "regionId": "...",
+       "service": { "id": "svc_456", "...", "category": {...} },
+       "customer": { "user": {...} },
+       "technician": { "user": {...} },
+       "manager": { "user": {...} },
+       "schedule": {...},
+       "payment": {...},
+       "feedback": {...},
+       "attachment": [...],
+       "serviceReport": {...},
+       "createdAt": "...",
+       "updatedAt": "..."
+     }
+   }
+   Possible Error Response:
+   {
+     "success": false,
+     "statusCode": 404,
+     "message": "Work order not found",
+     "data": null
+   }
+
+8. PATCH /api/v1/workorder/update
+   Purpose: Update work order status
+   Auth: Required (TECHNICIAN)
+   Request Body:
+   {
+     "workOrderId": "9f8fa4ee-8e5d-42ed-9e01-6cc0d197d9d7",
+     "status": "STARTED"
+   }
+   (status: "STARTED" | "COMPLETED"; not allowed from SCHEDULED, not EN_ROUTE→COMPLETED, not CANCELLED/COMPLETED)
+   Successful Response (200):
+   {
+     "success": true,
+     "statusCode": 200,
+     "message": "work order status successfully",
+     "data": { /* full formatted work order as in #7 */ }
+   }
+   Possible Error Response:
+   {
+     "success": false,
+     "statusCode": 400,
+     "message": "Invalid status transition",
+     "data": null
+   }
+
+9. POST /api/v1/payment/create
+   Purpose: Create a bKash payment request for a service
+   Auth: Required (CUSTOMER)
+   Preconditions: service IN_PROGRESS/COMPLETED, workOrder not CANCELLED/EN_ROUTE, payment not already PAID
+   Request Body:
+   {
+     "workOrderId": "9f8fa4ee-8e5d-42ed-9e01-6cc0d197d9d7"
+   }
+   Successful Response (200):
+   {
+     "success": true,
+     "statusCode": 200,
+     "message": "payment url created successfully",
+     "data": {
+       "paymentID": "pay_222",
+       "amount": "...",
+       "currency": "BDT",
+       "bkashURL": "https://sandbox.bkash.com/payment/pay_222",
+       "status": "...",
+       "merchantInvoiceNumber": "...",
+       ...
+     }
+   }
+   (data is the raw bKash checkout/create response; paymentUrl = bkashURL)
+   Possible Error Response:
+   {
+     "success": false,
+     "statusCode": 400,
+     "message": "Payment cannot be created for this work order",
+     "data": null
+   }
+
+10. POST /api/v1/feedback/
+    Purpose: Create customer feedback after service completion
+    Auth: Required (CUSTOMER)
+    Preconditions: workOrder and service COMPLETED, payment PAID, customer owns workOrder, no existing feedback
+    Request Body:
+    {
+      "workOrderId": "9f8fa4ee-8e5d-42ed-9e01-6cc0d197d9d7",
+      "rating": 5,
+      "comment": "Excellent service and punctual response."
+    }
+    Successful Response (201):
+    {
+      "success": true,
+      "statusCode": 201,
+      "message": "feedback created successfully",
+      "data": {
+        "id": "fb_101",
+        "workOrderId": "9f8fa4ee-8e5d-42ed-9e01-6cc0d197d9d7",
+        "rating": 5,
+        "comment": "Excellent service and punctual response.",
+        "createdAt": "...",
+        "updatedAt": "...",
+        "workOrder": { "...", "technician": {...} }
+      }
+    }
+    Possible Error Response:
+    - 500: "You have already reviewed this service work"
+    - 400: "without complete you can not crate review" / "you can not feedback before payment"
+
+6. Basic Backend Architecture
+
+High-Level Flow
+Client → API → Route → Controller → Service → Repository / ORM → Database
+
+Layer Responsibilities
+- Client: Web/mobile app or API consumer that sends HTTP requests.
+- API Layer: Receives requests, exposes endpoints, and routes them to the proper controller.
+- Route Layer: Maps URL patterns and HTTP methods to controller functions.
+- Controller: Validates input format, handles request parsing, and passes data to services.
+- Service Layer: Contains core business logic such as user authorization, service eligibility checks, scheduling validation, assignment logic, and payment validation.
+- Repository / ORM Layer: Executes database queries using Prisma ORM or direct data access methods.
+- Database: PostgreSQL stores users, service requests, work orders, technicians, ratings, payments, and reports.
+
+Where Security and Validation Happen
+- Authentication occurs in middleware before controller logic through JWT verification.
+- Role-based authorization is checked in the middleware or service layer for restricted routes.
+- Request validation is performed using Zod schemas or validation middleware.
+- Error handling is centralized in a global error handler to return consistent JSON responses.
+- Logging and auditing can be implemented in middleware or through dedicated services.
+
+External Integrations
+- Cloudinary for file upload and attachments.
+- bKash payment gateway for payment creation and callback handling.
+- Redis for caching and performance optimization.
+- Nodemailer for email OTP and verification messages.
+- PDF generation for service summaries or reports when needed.
+
+7. Final Submission Format
+
+Deliverable 1: Google Docs Link
+Google Docs Link: [Paste your complete System Design Document link here]
+
+Deliverable 2: ERD Share Link
+ERD Share Link: [Paste your dbdiagram.io or Draw.io share link here]
+
+8. Summary
+This backend design organizes the Field Service Management System into a clean, scalable architecture with separated layers, strong role-based authorization, structured database relationships, and clearly defined APIs. It supports the full service lifecycle: request creation, technician assignment, work execution, payment processing, and customer feedback, while ensuring a reliable and maintainable backend foundation for future growth.

@@ -1,30 +1,32 @@
 # Field Service Management System
 
-A comprehensive backend API for managing field service operations including customers, technicians, work orders, payments, and analytics.
+A comprehensive backend API for managing field service operations including customers, technicians, work orders, payments, service reports, feedback, schedules, and analytics.
 
 ## 📋 Overview
 
-This system provides a complete solution for field service management with role-based access control, supporting customers, technicians, managers, and administrators. Features include service requests, work order management, technician assignment, payment processing (bKash), file attachments, service reports, feedback system, and analytics dashboards.
+This system provides a complete solution for field service management with role-based access control, supporting customers, technicians, managers, and administrators. Features include service requests, work order management, technician assignment, technician availability/scheduling, payment processing (bKash), file attachments, service reports, feedback system, user management, and role-specific analytics dashboards.
 
 ## ✨ Features
 
 - **Role-based access control** — SUPER_ADMIN, ADMIN, MANAGER, TECHNICIAN, CUSTOMER with scoped permissions
 - **Authentication** — JWT access/refresh tokens, email OTP verification, password reset, Google & Facebook OAuth (Passport.js)
 - **Service request lifecycle** — customers submit requests → manager review → technician assignment → work order execution
-- **Technician management** — skill-based eligibility matching, region assignment, two-step profile completion
+- **Technician management** — skill-based eligibility matching, region assignment, profile completion, public technician listing
+- **Technician scheduling** — availability management and service schedules
 - **Work order tracking** — status updates from creation through completion
-- **Payments** — bKash integration with create/callback flow, role-specific payment history
-- **File attachments** — Cloudinary-backed uploads with soft delete, scoped by role
+- **Payments** — bKash integration with create/callback flow and payment info lookup
+- **File attachments** — Cloudinary-backed uploads with update/delete, scoped by role
 - **Service reports** — technicians upload/update job reports post-completion
 - **Feedback & ratings** — customers rate and review completed services
+- **User management** — profile image upload, customer profile update, user listing, account status updates
 - **Manager onboarding** — apply → email verify → admin approval workflow
-- **Region & category master data** — admin-managed, many-to-many linked to skills
-- **Analytics dashboards** — role-specific stats for admin, manager, technician, and customer
+- **Region & category master data** — admin-managed, single-item fetch and status updates
+- **Skill management** — admin-managed skills with status and soft delete
+- **Analytics dashboards** — role-specific stats for admin, manager, technician, customer, plus public stats
 - **Caching** — Redis for performance-sensitive reads
 - **Email notifications** — Nodemailer with EJS templates for OTPs, approvals, etc.
 
 ---
-
 
 ## 🛠 Tech Stack
 
@@ -38,6 +40,7 @@ This system provides a complete solution for field service management with role-
 | **File Storage** | Cloudinary |
 | **Payment Gateway** | bKash |
 | **Email** | Nodemailer |
+| **PDF Generation** | pdfkit |
 | **Caching** | Redis |
 | **Code Quality** | Biome (linting/formatting) |
 | **Build Tool** | tsup |
@@ -52,6 +55,7 @@ src/
 ├── app/
 │   ├── config/
 │   │   └── env.ts         # Environment configuration
+│   ├── interface/         # TypeScript interfaces/types
 │   ├── lib/
 │   │   ├── prisma.ts, redis.ts, cloudinary.ts, bkash.ts, passport.ts, nodemailer.ts
 │   ├── middleware/
@@ -75,7 +79,8 @@ src/
 │       ├── report/
 │       ├── feedback/
 │       ├── user/
-│       └── analytics/
+│       ├── analytics/
+│       └── schedule/
 ├── generated/prisma/      # Generated Prisma models
 └── prisma/
     └── schema/            # Prisma schema files
@@ -88,7 +93,7 @@ src/
 | `SUPER_ADMIN` | Full system access |
 | `ADMIN` | Administrative access |
 | `MANAGER` | Service management, technician assignment |
-| `TECHNICIAN` | Work order execution, reports |
+| `TECHNICIAN` | Work order execution, reports, schedules |
 | `CUSTOMER` | Service requests, payments, feedback |
 
 **Auth Headers:**
@@ -122,8 +127,10 @@ All endpoints are prefixed with `/api/v1`
 |--------|----------|------|------|-------------|
 | POST | `/` | ✅ (ADMIN, SUPER_ADMIN) | `{name, description}` | Create region |
 | GET | `/all-region` | ✅ (ADMIN, SUPER_ADMIN) | - | Get all regions (admin view) |
+| GET | `/:regionId` | ❌ | - | Get single region |
 | GET | `/` | ❌ | - | Get regions (public) |
 | PUT | `/:regionId` | ✅ (ADMIN, SUPER_ADMIN) | `{name, description}` | Update region |
+| PATCH | `/:regionId` | ✅ (ADMIN, SUPER_ADMIN) | - | Update region status |
 
 ### Manager Module (`/manager`)
 
@@ -141,20 +148,24 @@ All endpoints are prefixed with `/api/v1`
 | POST | `/` | ✅ (ADMIN, SUPER_ADMIN) | `{name, description}` | Create category |
 | GET | `/all` | ❌ | - | Get categories (public) |
 | GET | `/all-category` | ✅ (ADMIN, SUPER_ADMIN) | - | Get all categories (admin) |
+| GET | `/:categoryId` | ❌ | - | Get single category |
 | PUT | `/:categoryId` | ✅ (ADMIN, SUPER_ADMIN) | `{name, description}` | Update category |
+| PATCH | `/:categoryId` | ✅ (ADMIN, SUPER_ADMIN) | - | Update category status |
 
 ### Service Module (`/service`)
 
 | Method | Endpoint | Auth | Body | Description |
 |--------|----------|------|------|-------------|
 | POST | `/` | ✅ (CUSTOMER) | `{categoryId, title, description, address, regionId, preferredDate}` | Create service request |
+| PUT | `/:serviceId` | ✅ (CUSTOMER) | - | Update service request |
 | GET | `/my-services` | ✅ (CUSTOMER) | - | Get customer's services |
+| GET | `/my-region` | ✅ (MANAGER) | - | Get services in manager's region |
 | GET | `/all-services` | ✅ (ADMIN, SUPER_ADMIN) | - | Get all services (admin) |
-| GET | `/:serviceId` | ✅ (ADMIN, SUPER_ADMIN, CUSTOMER) | - | Get single service |
-| POST | `/review` | ✅ (MANAGER) | `{serviceId, status, comment}` | Review service request |
+| GET | `/:serviceId` | ✅ (ADMIN, SUPER_ADMIN, CUSTOMER, MANAGER, TECHNICIAN) | - | Get single service |
 | POST | `/assign-technician` | ✅ (MANAGER) | `{serviceId, technicianId}` | Assign technician |
 | GET | `/workOrder/:workOrderId` | ✅ (MANAGER) | - | Get eligible technicians |
 | PATCH | `/workOrder/technician-assign` | ✅ (MANAGER) | `{workOrderId, technicianId}` | Assign technician to work order |
+| PATCH | `/delete/:serviceId` | ✅ (CUSTOMER) | - | Soft delete service |
 
 ### Skill Module (`/skill`)
 
@@ -164,19 +175,24 @@ All endpoints are prefixed with `/api/v1`
 | GET | `/all` | ❌ | - | Get skills (public) |
 | GET | `/all-skill` | ✅ (ADMIN, SUPER_ADMIN) | - | Get all skills (admin) |
 | PUT | `/:skillId` | ✅ (ADMIN, SUPER_ADMIN) | `{name, description}` | Update skill |
+| PATCH | `/:skillId` | ✅ (ADMIN, SUPER_ADMIN) | - | Update skill status |
+| PATCH | `/delete/:skillId` | ✅ (ADMIN, SUPER_ADMIN) | - | Delete skill |
 
 ### Technician Module (`/technician`)
 
 | Method | Endpoint | Auth | Body | Description |
 |--------|----------|------|------|-------------|
-| PATCH | `/me/profile` | ✅ (TECHNICIAN) | `{skills[], regionId, experience, bio}` | Complete technician profile |
+| PUT | `/me/profile` | ✅ (TECHNICIAN) | `{skills[], regionId, experience, bio}` | Complete technician profile |
+| GET | `/all-technicians` | ❌ | - | Get all technicians |
+| GET | `/:technicianId` | ❌ | - | Get technician by ID |
 
 ### Work Order Module (`/workorder`)
 
 | Method | Endpoint | Auth | Body | Description |
 |--------|----------|------|------|-------------|
-| GET | `/my-workorder` | ✅ (TECHNICIAN, CUSTOMER, MANAGER) | - | Get my work orders (`?today=true` filters by today's servicing date, plus `?search=`, `?status=`, `?page=`, `?limit=`) |
+| GET | `/my-workorder` | ✅ (ADMIN, SUPER_ADMIN, TECHNICIAN, CUSTOMER, MANAGER) | - | Get my work orders (`?today=true`, `?search=`, `?status=`, `?page=`, `?limit=`) |
 | GET | `/new-workorder` | ✅ (TECHNICIAN) | - | Get available work orders |
+| GET | `/:workOrderId` | ✅ (ADMIN, SUPER_ADMIN, CUSTOMER, MANAGER, TECHNICIAN) | - | Get single work order |
 | PATCH | `/update` | ✅ (TECHNICIAN) | `{workOrderId, status}` | Update work order status |
 
 ### Payment Module (`/payment`)
@@ -185,22 +201,16 @@ All endpoints are prefixed with `/api/v1`
 |--------|----------|------|------|-------------|
 | POST | `/create` | ✅ (CUSTOMER) | `{serviceId, amount}` | Create bKash payment |
 | GET | `/service/callback` | ❌ | Query params | bKash payment callback |
-| GET | `/my-payments` | ✅ (CUSTOMER) | - | Get customer payments |
-| GET | `/technician-payments` | ✅ (TECHNICIAN) | - | Get technician payments |
-| GET | `/manager-payments` | ✅ (MANAGER) | - | Get manager payments |
-| GET | `/all-payments` | ✅ (ADMIN, SUPER_ADMIN) | - | Get all payments |
+| GET | `/payment-info` | ✅ | - | Get payment info |
 
 ### Attachment Module (`/attachment`)
 
 | Method | Endpoint | Auth | Body | Description |
 |--------|----------|------|------|-------------|
-| POST | `/` | ✅ (CUSTOMER, MANAGER, TECHNICIAN) | `multipart/form-data` (files) | Upload attachments |
-| GET | `/my-attachments` | ✅ (CUSTOMER) | - | Get customer attachments |
-| GET | `/technician-attachments` | ✅ (TECHNICIAN) | - | Get technician attachments |
-| GET | `/manager-attachments` | ✅ (MANAGER) | - | Get manager attachments |
-| GET | `/all-attachments` | ✅ (ADMIN, SUPER_ADMIN) | - | Get all attachments |
+| POST | `/` | ✅ (CUSTOMER, TECHNICIAN) | `multipart/form-data` (files) | Upload attachments |
+| GET | `/` | ✅ | - | Get attachments |
 | PATCH | `/update/:attachmentId` | ✅ (All roles) | `{description}` | Update attachment |
-| PATCH | `/delete/:attachmentId` | ✅ (All roles) | - | Soft delete attachment |
+| DELETE | `/delete/:attachmentId` | ✅ (All roles) | - | Delete attachment |
 
 ### Service Report Module (`/service-report`)
 
@@ -210,15 +220,15 @@ All endpoints are prefixed with `/api/v1`
 | GET | `/my-reports` | ✅ (TECHNICIAN) | - | Get technician reports |
 | GET | `/all-reports` | ✅ (ADMIN, SUPER_ADMIN) | - | Get all reports |
 | PATCH | `/update/:reportId` | ✅ (TECHNICIAN) | `multipart/form-data` | Update report |
-| PATCH | `/delete/:reportId` | ✅ (TECHNICIAN, ADMIN, SUPER_ADMIN) | - | Delete report |
+| DELETE | `/delete/:reportId` | ✅ (TECHNICIAN, ADMIN, SUPER_ADMIN) | - | Delete report |
 
 ### Feedback Module (`/feedback`)
 
 | Method | Endpoint | Auth | Body | Description |
 |--------|----------|------|------|-------------|
 | POST | `/` | ✅ (CUSTOMER) | `{serviceId, rating, comment}` | Create feedback |
-| GET | `/:feedbackId` | ✅ (ADMIN, SUPER_ADMIN) | - | Get feedback by ID |
-| GET | `/` | ❌ | - | Get all feedbacks |
+| GET | `/all-feedback` | ❌ | - | Get all feedbacks |
+| GET | `/:feedbackId` | ✅ (All roles) | - | Get feedback by ID |
 | PUT | `/update/:feedbackId` | ✅ (CUSTOMER) | `{rating, comment}` | Update feedback |
 | DELETE | `/delete/:feedbackId` | ✅ (CUSTOMER) | - | Delete feedback |
 
@@ -228,6 +238,8 @@ All endpoints are prefixed with `/api/v1`
 |--------|----------|------|------|-------------|
 | PATCH | `/profile-image` | ✅ (All roles) | `multipart/form-data` (profile) | Upload profile image |
 | PATCH | `/customer/update-profile` | ✅ (CUSTOMER) | `{name, phone, address}` | Update customer profile |
+| GET | `/all-users` | ✅ (ADMIN, SUPER_ADMIN) | - | Get all users |
+| PATCH | `/status-update/:userId` | ✅ (ADMIN, SUPER_ADMIN) | - | Update user status |
 
 ### Analytics Module (`/analytics`)
 
@@ -237,6 +249,15 @@ All endpoints are prefixed with `/api/v1`
 | GET | `/customer` | ✅ (CUSTOMER) | - | Customer dashboard stats |
 | GET | `/technician` | ✅ (TECHNICIAN) | - | Technician dashboard stats |
 | GET | `/manager` | ✅ (MANAGER) | - | Manager dashboard stats |
+| GET | `/public` | ❌ | - | Public dashboard stats |
+
+### Schedule Module (`/schedule`)
+
+| Method | Endpoint | Auth | Body | Description |
+|--------|----------|------|------|-------------|
+| GET | `/all-schedule` | ✅ (ADMIN, SUPER_ADMIN) | - | Get all schedules |
+| GET | `/my-schedule` | ✅ (TECHNICIAN) | - | Get technician schedules |
+| GET | `/:scheduleId` | ✅ (All roles) | - | Get single schedule |
 
 ## ⚙️ Environment Variables
 
@@ -345,9 +366,9 @@ Key models:
 - **Skill** - Technician skills
 - **Service** - Service requests
 - **WorkOrder** - Assigned work orders
+- **Schedule** - Technician availability schedules
+- **Availability** - Technician recurring availability
 - **Payment** - Payment records
 - **Attachment** - File attachments
 - **ServiceReport** - Technician reports
 - **Feedback** - Customer feedback
-- **Schedule** - Technician availability
-
