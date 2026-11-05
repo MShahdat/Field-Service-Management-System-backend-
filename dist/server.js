@@ -12,7 +12,7 @@ var __export = (target, all) => {
 };
 
 // src/app.ts
-import express from "express";
+import express2 from "express";
 
 // src/app/config/env.ts
 import dotenv from "dotenv";
@@ -82,7 +82,7 @@ var config2 = {
   "clientVersion": "7.9.1",
   "engineVersion": "e922089b7d7502aff4249d5da3420f6fa55fc6ad",
   "activeProvider": "postgresql",
-  "inlineSchema": 'model Attachment {\n  id String @id @default(uuid())\n\n  files       Json\n  description String?\n\n  type AttachmentType\n\n  isDelete  Boolean   @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  workOrderId String\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@map("attachments")\n}\n\nmodel Availability {\n  id String @id @default(uuid())\n\n  type      AvailabilityType\n  dayOfWeek Int? // 0 = Sunday, 1 = Monday, ..., 6 = Saturday\n  date      DateTime?        @db.Date\n\n  startTime DateTime? @db.Time()\n  endTime   DateTime? @db.Time()\n  isActive  Boolean   @default(true)\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  technicianId String\n  technician   TechnicianProfile @relation(fields: [technicianId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@unique([technicianId, type, dayOfWeek])\n  @@unique([technicianId, type, date])\n  @@map("availability")\n}\n\nmodel Category {\n  id String @id @default(uuid())\n\n  name        String  @unique\n  icon        String?\n  description String?\n  isActive    Boolean @default(true)\n  duration    Int\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  services Service[]\n  skill    Skill[]\n\n  @@map("categories")\n}\n\nmodel CustomerProfile {\n  id String @id @default(uuid())\n\n  phone     String?\n  address   Json?\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  userId String @unique\n  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  service  Service[]\n  workOder WorkOrder[]\n\n  @@map("customers")\n}\n\nenum UserRole {\n  SUPER_ADMIN\n  ADMIN\n  CUSTOMER\n  TECHNICIAN\n  MANAGER\n}\n\nenum AuthProvider {\n  CREDENTIAL\n  GOOGLE\n  FACEBOOK\n}\n\nenum UserStatus {\n  ACTIVE\n  BLOCKED\n  DELETED\n}\n\nenum Gender {\n  MALE\n  FEMALE\n}\n\nenum AvailabilityType {\n  RECURRING\n  ONE_OFF\n  BLOCKED\n}\n\nenum TechStatus {\n  AVAILABLE\n  BUSY\n  OFF_DUTY\n}\n\nenum Priority {\n  LOW\n  MEDIUM\n  HIGH\n  URGENT\n}\n\nenum ServiceStatus {\n  PENDING\n  APPROVED\n  REJECTED\n  ASSIGNED\n  IN_PROGRESS\n  COMPLETED\n  CANCELLED\n}\n\nenum WorkOrderStatus {\n  SCHEDULED\n  EN_ROUTE\n  STARTED\n  COMPLETED\n  CANCELLED\n}\n\nenum ScheduleStatus {\n  SCHEDULED\n  CONFIRMED\n  COMPLETED\n  CANCELLED\n}\n\nenum AttachmentType {\n  BEFORE_PHOTO\n  AFTER_PHOTO\n  SIGNATURE\n  DOCUMENT\n}\n\nenum PaymentStatus {\n  UNPAID\n  PAID\n  FAILED\n  CANCELLED\n  REFUNDED\n}\n\nenum ManagerVerificationStatus {\n  PENDING\n  APPROVED\n  REJECTED\n}\n\nmodel Feedback {\n  id String @id @default(uuid())\n\n  rating    Float\n  comment   String?\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  workOrderId String    @unique\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@map("feedbacks")\n}\n\nmodel ManagerProfile {\n  id String @id @default(uuid())\n\n  phone   String\n  address Json?\n  nid     String\n\n  verificationStatus ManagerVerificationStatus @default(PENDING)\n  rejectionReason    String?\n  reviewdBy          String?\n  reviewdAt          DateTime?\n\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  userId String @unique\n  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  region    Region[]\n  workOrder WorkOrder[]\n\n  @@map("managerProfiles")\n}\n\nmodel Payment {\n  id String @id @default(uuid())\n\n  paymentId             String        @unique\n  amount                Decimal       @db.Decimal(10, 2)\n  method                String        @default("bKash")\n  transectionId         String?       @unique\n  status                PaymentStatus @default(UNPAID)\n  paidAt                DateTime?\n  payerReference        String?\n  currency              String        @default("BDT")\n  merchantInvoiceNumber String        @unique\n\n  getwayResponse Json?\n\n  refundTrxId  String?\n  refundAmount Decimal? @db.Decimal(10, 2)\n  refundedAt   String?\n  reason       String?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  workOrderId String    @unique\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@map("payments")\n}\n\nmodel Region {\n  id String @id @default(uuid())\n\n  area        String  @unique\n  description String?\n  isActive    Boolean @default(true)\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  manager     ManagerProfile[]\n  services    Service[]\n  technicians TechnicianProfile[] @relation("TechnicianRegions")\n  workOrders  WorkOrder[]\n\n  @@map("regions")\n}\n\nmodel Schedule {\n  id String @id @default(uuid())\n\n  servicingDate DateTime\n  startTime     DateTime\n  endTime       DateTime\n  actualStart   DateTime?\n  actualEnd     DateTime?\n\n  status    ScheduleStatus @default(SCHEDULED)\n  isdeleted Boolean        @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  technicianId String\n  technician   TechnicianProfile @relation(fields: [technicianId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  workOrderId String    @unique\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@map("schedules")\n}\n\n// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Get a free hosted Postgres database in seconds: `npx create-db`\n\ngenerator client {\n  provider = "prisma-client"\n  output   = "../../generated/prisma"\n}\n\ndatasource db {\n  provider = "postgresql"\n}\n\nmodel Service {\n  id String @id @default(uuid())\n\n  title       String        @default("")\n  description String?\n  priority    Priority      @default(MEDIUM)\n  status      ServiceStatus @default(PENDING)\n  address     Json\n\n  servicingDate      DateTime  @db.Date\n  preferredStartTime DateTime? @db.Time()\n  preferredEndTime   DateTime? @db.Time()\n  duration           Int?\n\n  isDeleted   Boolean   @default(false)\n  isDeletedAt DateTime?\n\n  assignedAt      DateTime?\n  reviewedBy      String?\n  reviewedAt      DateTime?\n  rejectionReason String?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  customerId String\n  customer   CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  categoryId String\n  category   Category @relation(fields: [categoryId], references: [id])\n\n  regionId String\n  region   Region @relation(fields: [regionId], references: [id])\n\n  workOrders WorkOrder?\n\n  @@map("services")\n}\n\nmodel ServiceReport {\n  id String @id @default(uuid())\n\n  reportUrl      String\n  reportPublicId String\n  description    String?\n  isDelete       Boolean   @default(false)\n  deletedAt      DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  workOrderId String    @unique\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@map("serviceReports")\n}\n\nmodel Skill {\n  id String @id @default(uuid())\n\n  name        String    @unique\n  icon        String?\n  description String?\n  isActive    Boolean   @default(true)\n  isDelete    Boolean   @default(false)\n  deletedAt   DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  categoryId String\n  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  technician TechnicianProfile[]\n\n  @@map("skills")\n}\n\nmodel TechnicianProfile {\n  id String @id @default(uuid())\n\n  phone              String?\n  address            Json?\n  bio                String?\n  nid                String?\n  isProfileCompleted Boolean   @default(false)\n  isDeleted          Boolean   @default(false)\n  deletedAt          DateTime?\n\n  skills       Skill[]\n  availability Availability[]\n  regions      Region[]       @relation("TechnicianRegions")\n\n  status        TechStatus @default(AVAILABLE)\n  rating        Float?     @default(0)\n  jobsCompleted Int        @default(0)\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  userId String @unique\n  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  workOrder WorkOrder[]\n  schedule  Schedule[]\n\n  @@map("technicians")\n}\n\nmodel User {\n  id String @id @default(uuid())\n\n  name               String\n  email              String  @unique\n  password           String?\n  profileImg         String?\n  profileImgPublicId String?\n\n  googleId           String?      @unique\n  facebookId         String?      @unique\n  authProvider       AuthProvider @default(CREDENTIAL)\n  emailVerified      Boolean      @default(false)\n  role               UserRole     @default(CUSTOMER)\n  status             UserStatus   @default(ACTIVE)\n  needPasswordChange Boolean      @default(false)\n  isDeleted          Boolean      @default(false)\n  deletedAt          DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  customer   CustomerProfile?\n  technician TechnicianProfile?\n  manager    ManagerProfile?\n\n  @@map("users")\n}\n\nmodel WorkOrder {\n  id String @id @default(uuid())\n\n  servicingDate DateTime\n\n  status WorkOrderStatus @default(SCHEDULED)\n  note   String?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  regionId String\n  region   Region @relation(fields: [regionId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  customerId String\n  customer   CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  technicianId String?\n  technician   TechnicianProfile? @relation(fields: [technicianId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  serviceId String  @unique\n  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  managerId String?\n  manager   ManagerProfile? @relation(fields: [managerId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  attachment    Attachment[]\n  serviceReport ServiceReport?\n  feedback      Feedback?\n  payment       Payment?\n  schedule      Schedule?\n\n  @@map("workOrders")\n}\n',
+  "inlineSchema": 'model Attachment {\n  id String @id @default(uuid())\n\n  files       Json\n  description String?\n\n  type AttachmentType\n\n  isDelete  Boolean   @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  workOrderId String\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@index([workOrderId, isDelete])\n  @@map("attachments")\n}\n\nmodel Availability {\n  id String @id @default(uuid())\n\n  type      AvailabilityType\n  dayOfWeek Int? // 0 = Sunday, 1 = Monday, ..., 6 = Saturday\n  date      DateTime?        @db.Date\n\n  startTime DateTime? @db.Time()\n  endTime   DateTime? @db.Time()\n  isActive  Boolean   @default(true)\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  technicianId String\n  technician   TechnicianProfile @relation(fields: [technicianId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@unique([technicianId, type, dayOfWeek])\n  @@unique([technicianId, type, date])\n  @@index([technicianId, type, isActive])\n  @@index([type, dayOfWeek, isActive])\n  @@index([type, date, isActive])\n  @@map("availability")\n}\n\nmodel Category {\n  id String @id @default(uuid())\n\n  name        String  @unique\n  icon        String?\n  description String?\n  isActive    Boolean @default(true)\n  duration    Int\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  services Service[]\n  skill    Skill[]\n\n  @@index([name, isActive])\n  @@map("categories")\n}\n\nmodel CustomerProfile {\n  id String @id @default(uuid())\n\n  phone     String?\n  address   Json?\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  userId String @unique\n  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  service  Service[]\n  workOder WorkOrder[]\n\n  @@index([userId, isDeleted])\n  @@index([isDeleted])\n  @@map("customers")\n}\n\nenum UserRole {\n  SUPER_ADMIN\n  ADMIN\n  CUSTOMER\n  TECHNICIAN\n  MANAGER\n}\n\nenum AuthProvider {\n  CREDENTIAL\n  GOOGLE\n  FACEBOOK\n}\n\nenum UserStatus {\n  ACTIVE\n  BLOCKED\n  DELETED\n}\n\nenum Gender {\n  MALE\n  FEMALE\n}\n\nenum AvailabilityType {\n  RECURRING\n  ONE_OFF\n  BLOCKED\n}\n\nenum TechStatus {\n  AVAILABLE\n  BUSY\n  OFF_DUTY\n}\n\nenum Priority {\n  LOW\n  MEDIUM\n  HIGH\n  URGENT\n}\n\nenum ServiceStatus {\n  PENDING\n  APPROVED\n  REJECTED\n  ASSIGNED\n  IN_PROGRESS\n  COMPLETED\n  CANCELLED\n}\n\nenum WorkOrderStatus {\n  SCHEDULED\n  EN_ROUTE\n  STARTED\n  COMPLETED\n  CANCELLED\n}\n\nenum ScheduleStatus {\n  SCHEDULED\n  CONFIRMED\n  COMPLETED\n  CANCELLED\n}\n\nenum AttachmentType {\n  BEFORE_PHOTO\n  AFTER_PHOTO\n  SIGNATURE\n  DOCUMENT\n}\n\nenum PaymentStatus {\n  UNPAID\n  PAID\n  FAILED\n  CANCELLED\n  REFUNDED\n}\n\nenum ManagerVerificationStatus {\n  PENDING\n  APPROVED\n  REJECTED\n}\n\nmodel Feedback {\n  id String @id @default(uuid())\n\n  rating    Float\n  comment   String?\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  workOrderId String    @unique\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@index([rating])\n  @@map("feedbacks")\n}\n\nmodel ManagerProfile {\n  id String @id @default(uuid())\n\n  phone   String\n  address Json?\n  nid     String\n\n  verificationStatus ManagerVerificationStatus @default(PENDING)\n  rejectionReason    String?\n  reviewdBy          String?\n  reviewdAt          DateTime?\n\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  userId String @unique\n  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  region    Region[]\n  workOrder WorkOrder[]\n\n  @@map("managerProfiles")\n}\n\nmodel Payment {\n  id String @id @default(uuid())\n\n  paymentId             String        @unique\n  amount                Decimal       @db.Decimal(10, 2)\n  method                String        @default("bKash")\n  transectionId         String?       @unique\n  status                PaymentStatus @default(UNPAID)\n  paidAt                DateTime?\n  payerReference        String?\n  currency              String        @default("BDT")\n  merchantInvoiceNumber String        @unique\n\n  getwayResponse Json?\n\n  refundTrxId  String?\n  refundAmount Decimal? @db.Decimal(10, 2)\n  refundedAt   String?\n  reason       String?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  workOrderId String    @unique\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@index([status])\n  @@index([paidAt])\n  @@index([status, paidAt])\n  @@map("payments")\n}\n\nmodel Region {\n  id String @id @default(uuid())\n\n  area        String  @unique\n  description String?\n  isActive    Boolean @default(true)\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  manager     ManagerProfile[]\n  services    Service[]\n  technicians TechnicianProfile[] @relation("TechnicianRegions")\n  workOrders  WorkOrder[]\n\n  @@index([area, isActive])\n  @@map("regions")\n}\n\nmodel Schedule {\n  id String @id @default(uuid())\n\n  servicingDate DateTime\n  startTime     DateTime\n  endTime       DateTime\n  actualStart   DateTime?\n  actualEnd     DateTime?\n\n  status    ScheduleStatus @default(SCHEDULED)\n  isdeleted Boolean        @default(false)\n  deletedAt DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  technicianId String\n  technician   TechnicianProfile @relation(fields: [technicianId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  workOrderId String    @unique\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@index([technicianId])\n  @@index([technicianId, servicingDate])\n  @@index([servicingDate, status])\n  @@index([technicianId, servicingDate, status])\n  @@map("schedules")\n}\n\n// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Get a free hosted Postgres database in seconds: `npx create-db`\n\ngenerator client {\n  provider = "prisma-client"\n  output   = "../../generated/prisma"\n}\n\ndatasource db {\n  provider = "postgresql"\n}\n\nmodel Service {\n  id String @id @default(uuid())\n\n  title       String        @default("")\n  description String?\n  priority    Priority      @default(MEDIUM)\n  status      ServiceStatus @default(PENDING)\n  address     Json\n\n  servicingDate      DateTime  @db.Date\n  preferredStartTime DateTime? @db.Time()\n  preferredEndTime   DateTime? @db.Time()\n  duration           Int?\n\n  isDeleted   Boolean   @default(false)\n  isDeletedAt DateTime?\n\n  assignedAt      DateTime?\n  reviewedBy      String?\n  reviewedAt      DateTime?\n  rejectionReason String?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  customerId String\n  customer   CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  categoryId String\n  category   Category @relation(fields: [categoryId], references: [id])\n\n  regionId String\n  region   Region @relation(fields: [regionId], references: [id])\n\n  workOrders WorkOrder?\n\n  @@index([customerId, isDeleted])\n  @@index([categoryId])\n  @@index([regionId])\n  @@index([status, isDeleted])\n  @@index([priority])\n  @@index([servicingDate])\n  @@index([createdAt])\n  @@index([isDeleted, status, servicingDate])\n  @@index([customerId, status, isDeleted])\n  @@map("services")\n}\n\nmodel ServiceReport {\n  id String @id @default(uuid())\n\n  reportUrl      String\n  reportPublicId String\n  description    String?\n  isDelete       Boolean   @default(false)\n  deletedAt      DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  workOrderId String    @unique\n  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  @@index([workOrderId, isDelete])\n  @@map("serviceReports")\n}\n\nmodel Skill {\n  id String @id @default(uuid())\n\n  name        String    @unique\n  icon        String?\n  description String?\n  isActive    Boolean   @default(true)\n  isDelete    Boolean   @default(false)\n  deletedAt   DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  categoryId String\n  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  technician TechnicianProfile[]\n\n  @@index([categoryId])\n  @@index([isActive, isDelete])\n  @@index([isActive, categoryId])\n  @@map("skills")\n}\n\nmodel TechnicianProfile {\n  id String @id @default(uuid())\n\n  phone              String?\n  address            Json?\n  bio                String?\n  nid                String?\n  isProfileCompleted Boolean   @default(false)\n  isDeleted          Boolean   @default(false)\n  deletedAt          DateTime?\n\n  skills       Skill[]\n  availability Availability[]\n  regions      Region[]       @relation("TechnicianRegions")\n\n  status        TechStatus @default(AVAILABLE)\n  rating        Float?     @default(0)\n  jobsCompleted Int        @default(0)\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  userId String @unique\n  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  workOrder WorkOrder[]\n  schedule  Schedule[]\n\n  @@index([isDeleted, isProfileCompleted])\n  @@index([status, isDeleted])\n  @@index([rating, jobsCompleted])\n  @@index([isDeleted, status, isProfileCompleted])\n  @@map("technicians")\n}\n\nmodel User {\n  id String @id @default(uuid())\n\n  name               String\n  email              String  @unique\n  password           String?\n  profileImg         String?\n  profileImgPublicId String?\n\n  googleId           String?      @unique\n  facebookId         String?      @unique\n  authProvider       AuthProvider @default(CREDENTIAL)\n  emailVerified      Boolean      @default(false)\n  role               UserRole     @default(CUSTOMER)\n  status             UserStatus   @default(ACTIVE)\n  needPasswordChange Boolean      @default(false)\n  isDeleted          Boolean      @default(false)\n  deletedAt          DateTime?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  customer   CustomerProfile?\n  technician TechnicianProfile?\n  manager    ManagerProfile?\n\n  @@index([role, status, isDeleted])\n  @@map("users")\n}\n\nmodel WorkOrder {\n  id String @id @default(uuid())\n\n  servicingDate DateTime\n\n  status WorkOrderStatus @default(SCHEDULED)\n  note   String?\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  regionId String\n  region   Region @relation(fields: [regionId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  customerId String\n  customer   CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  technicianId String?\n  technician   TechnicianProfile? @relation(fields: [technicianId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  serviceId String  @unique\n  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  managerId String?\n  manager   ManagerProfile? @relation(fields: [managerId], references: [id], onDelete: Cascade, onUpdate: Cascade)\n\n  attachment    Attachment[]\n  serviceReport ServiceReport?\n  feedback      Feedback?\n  payment       Payment?\n  schedule      Schedule?\n\n  @@index([regionId])\n  @@index([customerId])\n  @@index([technicianId])\n  @@index([managerId])\n  @@index([status, servicingDate])\n  @@index([technicianId, status])\n  @@index([customerId, status])\n  @@index([managerId, status])\n  @@index([createdAt])\n  @@map("workOrders")\n}\n',
   "runtimeDataModel": {
     "models": {},
     "enums": {},
@@ -3846,6 +3846,24 @@ var softDelete = async (id, user) => {
     }
   );
 };
+var deleteService = async (id) => {
+  const isService = await prisma.service.findUnique({
+    where: {
+      id
+    }
+  });
+  if (!isService) {
+    throw new AppError(httpStatus14.NOT_FOUND, "service not found");
+  }
+  if (isService.status === "COMPLETED" || isService.status === "IN_PROGRESS" || isService.status === "ASSIGNED") {
+    throw new AppError(httpStatus14.BAD_REQUEST, "service cannot be deleted");
+  }
+  await prisma.service.delete({
+    where: {
+      id
+    }
+  });
+};
 var serviceService = {
   createService,
   getMyServices,
@@ -3855,7 +3873,8 @@ var serviceService = {
   assignTechnician,
   updateService,
   softDelete,
-  getMyRegionServices
+  getMyRegionServices,
+  deleteService
 };
 
 // src/app/module/service/service.controller.ts
@@ -3968,6 +3987,16 @@ var softDelete2 = catchAsync(async (req, res) => {
     data: null
   });
 });
+var deleteService2 = catchAsync(async (req, res) => {
+  const serviceId = req.params.serviceId;
+  await serviceService.deleteService(serviceId);
+  sendResponse(res, {
+    statusCode: httpStatus15.OK,
+    success: true,
+    message: "service permanently deleted successfully",
+    data: null
+  });
+});
 var serviceController = {
   createService: createService2,
   getMyServices: getMyServices2,
@@ -3977,7 +4006,8 @@ var serviceController = {
   assignTechnician: assignTechnician2,
   updateService: updateService2,
   softDelete: softDelete2,
-  getMyRegionServices: getMyRegionServices2
+  getMyRegionServices: getMyRegionServices2,
+  deleteService: deleteService2
 };
 
 // src/app/module/service/service.validation.ts
@@ -4069,6 +4099,11 @@ route5.patch(
   "/delete/:serviceId",
   auth(UserRole.CUSTOMER),
   serviceController.softDelete
+);
+route5.delete(
+  "/delete/:serviceId",
+  auth(UserRole.SUPER_ADMIN),
+  serviceController.deleteService
 );
 var serviceRouter = route5;
 
@@ -8569,16 +8604,50 @@ route14.get(
 );
 var scheduleRouter = route14;
 
+// src/app/module/debug/debug.route.ts
+import express from "express";
+
+// src/app/module/debug/debug.service.ts
+var checkWorkOrderStatusIndex = async () => {
+  const result = await prisma.$queryRawUnsafe(
+    `EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM "workOrders" WHERE "status" = 'COMPLETED'`
+  );
+  return result;
+};
+var debugService = {
+  checkWorkOrderStatusIndex
+};
+
+// src/app/module/debug/debug.controller.ts
+import httpStatus35 from "http-status";
+var checkWorkOrderSttatusIndex = async (req, res) => {
+  const result = await debugService.checkWorkOrderStatusIndex();
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus35.OK,
+    message: "EXPLAIN ANALYZE for workOrders status index",
+    data: result
+  });
+};
+var debugController = {
+  checkWorkOrderSttatusIndex
+};
+
+// src/app/module/debug/debug.route.ts
+var router2 = express.Router();
+router2.get("/workorder/status", debugController.checkWorkOrderSttatusIndex);
+var debugRouter = router2;
+
 // src/app.ts
-var app = express();
+var app = express2();
 app.use(
   cors({
     origin: env_default.frontend_url,
     credentials: true
   })
 );
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+app.use(express2.urlencoded({ extended: true }));
+app.use(express2.json());
 app.use(cookieParser());
 app.use(passport3.initialize());
 app.get("/", async (req, res) => {
@@ -8595,6 +8664,7 @@ app.get("/bkash-test", async (req, res) => {
     data: result
   });
 });
+app.use("/api/v1/debug", debugRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/region", regionRouter);
 app.use("/api/v1/manager", managerRouter);
@@ -8614,9 +8684,78 @@ app.use(globalErrorHandler);
 app.use(notFound);
 var app_default = app;
 
+// src/app/lib/cron.job.ts
+import cron from "node-cron";
+var deleteRejectedManager = async () => {
+  cron.schedule("0 0 1 * * ", async () => {
+    try {
+      const oneMonthAgo = new Date(Date.now() - 60 * 60 * 24 * 30 * 1e3);
+      const deleteManager = await prisma.user.deleteMany({
+        where: {
+          role: "MANAGER",
+          createdAt: { lt: oneMonthAgo },
+          manager: {
+            verificationStatus: "REJECTED"
+          }
+        }
+      });
+      if (deleteManager.count > 0) {
+        console.log(
+          `Cron: Deleted ${deleteManager.count} rejected managers older then 1 month`
+        );
+      }
+    } catch (error) {
+      console.log(`Cron: Failed to delete rejected manager applications`, error);
+    }
+    console.log("Rejected Manager Delete cron schedule trigger");
+  });
+};
+var deleteRejectedServices = async () => {
+  cron.schedule("0 0 1 * * ", async () => {
+    try {
+      const oneMonthAgo = new Date(Date.now() - 60 * 60 * 24 * 30 * 1e3);
+      const deleteServices = await prisma.service.deleteMany({
+        where: {
+          status: "REJECTED",
+          createdAt: { lt: oneMonthAgo }
+        }
+      });
+      if (deleteServices.count > 0) {
+        console.log(
+          `Cron: Deleted ${deleteServices.count} rejected services older then 1 month`
+        );
+      }
+    } catch (error) {
+      console.log(`Cron: Failed to delete rejected service applications`, error);
+    }
+    console.log("Rejected Service Delete cron schedule trigger");
+  });
+};
+var deleteCancelledServices = async () => {
+  cron.schedule("0 0 * * 0 ", async () => {
+    try {
+      const oneWeekAgo = new Date(Date.now() - 60 * 60 * 24 * 7 * 1e3);
+      const deleteServices = await prisma.service.deleteMany({
+        where: {
+          status: "CANCELLED",
+          createdAt: { lt: oneWeekAgo }
+        }
+      });
+      if (deleteServices.count > 0) {
+        console.log(
+          `Cron: Deleted ${deleteServices.count} cancelled services older then 1 week`
+        );
+      }
+    } catch (error) {
+      console.log(`Cron: Failed to delete cancelled service applications`, error);
+    }
+    console.log("Cancelled Service Delete cron schedule trigger");
+  });
+};
+
 // src/app/utils/seed.ts
 import bcrypt3 from "bcryptjs";
-import httpStatus35 from "http-status";
+import httpStatus36 from "http-status";
 var seedSuperAdmin = async () => {
   try {
     const existSuperAdmin = await prisma.user.findFirst({
@@ -8632,7 +8771,7 @@ var seedSuperAdmin = async () => {
     const password = env_default.super_admin_password;
     if (!name || !email || !password) {
       throw new AppError(
-        httpStatus35.INTERNAL_SERVER_ERROR,
+        httpStatus36.INTERNAL_SERVER_ERROR,
         "no super admin name, email, password"
       );
     }
@@ -8666,7 +8805,7 @@ var seedTesterAdmin = async () => {
     const password = env_default.tester_admin_password;
     if (!name || !email || !password) {
       throw new AppError(
-        httpStatus35.INTERNAL_SERVER_ERROR,
+        httpStatus36.INTERNAL_SERVER_ERROR,
         "no tester admin name, email, password"
       );
     }
@@ -8708,7 +8847,7 @@ var seedTesterManager = async () => {
     const password = env_default.tester_manager_password;
     if (!name || !email || !password) {
       throw new AppError(
-        httpStatus35.INTERNAL_SERVER_ERROR,
+        httpStatus36.INTERNAL_SERVER_ERROR,
         "no tester manager name, email, password"
       );
     }
@@ -8786,6 +8925,9 @@ var main = async () => {
     await seedSuperAdmin();
     await seedTesterAdmin();
     await seedTesterManager();
+    await deleteRejectedManager();
+    await deleteRejectedServices();
+    await deleteCancelledServices();
   } catch (error) {
     console.error("Error statring the server", error);
     await prisma.$disconnect();

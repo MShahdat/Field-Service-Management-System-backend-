@@ -13,5 +13,6 @@ model Region {
   technicians TechnicianProfile[] @relation("TechnicianRegions")
   workOrders  WorkOrder[]
 
+  @@index([area, isActive])
   @@map("regions")
 }

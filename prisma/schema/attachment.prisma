@@ -15,5 +15,6 @@ model Attachment {
   workOrderId String
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
+  @@index([workOrderId, isDelete])
   @@map("attachments")
 }

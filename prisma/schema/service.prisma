@@ -34,5 +34,14 @@ model Service {
 
   workOrders WorkOrder?
 
+  @@index([customerId, isDeleted])
+  @@index([categoryId])
+  @@index([regionId])
+  @@index([status, isDeleted])
+  @@index([priority])
+  @@index([servicingDate])
+  @@index([createdAt])
+  @@index([isDeleted, status, servicingDate])
+  @@index([customerId, status, isDeleted])
   @@map("services")
 }

@@ -16,5 +16,8 @@ model Skill {
 
   technician TechnicianProfile[]
 
+  @@index([categoryId])
+  @@index([isActive, isDelete])
+  @@index([isActive, categoryId])
   @@map("skills")
 }

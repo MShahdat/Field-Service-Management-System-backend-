@@ -15,5 +15,7 @@ model CustomerProfile {
   service  Service[]
   workOder WorkOrder[]
 
+  @@index([userId, isDeleted])
+  @@index([isDeleted])
   @@map("customers")
 }

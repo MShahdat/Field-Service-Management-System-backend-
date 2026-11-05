@@ -1232,6 +1232,30 @@ const softDelete = async (id: string, user: IRequestUser) => {
 };
 
 
+//& PARMANENTLY DELETE
+const deleteService = async (id: string) => {
+
+	const isService = await prisma.service.findUnique({
+		where: {
+			id,
+		},
+	});
+
+	if (!isService) {
+		throw new AppError(httpStatus.NOT_FOUND, "service not found");
+	}
+
+	if (isService.status === "COMPLETED" || isService.status === 'IN_PROGRESS' || isService.status === "ASSIGNED") {
+		throw new AppError(httpStatus.BAD_REQUEST, "service cannot be deleted");
+	}
+
+	await prisma.service.delete({
+		where: {
+			id,
+		}
+	});
+
+};
 
 export const serviceService = {
 	createService,
@@ -1243,4 +1267,5 @@ export const serviceService = {
 	updateService,
 	softDelete,
 	getMyRegionServices,
+	deleteService
 };

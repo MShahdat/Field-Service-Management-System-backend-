@@ -13,5 +13,6 @@ model Category {
   services Service[]
   skill    Skill[]
 
+  @@index([name, isActive])
   @@map("categories")
 }

@@ -24,5 +24,8 @@ model Payment {
   workOrderId String    @unique
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
+  @@index([status])
+  @@index([paidAt])
+  @@index([status, paidAt])
   @@map("payments")
 }

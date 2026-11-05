@@ -74,4 +74,10 @@ route.patch(
 	serviceController.softDelete,
 );
 
+route.delete(
+	"/delete/:serviceId",
+	auth(UserRole.SUPER_ADMIN),
+	serviceController.deleteService
+)
+
 export const serviceRouter = route;

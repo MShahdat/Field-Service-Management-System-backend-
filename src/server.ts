@@ -1,5 +1,6 @@
 import app from "./app";
 import config from "./app/config/env";
+import { deleteCancelledServices, deleteRejectedManager, deleteRejectedServices } from "./app/lib/cron.job";
 
 import { prisma } from "./app/lib/prisma";
 import { redisClient } from "./app/lib/redis";
@@ -23,6 +24,10 @@ const main = async () => {
 		await seedSuperAdmin();
 		await seedTesterAdmin();
 		await seedTesterManager();
+		await deleteRejectedManager();
+		await deleteRejectedServices();
+		await deleteCancelledServices()
+
 	} catch (error) {
 		console.error("Error statring the server", error);
 		await prisma.$disconnect();

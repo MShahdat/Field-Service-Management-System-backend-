@@ -13,4 +13,5 @@ model Feedback {
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@map("feedbacks")
+  @@index([rating])
 }

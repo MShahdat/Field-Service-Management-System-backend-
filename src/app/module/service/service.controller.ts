@@ -163,6 +163,21 @@ const softDelete = catchAsync(async (req: Request, res: Response) => {
 });
 
 
+//& DELETE SERVICE (ADMIN)
+const deleteService = catchAsync(async (req: Request, res: Response) => {
+	const serviceId = req.params.serviceId as string;
+
+	await serviceService.deleteService(serviceId);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "service permanently deleted successfully",
+		data: null,
+	});
+});
+
+
 export const serviceController = {
 	createService,
 	getMyServices,
@@ -173,5 +188,5 @@ export const serviceController = {
 	updateService,
 	softDelete,
 	getMyRegionServices,
-
+	deleteService
 };

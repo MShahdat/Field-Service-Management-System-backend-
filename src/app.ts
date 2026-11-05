@@ -23,6 +23,7 @@ import { feedbackRouter } from "./app/module/feedback/feedback.route";
 import { userRouter } from "./app/module/user/user.route";
 import { analyticsRoutes } from "./app/module/analytics/analytics.route";
 import { scheduleRouter } from "./app/module/schedule/schedule.route";
+import { debugRouter } from "./app/module/debug/debug.route";
 
 const app: Application = express();
 
@@ -55,6 +56,8 @@ app.get("/bkash-test", async (req: Request, res: Response) => {
 		data: result,
 	});
 });
+
+app.use('/api/v1/debug', debugRouter)
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/region", regionRouter);

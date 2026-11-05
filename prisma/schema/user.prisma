@@ -24,5 +24,6 @@ model User {
   technician TechnicianProfile?
   manager    ManagerProfile?
 
+  @@index([role, status, isDeleted])
   @@map("users")
 }

@@ -26,5 +26,9 @@ model TechnicianProfile {
   workOrder WorkOrder[]
   schedule  Schedule[]
 
+  @@index([isDeleted, isProfileCompleted])
+  @@index([status, isDeleted])
+  @@index([rating, jobsCompleted])
+  @@index([isDeleted, status, isProfileCompleted])
   @@map("technicians")
 }

@@ -30,5 +30,15 @@ model WorkOrder {
   payment       Payment?
   schedule      Schedule?
 
+  @@index([regionId])
+  @@index([customerId])
+  @@index([technicianId])
+  @@index([managerId])
+  @@index([status])
+  @@index([status, servicingDate])
+  @@index([technicianId, status])
+  @@index([customerId, status])
+  @@index([managerId, status])
+  @@index([createdAt])
   @@map("workOrders")
 }

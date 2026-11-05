@@ -17,5 +17,8 @@ model Availability {
 
   @@unique([technicianId, type, dayOfWeek])
   @@unique([technicianId, type, date])
+  @@index([technicianId, type, isActive])
+  @@index([type, dayOfWeek, isActive])
+  @@index([type, date, isActive])
   @@map("availability")
 }
