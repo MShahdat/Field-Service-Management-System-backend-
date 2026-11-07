@@ -1,6 +1,6 @@
 import { addMinutes, isBefore } from "date-fns";
 import {
-	ManagerVerificationStatus,
+	Priority,
 	ScheduleStatus,
 	ServiceStatus,
 	UserRole,
@@ -20,6 +20,8 @@ import {
 	formatDateToYYYYMMDD,
 	formatTimeToHHmm,
 	getUTCDayOfWeek,
+	parseCsv,
+	parseEnumList,
 	parseTimeOnDate,
 	toDateKeyUTC,
 	TZ,
@@ -357,17 +359,48 @@ const getALLServices = async (query: IQuery, user: IRequestUser) => {
 
 	const andCondition: ServiceWhereInput[] = [];
 
-	if (query.status) {
+	const statusList = parseEnumList(query.status, ServiceStatus, "status");
+	if (statusList.length > 0) {
 		andCondition.push({
-			status: query.status,
+			status: {
+				in: statusList
+			}
 		});
 	}
 
-	if (query.priority) {
+	const priorityList = parseEnumList(query.priority, Priority, "priority")
+	if (priorityList.length > 0) {
 		andCondition.push({
-			priority: query.priority,
+			priority: {
+				in: priorityList
+			},
 		});
 	}
+
+	const regionNames = parseCsv(query.regions ?? query.region);
+	if (regionNames.length > 0) {
+		andCondition.push({
+			region: {
+				is: {
+					area: { in: regionNames, mode: "insensitive" },
+					isActive: true,
+				},
+			},
+		});
+	}
+
+	const categoryNames = parseCsv(query.category ?? query.categories);
+	if (categoryNames.length > 0) {
+		andCondition.push({
+			category: {
+				is: {
+					name: { in: categoryNames, mode: "insensitive" },
+					isActive: true,
+				},
+			},
+		});
+	}
+
 
 	if (query.today === "true" || query.today === true) {
 		const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date());
@@ -376,6 +409,16 @@ const getALLServices = async (query: IQuery, user: IRequestUser) => {
 			servicingDate: {
 				gte: start,
 				lte: end,
+			},
+		});
+	}
+
+
+	if (query.minDuration || query.maxDuration) {
+		andCondition.push({
+			duration: {
+				...(query.minDuration && { gte: Number(query.minDuration) }),
+				...(query.maxDuration && { lte: Number(query.maxDuration) }),
 			},
 		});
 	}
@@ -393,6 +436,7 @@ const getALLServices = async (query: IQuery, user: IRequestUser) => {
 		},
 		include: {
 			category: true,
+			region: true,
 			workOrders: true,
 		},
 	});

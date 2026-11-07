@@ -184,6 +184,42 @@ const getAllFeedbacks = async (query: IQuery) => {
 
 	const andConditions: FeedbackWhereInput[] = [];
 
+	if (query.search) {
+		andConditions.push({
+			OR: [
+				{
+					comment: {
+						contains: query.search,
+						mode: "insensitive"
+					}
+				},
+				{
+					workOrderId: {
+						contains: query.search
+					}
+				},
+				{
+					workOrder: {
+						serviceId: {
+							contains: query.search
+						}
+					}
+				},
+				{
+					workOrder: {
+						customer: {
+							user: {
+								name: {
+									contains: query.search
+								}
+							}
+						}
+					}
+				}
+			]
+		})
+	}
+
 	if (query.technicianId) {
 		andConditions.push({
 			workOrder: {

@@ -1,11 +1,11 @@
 import { WorkOrderWhereInput } from "../../../../generated/prisma/models";
-import { ScheduleStatus, UserRole, WorkOrderStatus } from "../../../../generated/prisma/enums";
+import { Priority, ScheduleStatus, UserRole, WorkOrderStatus } from "../../../../generated/prisma/enums";
 import { IQuery, IRequestUser } from "../../interface";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
 import httpStatus from "http-status";
 import { IUpdateStatusPayload } from "./workOrder.interface";
-import { formatDateTime, formatDateToYYYYMMDD, formatTimeToHHmm, utcDayRange, TZ } from "../../utils/utility";
+import { formatDateTime, formatDateToYYYYMMDD, formatTimeToHHmm, utcDayRange, TZ, parseEnumList, parseCsv } from "../../utils/utility";
 
 
 const formatWorkOrder = (wo: any) => ({
@@ -143,6 +143,7 @@ const getMyWrokOrders = async (query: IQuery, user: IRequestUser) => {
 			);
 	}
 
+
 	const andCondition: WorkOrderWhereInput[] = [
 		ownerCondition,
 		cancelledCondition,
@@ -182,11 +183,54 @@ const getMyWrokOrders = async (query: IQuery, user: IRequestUser) => {
 	}
 
 
-	if (query.status) {
+	const statusList = parseEnumList(query.status, WorkOrderStatus, "status");
+	if (statusList.length > 0) {
 		andCondition.push({
-			status: query.status,
+			status: {
+				in: statusList
+			}
 		});
 	}
+
+
+	const priorityList = parseEnumList(query.priority, Priority, "priority")
+	if (priorityList.length > 0) {
+		andCondition.push({
+			service: {
+				priority: {
+					in: priorityList
+				},
+			}
+		});
+	}
+
+	const regionNames = parseCsv(query.regions ?? query.region);
+	if (regionNames.length > 0) {
+		andCondition.push({
+			region: {
+				is: {
+					area: { in: regionNames, mode: "insensitive" },
+					isActive: true,
+				},
+			},
+		});
+	}
+
+	const categoryNames = parseCsv(query.category ?? query.categories);
+	if (categoryNames.length > 0) {
+		andCondition.push({
+			service: {
+				category: {
+					is: {
+						name: { in: categoryNames, mode: "insensitive" },
+						isActive: true,
+					},
+				},
+			}
+		});
+	}
+
+
 
 	if (query.today === "true" || query.today === true) {
 		const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date());
@@ -198,6 +242,8 @@ const getMyWrokOrders = async (query: IQuery, user: IRequestUser) => {
 			},
 		});
 	}
+
+
 
 	const workOrders = await prisma.workOrder.findMany({
 		where: {

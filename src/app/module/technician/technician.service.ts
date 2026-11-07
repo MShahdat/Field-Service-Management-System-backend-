@@ -3,7 +3,7 @@ import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
 import { IUpdateTechnician } from "./technician.interface";
 import httpStatus from "http-status";
-import { formatTimeToHHmm } from "../../utils/utility";
+import { formatTimeToHHmm, parseCsv } from "../../utils/utility";
 import { TechnicianProfileWhereInput, UserWhereInput } from "../../../../generated/prisma/models";
 import { UserRole, UserStatus } from "../../../../generated/prisma/enums";
 
@@ -212,16 +212,6 @@ const completeProfile = async (
 };
 
 
-//& Helper: parse comma-separated query param into clean string array
-const parseCsv = (v: unknown): string[] => {
-	if (!v) return [];
-	const raw = Array.isArray(v) ? v.join(",") : String(v);
-	return raw
-		.split(",")
-		.map((s) => s.trim())
-		.filter(Boolean);
-};
-
 //& GET ALL TECHNICIAN (PUBLIC)
 const getAllTech = async (query: IQuery) => {
 	const sort = query.sortBy ? query.sortBy : "createdAt";
@@ -266,12 +256,6 @@ const getAllTech = async (query: IQuery) => {
 				},
 			],
 		});
-	}
-
-	if (query.status) {
-		andConditions.push({
-			status: query.status
-		})
 	}
 
 

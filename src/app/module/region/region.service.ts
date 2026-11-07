@@ -70,10 +70,14 @@ const getAllRegion = async (query: IQuery, user: IRequestUser) => {
 		});
 	}
 
-	if (query.isActive) {
-		andCondition.push({
-			isActive: query.isActive,
-		});
+	const isActiveValue = query.isActive ?? query.status;
+	if (isActiveValue !== undefined && isActiveValue !== "") {
+		const normalized = String(isActiveValue).trim().toLowerCase();
+		if (normalized === "true" || normalized === "false") {
+			andCondition.push({
+				isActive: normalized === "true",
+			});
+		}
 	}
 
 	const area = await prisma.region.findMany({
@@ -106,12 +110,12 @@ const getAllRegion = async (query: IQuery, user: IRequestUser) => {
 	};
 };
 
-//& GET REGION (PUBLIC)
+//& GET REGIONS (PUBLIC)
 const getRegions = async (query: IQuery) => {
 	const sort = query.sortBy ? query.sortBy : "createdAt";
 	const order = query.sortOrder ? query.sortOrder : "desc";
 	const page = Number(query.page || 1);
-	const limit = Number(query.limit || 9);
+	const limit = Number(query.limit || 12);
 
 	const andCondition: RegionWhereInput[] = [
 		{
@@ -136,6 +140,8 @@ const getRegions = async (query: IQuery) => {
 			],
 		});
 	}
+
+
 
 	const area = await prisma.region.findMany({
 		where: {

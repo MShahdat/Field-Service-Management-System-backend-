@@ -457,6 +457,12 @@ var UserStatus = {
   BLOCKED: "BLOCKED",
   DELETED: "DELETED"
 };
+var Priority = {
+  LOW: "LOW",
+  MEDIUM: "MEDIUM",
+  HIGH: "HIGH",
+  URGENT: "URGENT"
+};
 var ServiceStatus = {
   PENDING: "PENDING",
   APPROVED: "APPROVED",
@@ -485,6 +491,11 @@ var PaymentStatus = {
   FAILED: "FAILED",
   CANCELLED: "CANCELLED",
   REFUNDED: "REFUNDED"
+};
+var ManagerVerificationStatus = {
+  PENDING: "PENDING",
+  APPROVED: "APPROVED",
+  REJECTED: "REJECTED"
 };
 
 // generated/prisma/client.ts
@@ -682,6 +693,23 @@ function formatDateTime(iso) {
   if (Number.isNaN(d.getTime())) return iso;
   return dateTimeFmt.format(d);
 }
+var parseCsv = (v) => {
+  if (!v) return [];
+  const raw3 = Array.isArray(v) ? v.join(",") : String(v);
+  return raw3.split(",").map((s) => s.trim()).filter(Boolean);
+};
+var parseEnumList = (value, enumObj, fieldName) => {
+  const validValues = Object.values(enumObj);
+  const list = parseCsv(value).map((v) => v.trim().toUpperCase()).filter(Boolean);
+  const invalid = list.filter((v) => !validValues.includes(v));
+  if (invalid.length > 0) {
+    throw new AppError(
+      400,
+      `Invalid ${fieldName}: ${invalid.join(", ")}. Allowed values: ${validValues.join(", ")}`
+    );
+  }
+  return list;
+};
 
 // src/app/module/auth/auth.service.ts
 var roleProfileMap = {
@@ -1704,10 +1732,14 @@ var getAllRegion = async (query, user) => {
       ]
     });
   }
-  if (query.isActive) {
-    andCondition.push({
-      isActive: query.isActive
-    });
+  const isActiveValue = query.isActive ?? query.status;
+  if (isActiveValue !== void 0 && isActiveValue !== "") {
+    const normalized = String(isActiveValue).trim().toLowerCase();
+    if (normalized === "true" || normalized === "false") {
+      andCondition.push({
+        isActive: normalized === "true"
+      });
+    }
   }
   const area = await prisma.region.findMany({
     where: {
@@ -1739,7 +1771,7 @@ var getRegions = async (query) => {
   const sort = query.sortBy ? query.sortBy : "createdAt";
   const order = query.sortOrder ? query.sortOrder : "desc";
   const page = Number(query.page || 1);
-  const limit = Number(query.limit || 9);
+  const limit = Number(query.limit || 12);
   const andCondition = [
     {
       isActive: true
@@ -2304,15 +2336,22 @@ var getAllManagers = async (query) => {
       ]
     });
   }
-  if (query.verificationStatus) {
+  const verivicationStatuList = parseEnumList(query.varificationStatus, ManagerVerificationStatus, "verificationStatus");
+  if (verivicationStatuList.length > 0) {
     andConditions.push({
-      verificationStatus: query.verificationStatus
+      verificationStatus: {
+        in: verivicationStatuList
+      }
     });
   }
-  if (query.emailVerified) {
+  const regionNames = parseCsv(query.regions ?? query.region);
+  if (regionNames.length > 0) {
     andConditions.push({
-      user: {
-        emailVerified: Boolean(query.emailVerified)
+      region: {
+        some: {
+          area: { in: regionNames, mode: "insensitive" },
+          isActive: true
+        }
       }
     });
   }
@@ -2510,14 +2549,26 @@ var getAllCategory = async (query) => {
       ]
     });
   }
-  if (query.isActive) {
-    andConditions.push({
-      isActive: query.isActive
-    });
-  }
   if (query.name) {
     andConditions.push({
       name: query.name
+    });
+  }
+  const isActiveValue = query.isActive ?? query.status;
+  if (isActiveValue !== void 0 && isActiveValue !== "") {
+    const normalized = String(isActiveValue).trim().toLowerCase();
+    if (normalized === "true" || normalized === "false") {
+      andConditions.push({
+        isActive: normalized === "true"
+      });
+    }
+  }
+  if (query.minDuration || query.maxDuration) {
+    andConditions.push({
+      duration: {
+        ...query.minDuration && { gte: Number(query.minDuration) },
+        ...query.maxDuration && { lte: Number(query.maxDuration) }
+      }
     });
   }
   const category = await prisma.category.findMany({
@@ -3133,14 +3184,42 @@ var getALLServices = async (query, user) => {
     throw new AppError(httpStatus14.NOT_FOUND, "user not found");
   }
   const andCondition = [];
-  if (query.status) {
+  const statusList = parseEnumList(query.status, ServiceStatus, "status");
+  if (statusList.length > 0) {
     andCondition.push({
-      status: query.status
+      status: {
+        in: statusList
+      }
     });
   }
-  if (query.priority) {
+  const priorityList = parseEnumList(query.priority, Priority, "priority");
+  if (priorityList.length > 0) {
     andCondition.push({
-      priority: query.priority
+      priority: {
+        in: priorityList
+      }
+    });
+  }
+  const regionNames = parseCsv(query.regions ?? query.region);
+  if (regionNames.length > 0) {
+    andCondition.push({
+      region: {
+        is: {
+          area: { in: regionNames, mode: "insensitive" },
+          isActive: true
+        }
+      }
+    });
+  }
+  const categoryNames = parseCsv(query.category ?? query.categories);
+  if (categoryNames.length > 0) {
+    andCondition.push({
+      category: {
+        is: {
+          name: { in: categoryNames, mode: "insensitive" },
+          isActive: true
+        }
+      }
     });
   }
   if (query.today === "true" || query.today === true) {
@@ -3150,6 +3229,14 @@ var getALLServices = async (query, user) => {
       servicingDate: {
         gte: start,
         lte: end
+      }
+    });
+  }
+  if (query.minDuration || query.maxDuration) {
+    andCondition.push({
+      duration: {
+        ...query.minDuration && { gte: Number(query.minDuration) },
+        ...query.maxDuration && { lte: Number(query.maxDuration) }
       }
     });
   }
@@ -3164,6 +3251,7 @@ var getALLServices = async (query, user) => {
     },
     include: {
       category: true,
+      region: true,
       workOrders: true
     }
   });
@@ -4786,11 +4874,6 @@ var completeProfile = async (payload, user) => {
   );
   return transactionResult;
 };
-var parseCsv = (v) => {
-  if (!v) return [];
-  const raw3 = Array.isArray(v) ? v.join(",") : String(v);
-  return raw3.split(",").map((s) => s.trim()).filter(Boolean);
-};
 var getAllTech = async (query) => {
   const sort = query.sortBy ? query.sortBy : "createdAt";
   const order = query.sortOrder ? query.sortOrder : "desc";
@@ -4831,11 +4914,6 @@ var getAllTech = async (query) => {
           }
         }
       ]
-    });
-  }
-  if (query.status) {
-    andConditions.push({
-      status: query.status
     });
   }
   if (query.minJobsCompleted || query.maxJobsCompleted) {
@@ -5214,9 +5292,46 @@ var getMyWrokOrders = async (query, user) => {
       ]
     });
   }
-  if (query.status) {
+  const statusList = parseEnumList(query.status, WorkOrderStatus, "status");
+  if (statusList.length > 0) {
     andCondition.push({
-      status: query.status
+      status: {
+        in: statusList
+      }
+    });
+  }
+  const priorityList = parseEnumList(query.priority, Priority, "priority");
+  if (priorityList.length > 0) {
+    andCondition.push({
+      service: {
+        priority: {
+          in: priorityList
+        }
+      }
+    });
+  }
+  const regionNames = parseCsv(query.regions ?? query.region);
+  if (regionNames.length > 0) {
+    andCondition.push({
+      region: {
+        is: {
+          area: { in: regionNames, mode: "insensitive" },
+          isActive: true
+        }
+      }
+    });
+  }
+  const categoryNames = parseCsv(query.category ?? query.categories);
+  if (categoryNames.length > 0) {
+    andCondition.push({
+      service: {
+        category: {
+          is: {
+            name: { in: categoryNames, mode: "insensitive" },
+            isActive: true
+          }
+        }
+      }
     });
   }
   if (query.today === "true" || query.today === true) {
@@ -5946,7 +6061,7 @@ var bkashCallback = async (query) => {
   return transactionResult;
 };
 var getPaymentInfo = async (query, user) => {
-  const sort = query.sortBy ? query.sortBy : "createdAt";
+  const sort = query.sortBy ? query.sortBy : "updatedAt";
   const order = query.sortOrder ? query.sortOrder : "desc";
   const page = Number(query.page || 1);
   const limit = Number(query.limit || 9);
@@ -6055,30 +6170,78 @@ var getPaymentInfo = async (query, user) => {
               }
             }
           }
+        },
+        {
+          transectionId: {
+            contains: query.search
+          }
+        },
+        {
+          workOrder: {
+            serviceId: {
+              contains: query.search
+            }
+          }
+        },
+        {
+          workOrderId: {
+            contains: query.search
+          }
+        },
+        {
+          workOrder: {
+            service: {
+              categoryId: {
+                contains: query.search
+              }
+            }
+          }
         }
       ]
     });
   }
-  if (query.status) {
+  const statusList = parseEnumList(query.status, PaymentStatus, "status");
+  if (statusList.length > 0) {
     andCondition.push({
-      status: query.status
-    });
-  }
-  if (query.workOrderId) {
-    andCondition.push({
-      workOrderId: query.workOrderId
-    });
-  }
-  if (query.serviceId) {
-    andCondition.push({
-      workOrder: {
-        serviceId: query.serviceId
+      status: {
+        in: statusList
       }
     });
   }
-  if (query.trxId) {
+  const regionNames = parseCsv(query.regions ?? query.region);
+  if (regionNames.length > 0) {
     andCondition.push({
-      transectionId: query.trxId
+      workOrder: {
+        region: {
+          is: {
+            area: { in: regionNames, mode: "insensitive" },
+            isActive: true
+          }
+        }
+      }
+    });
+  }
+  const categoryNames = parseCsv(query.category ?? query.categories);
+  if (categoryNames.length > 0) {
+    andCondition.push({
+      workOrder: {
+        service: {
+          category: {
+            is: {
+              name: { in: categoryNames, mode: "insensitive" },
+              isActive: true
+            }
+          }
+        }
+      }
+    });
+  }
+  if (query.minAmount || query.maxAmount) {
+    andCondition.push({
+      amount: {
+        ...query.minAmount && { gte: Number(query.minAmount) },
+        ...query.maxAmount && { lte: Number(query.maxAmount) }
+      }
     });
   }
   const payment = await prisma.payment.findMany({
@@ -7260,6 +7423,41 @@ var getAllFeedbacks = async (query) => {
   const page = Number(query.page || 1);
   const limit = Number(query.limit || 20);
   const andConditions = [];
+  if (query.search) {
+    andConditions.push({
+      OR: [
+        {
+          comment: {
+            contains: query.search,
+            mode: "insensitive"
+          }
+        },
+        {
+          workOrderId: {
+            contains: query.search
+          }
+        },
+        {
+          workOrder: {
+            serviceId: {
+              contains: query.search
+            }
+          }
+        },
+        {
+          workOrder: {
+            customer: {
+              user: {
+                name: {
+                  contains: query.search
+                }
+              }
+            }
+          }
+        }
+      ]
+    });
+  }
   if (query.technicianId) {
     andConditions.push({
       workOrder: {
@@ -7651,24 +7849,33 @@ var getAllUsers = async (query) => {
       ]
     });
   }
-  if (query.status) {
+  if (query.name) {
     andConditions.push({
-      status: query.status
+      name: query.name
     });
   }
-  if (query.role) {
+  const statusList = parseEnumList(query.status, UserStatus, "status");
+  if (statusList.length > 0) {
     andConditions.push({
-      role: query.role
+      status: {
+        in: statusList
+      }
     });
   }
-  if (query.isDeleted) {
+  const roleList = parseEnumList(query.role, UserRole, "role");
+  if (roleList.length > 0) {
     andConditions.push({
-      isDeleted: Boolean(query.isDeleted)
+      role: {
+        in: roleList
+      }
     });
   }
-  if (query.isEmailVerified) {
+  const authProviderList = parseEnumList(query.authProvider, AuthProvider, "authProvider");
+  if (authProviderList.length > 0) {
     andConditions.push({
-      emailVerified: Boolean(query.isEmailVerified)
+      authProvider: {
+        in: authProviderList
+      }
     });
   }
   const users = await prisma.user.findMany({
@@ -7712,7 +7919,9 @@ var statusUpdate7 = async (payload, userId) => {
       id: userId
     },
     data: {
-      status: payload.status
+      status: payload.status,
+      isDeleted: true,
+      deletedAt: /* @__PURE__ */ new Date()
     }
   });
 };
@@ -7828,22 +8037,9 @@ import { Router as Router14 } from "express";
 import httpStatus32 from "http-status";
 
 // src/app/module/analytics/analytics.service.ts
-var getCurrentMonthRange = () => {
-  const now = /* @__PURE__ */ new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const endOfMonth = new Date(
-    now.getFullYear(),
-    now.getMonth() + 1,
-    0,
-    23,
-    59,
-    59,
-    999
-  );
-  return { startOfMonth, endOfMonth };
-};
+var oneMonthAgo = new Date(Date.now() - 60 * 60 * 24 * 30 * 1e3);
+console.log("one month ago", oneMonthAgo);
 var getAdminAnalytics = async () => {
-  const { startOfMonth, endOfMonth } = getCurrentMonthRange();
   const totalCustomers = await prisma.customerProfile.count({
     where: { isDeleted: false }
   });
@@ -7928,8 +8124,7 @@ var getAdminAnalytics = async () => {
     where: {
       status: PaymentStatus.PAID,
       paidAt: {
-        gte: startOfMonth,
-        lte: endOfMonth
+        gte: oneMonthAgo
       }
     },
     _sum: { amount: true }
@@ -7995,6 +8190,13 @@ var getCustomerAnalytics = async (userId) => {
       isDeleted: false
     }
   });
+  const inProgressServices = await prisma.service.count({
+    where: {
+      customerId: customer.id,
+      status: ServiceStatus.IN_PROGRESS,
+      isDeleted: false
+    }
+  });
   const completedServices = await prisma.service.count({
     where: {
       customerId: customer.id,
@@ -8033,6 +8235,7 @@ var getCustomerAnalytics = async (userId) => {
     cancelledServices,
     pendingServices,
     rejectedServices,
+    inProgressServices,
     completedServices,
     completedWorkOrders,
     totalStartedWorkOrders,
@@ -8102,12 +8305,12 @@ var getTechnicianAnalytics = async (userId) => {
       workOrder: { technicianId },
       status: PaymentStatus.PAID,
       paidAt: {
-        gte: getCurrentMonthRange().startOfMonth,
-        lte: getCurrentMonthRange().endOfMonth
+        gte: oneMonthAgo
       }
     },
     _sum: { amount: true }
   });
+  console.log("current month rev", currentMonthRevenue);
   const completeJobs = await prisma.workOrder.count({
     where: { technicianId, status: WorkOrderStatus.COMPLETED }
   });
@@ -8137,6 +8340,7 @@ var getManagerAnalytics = async (userId) => {
       assignedServices: 0,
       rejectedServices: 0,
       completedWorkByTechnicians: 0,
+      totalOrders: 0,
       totalStartedWorkOrders: 0,
       totalEnrouteWorkOrders: 0,
       totalEarnings: "0",
@@ -8175,6 +8379,11 @@ var getManagerAnalytics = async (userId) => {
       status: WorkOrderStatus.STARTED
     }
   });
+  const totalWorkOrders = await prisma.workOrder.count({
+    where: {
+      managerId: manager.id
+    }
+  });
   const totalEnrouteWorkOrders = await prisma.workOrder.count({
     where: {
       managerId: manager.id,
@@ -8197,8 +8406,7 @@ var getManagerAnalytics = async (userId) => {
       },
       status: PaymentStatus.PAID,
       paidAt: {
-        gte: getCurrentMonthRange().startOfMonth,
-        lte: getCurrentMonthRange().endOfMonth
+        gte: oneMonthAgo
       }
     },
     _sum: { amount: true }
@@ -8216,6 +8424,7 @@ var getManagerAnalytics = async (userId) => {
     rejectedServices,
     completedWorkByTechnicians,
     totalStartedWorkOrders,
+    totalWorkOrders,
     totalEnrouteWorkOrders,
     totalEarnings: totalEarnings._sum.amount?.toString() ?? "0",
     totalRefunded: totalRefunded._sum.amount?.toString() ?? "0",
@@ -8689,11 +8898,11 @@ import cron from "node-cron";
 var deleteRejectedManager = async () => {
   cron.schedule("0 0 1 * * ", async () => {
     try {
-      const oneMonthAgo = new Date(Date.now() - 60 * 60 * 24 * 30 * 1e3);
+      const oneMonthAgo2 = new Date(Date.now() - 60 * 60 * 24 * 30 * 1e3);
       const deleteManager = await prisma.user.deleteMany({
         where: {
           role: "MANAGER",
-          createdAt: { lt: oneMonthAgo },
+          createdAt: { lt: oneMonthAgo2 },
           manager: {
             verificationStatus: "REJECTED"
           }
@@ -8713,11 +8922,11 @@ var deleteRejectedManager = async () => {
 var deleteRejectedServices = async () => {
   cron.schedule("0 0 1 * * ", async () => {
     try {
-      const oneMonthAgo = new Date(Date.now() - 60 * 60 * 24 * 30 * 1e3);
+      const oneMonthAgo2 = new Date(Date.now() - 60 * 60 * 24 * 30 * 1e3);
       const deleteServices = await prisma.service.deleteMany({
         where: {
           status: "REJECTED",
-          createdAt: { lt: oneMonthAgo }
+          createdAt: { lt: oneMonthAgo2 }
         }
       });
       if (deleteServices.count > 0) {

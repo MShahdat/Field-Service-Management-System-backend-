@@ -1,3 +1,4 @@
+import { AppError } from "./appError";
 
 export const parseTimeOnDate = (
 	timeValue: string | Date,
@@ -66,3 +67,42 @@ export function formatDateTime(iso?: string | null) {
 	if (Number.isNaN(d.getTime())) return iso;
 	return dateTimeFmt.format(d);
 }
+
+
+
+
+//& Helper: parse comma-separated query param into clean string array
+export const parseCsv = (v: unknown): string[] => {
+	if (!v) return [];
+	const raw = Array.isArray(v) ? v.join(",") : String(v);
+	return raw
+		.split(",")
+		.map((s) => s.trim())
+		.filter(Boolean);
+};
+
+
+
+export const parseEnumList = <T extends string>(
+	value: string | undefined,
+	enumObj: Record<string, T>,
+	fieldName: string
+): T[] => {
+	const validValues = Object.values(enumObj) as string[];
+
+	const list = parseCsv(value)
+		.map((v) => v.trim().toUpperCase())
+		.filter(Boolean);
+
+	const invalid = list.filter((v) => !validValues.includes(v));
+
+	if (invalid.length > 0) {
+		throw new AppError(
+			400,
+			`Invalid ${fieldName}: ${invalid.join(", ")}. Allowed values: ${validValues.join(", ")}`
+		);
+	}
+
+	return list as T[];
+};
+

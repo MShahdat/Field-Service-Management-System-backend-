@@ -8,7 +8,7 @@ import {
 import httpStatus from "http-status";
 import bcrypt from "bcryptjs";
 import config from "../../config/env";
-import { UserRole } from "../../../../generated/prisma/enums";
+import { ManagerVerificationStatus, UserRole } from "../../../../generated/prisma/enums";
 import crypto from "crypto";
 import { redisClient } from "../../lib/redis";
 import path from "path";
@@ -17,6 +17,7 @@ import { transporter } from "../../lib/nodemailer";
 import { IQuery, IRequestUser } from "../../interface";
 import { ManagerProfileWhereInput } from "../../../../generated/prisma/models";
 import { generateRandomPass } from "../../utils/randomPassword";
+import { parseCsv, parseEnumList } from "../../utils/utility";
 
 //& APPLY MANAGER
 const applyManager = async (payload: IManagerApplyPayload) => {
@@ -352,29 +353,26 @@ const getAllManagers = async (query: IQuery) => {
 
 	//~ filtering
 
-	// if(query.region){
-	// 	const region = query.region as string
-	// 	const arr = region.split(',').map((item) => item.trim())
+	const verivicationStatuList = parseEnumList(query.varificationStatus, ManagerVerificationStatus, "verificationStatus")
 
-	// 	andConditions.push({
-	// 		region: {
-	// 			hasSome: arr
-	// 		}
-	// 	})
-	// }
-
-	if (query.verificationStatus) {
+	if (verivicationStatuList.length > 0) {
 		andConditions.push({
-			verificationStatus: query.verificationStatus,
-		});
-	}
-
-	if (query.emailVerified) {
-		andConditions.push({
-			user: {
-				emailVerified: Boolean(query.emailVerified)
+			verificationStatus: {
+				in: verivicationStatuList as ManagerVerificationStatus[]
 			}
 		})
+	}
+
+	const regionNames = parseCsv(query.regions ?? query.region);
+	if (regionNames.length > 0) {
+		andConditions.push({
+			region: {
+				some: {
+					area: { in: regionNames, mode: "insensitive" },
+					isActive: true,
+				},
+			},
+		});
 	}
 
 	const managers = await prisma.managerProfile.findMany({

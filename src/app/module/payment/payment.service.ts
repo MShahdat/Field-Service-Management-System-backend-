@@ -6,6 +6,7 @@ import { getBkashIdToken } from "../../lib/bkash";
 import { transporter } from "../../lib/nodemailer";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
+import { parseCsv, parseEnumList } from "../../utils/utility";
 import { IPaymentPayload } from "./payment.interface";
 import httpStatus from "http-status";
 import PDFDocument from "pdfkit";
@@ -301,7 +302,7 @@ const bkashCallback = async (query: Record<string, any>) => {
 
 //& GET PAYMENT INFO 
 const getPaymentInfo = async (query: IQuery, user: IRequestUser) => {
-	const sort = query.sortBy ? query.sortBy : "createdAt";
+	const sort = query.sortBy ? query.sortBy : "updatedAt";
 	const order = query.sortOrder ? query.sortOrder : "desc";
 	const page = Number(query.page || 1);
 	const limit = Number(query.limit || 9);
@@ -425,37 +426,86 @@ const getPaymentInfo = async (query: IQuery, user: IRequestUser) => {
 						},
 					},
 				},
+				{
+					transectionId: {
+						contains: query.search,
+					}
+				},
+				{
+					workOrder: {
+						serviceId: {
+							contains: query.search,
+						}
+					}
+				},
+				{
+					workOrderId: {
+						contains: query.search
+					}
+				},
+				{
+					workOrder: {
+						service: {
+							categoryId: {
+								contains: query.search
+							}
+						}
+					}
+				}
 			],
 		});
 	}
 
 	//* filtering
-	if (query.status) {
+	const statusList = parseEnumList(query.status, PaymentStatus, "status");
+	if (statusList.length > 0) {
 		andCondition.push({
-			status: query.status,
+			status: {
+				in: statusList
+			}
 		});
 	}
 
-	if (query.workOrderId) {
-		andCondition.push({
-			workOrderId: query.workOrderId,
-		});
-	}
 
-	if (query.serviceId) {
+	const regionNames = parseCsv(query.regions ?? query.region);
+	if (regionNames.length > 0) {
 		andCondition.push({
 			workOrder: {
-				serviceId: query.serviceId
+				region: {
+					is: {
+						area: { in: regionNames, mode: "insensitive" },
+						isActive: true,
+					},
+				},
 			}
-		})
+		});
 	}
 
-	if (query.trxId) {
+	const categoryNames = parseCsv(query.category ?? query.categories);
+	if (categoryNames.length > 0) {
 		andCondition.push({
-			transectionId: query.trxId
-		})
+			workOrder: {
+				service: {
+					category: {
+						is: {
+							name: { in: categoryNames, mode: "insensitive" },
+							isActive: true,
+						},
+					},
+				}
+			}
+		});
 	}
 
+
+	if (query.minAmount || query.maxAmount) {
+		andCondition.push({
+			amount: {
+				...(query.minAmount && { gte: Number(query.minAmount) }),
+				...(query.maxAmount && { lte: Number(query.maxAmount) }),
+			},
+		});
+	}
 
 	const payment = await prisma.payment.findMany({
 		where: {

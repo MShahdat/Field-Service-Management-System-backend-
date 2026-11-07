@@ -6,6 +6,8 @@ import httpStatus from "http-status";
 import { IQuery, IRequestUser } from "../../interface";
 import { IStatusUpdate, IUpdateCustomer } from "./user.interface";
 import { UserWhereInput } from "../../../../generated/prisma/models";
+import { parseCsv, parseEnumList } from "../../utils/utility";
+import { AuthProvider, UserRole, UserStatus } from "../../../../generated/prisma/enums";
 
 //& PROFILE IMAGE UPLOAD
 const profileImageUpload = async (
@@ -125,27 +127,36 @@ const getAllUsers = async (query: IQuery) => {
 		});
 	}
 
-	if (query.status) {
+	if (query.name) {
 		andConditions.push({
-			status: query.status
-		});
-	}
-
-	if (query.role) {
-		andConditions.push({
-			role: query.role
+			name: query.name
 		})
 	}
 
-	if (query.isDeleted) {
+	const statusList = parseEnumList(query.status, UserStatus, "status");
+	if (statusList.length > 0) {
 		andConditions.push({
-			isDeleted: Boolean(query.isDeleted),
+			status: {
+				in: statusList
+			}
 		});
 	}
 
-	if (query.isEmailVerified) {
+	const roleList = parseEnumList(query.role, UserRole, "role");
+	if (roleList.length > 0) {
 		andConditions.push({
-			emailVerified: Boolean(query.isEmailVerified)
+			role: {
+				in: roleList
+			}
+		});
+	}
+
+	const authProviderList = parseEnumList(query.authProvider, AuthProvider, "authProvider");
+	if (authProviderList.length > 0) {
+		andConditions.push({
+			authProvider: {
+				in: authProviderList
+			}
 		});
 	}
 
@@ -199,7 +210,9 @@ const statusUpdate = async (payload: IStatusUpdate, userId: string) => {
 			id: userId
 		},
 		data: {
-			status: payload.status
+			status: payload.status,
+			isDeleted: true,
+			deletedAt: new Date()
 		}
 	})
 };

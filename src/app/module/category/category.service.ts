@@ -2,6 +2,7 @@ import { CategoryWhereInput } from "../../../../generated/prisma/models";
 import { IQuery, IRequestUser } from "../../interface";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
+import { parseCsv } from "../../utils/utility";
 import { ICategoryPayload, IUpdateCategoryPayload } from "./category.interface";
 import httpStatus from "http-status";
 
@@ -64,17 +65,33 @@ const getAllCategory = async (query: IQuery) => {
 
 	//~ filtering
 
-	if (query.isActive) {
-		andConditions.push({
-			isActive: query.isActive,
-		});
-	}
 
 	if (query.name) {
 		andConditions.push({
 			name: query.name,
 		});
 	}
+
+	const isActiveValue = query.isActive ?? query.status;
+	if (isActiveValue !== undefined && isActiveValue !== "") {
+		const normalized = String(isActiveValue).trim().toLowerCase();
+		if (normalized === "true" || normalized === "false") {
+			andConditions.push({
+				isActive: normalized === "true",
+			});
+		}
+	}
+
+
+	if (query.minDuration || query.maxDuration) {
+		andConditions.push({
+			duration: {
+				...(query.minDuration && { gte: Number(query.minDuration) }),
+				...(query.maxDuration && { lte: Number(query.maxDuration) }),
+			},
+		});
+	}
+
 
 	const category = await prisma.category.findMany({
 		where: {
